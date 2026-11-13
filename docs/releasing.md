@@ -10,6 +10,8 @@ Repository: [TomSellecksMustache/VSR-Everywhere](https://github.com/TomSellecksM
 
 Build with `Build-Installer.ps1`, then check the outputs in `dist/`:
 
+For the Linux server packages, run `python3 tools/build_linux.py` and verify them with `python3 installer/linux/test_package.py`.
+
 | File | Audience |
 | --- | --- |
 | `VSR-Everywhere-1.0.0-Setup.exe` | Recommended single-file wizard. Downloads its larger dependencies. |
@@ -17,6 +19,9 @@ Build with `Build-Installer.ps1`, then check the outputs in `dist/`:
 | `Install-VSREverywhere.ps1` | PowerShell entry point; must match the ZIP from the same build. |
 | `VSR-Everywhere-1.0.0-plugin.zip` | Manual deployment for administrators with a working runtime. |
 | `VSR-Everywhere-1.0.0-Source.zip` | Source, guides, and comparison images for review or rebuilding. |
+| `Install-VSREverywhere-1.0.0-Linux.sh` | Standalone terminal installer for native Linux systemd services. |
+| `VSR-Everywhere-1.0.0-Linux.tar.gz` | The Linux installer, setup guide, and license notices. |
+| `VSR-Everywhere-1.0.0-Linux-SHA256SUMS.txt` | Checksums for the Linux installer and bundle. |
 | `LICENSE` | MIT license for the project code; also included in the packages. |
 
 The separate `VSR-Everywhere-Comparison-Shots.zip` contains the original 40 exported PNGs and can be attached as an additional release asset. The repository's gallery uses smaller WebP assets to keep the source tree manageable.

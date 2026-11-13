@@ -6,7 +6,7 @@ Enhance lower-resolution video on a Windows or Linux server and deliver an HEVC 
 
 [**Download the Windows installer**](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/download/v1.0.0/VSR-Everywhere-1.0.0-Setup.exe) · [All 1.0.0 downloads](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/tag/v1.0.0)
 
-**Linux servers:** [terminal installer and requirements](INSTALL-LINUX.md). The Linux port targets native systemd services on compatible x86-64 glibc distributions, including Ubuntu and RPM-based systems. Native Linux GPU playback still needs validation.
+**Linux servers:** [download the Linux installer](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/download/v1.0.0/Install-VSREverywhere-1.0.0-Linux.sh) · [setup and requirements](INSTALL-LINUX.md). The Linux port targets native systemd services on compatible x86-64 glibc distributions, including Ubuntu and RPM-based systems. Native Linux GPU playback still needs validation.
 
 [Install](INSTALL-WINDOWS.md) · [Comparisons](docs/comparisons.md) · [Settings](docs/configuration.md) · [Troubleshooting](docs/troubleshooting.md) · [Build from source](docs/development.md)
 

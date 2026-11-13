@@ -14,7 +14,7 @@ NVIDIA's binary runtime sets the compatibility boundary: this cannot promise sup
 
 ## Install
 
-Download `Install-VSREverywhere-1.0.0-Linux.sh` to the server, then run:
+Download [Install-VSREverywhere-1.0.0-Linux.sh](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/download/v1.0.0/Install-VSREverywhere-1.0.0-Linux.sh) to the server, then run:
 
 ```bash
 sudo bash ./Install-VSREverywhere-1.0.0-Linux.sh
@@ -58,7 +58,9 @@ With .NET 10 SDK and Python 3 available in the source tree:
 
 ```bash
 python3 tools/build_linux.py
-python3 -m unittest discover -s tests -p 'test_linux_setup.py'
+python3 -m unittest discover -s tests -p 'test_linux_*.py'
 ```
 
 The build produces the standalone `.sh`, a `.tar.gz` containing the same installer and guides, and SHA-256 checksums in `dist/`. No Windows executable is required on the Linux server. The project code is [MIT licensed](LICENSE); dependencies retain their own licenses in [the notices](THIRD_PARTY_NOTICES.md).
+
+Automated installer, ownership, plugin/cache, and package checks pass on Ubuntu 24.04 and Rocky Linux 9. Native Linux GPU playback remains unverified.
