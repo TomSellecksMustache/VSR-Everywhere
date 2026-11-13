@@ -1,0 +1,69 @@
+[CmdletBinding()]
+param([switch]$Silent, [switch]$Preview, [switch]$Embedded, [string]$DataPath = '', [string]$ServerPath = '', [string]$InstallFolder = '')
+$ErrorActionPreference = 'Stop'
+Import-Module (Join-Path $PSHOME 'Modules\Microsoft.PowerShell.Utility\Microsoft.PowerShell.Utility.psd1') -Global
+Import-Module (Join-Path $PSHOME 'Modules\Microsoft.PowerShell.Security\Microsoft.PowerShell.Security.psd1') -Global
+$archiveName = '__BUNDLE_FILE__'
+$expectedSha256 = '__BUNDLE_SHA256__'
+function Quote-SetupArgument([string]$Value) {
+    return '"' + (($Value -replace '(\\*)"', '$1$1\"') -replace '(\\+)$', '$1$1') + '"'
+}
+$hostPath = Join-Path $env:WINDIR 'System32\WindowsPowerShell\v1.0\powershell.exe'
+if (-not [Environment]::Is64BitProcess) { $hostPath = Join-Path $env:WINDIR 'Sysnative\WindowsPowerShell\v1.0\powershell.exe' }
+$identity = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
+if ((-not $Preview -and -not $identity.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) -or -not [Environment]::Is64BitProcess) {
+    $arguments = @('-NoProfile', '-Sta', '-ExecutionPolicy', 'Bypass', '-File', (Quote-SetupArgument $PSCommandPath))
+    if ($Silent) { $arguments += '-Silent' }; if ($Preview) { $arguments += '-Preview' }
+    if ($DataPath) { $arguments += @('-DataPath', (Quote-SetupArgument $DataPath)) }
+    if ($ServerPath) { $arguments += @('-ServerPath', (Quote-SetupArgument $ServerPath)) }
+    if ($InstallFolder) { $arguments += @('-InstallFolder', (Quote-SetupArgument $InstallFolder)) }
+    $start = @{ FilePath = $hostPath; ArgumentList = $arguments; Wait = $true; PassThru = $true; WindowStyle = 'Hidden' }
+    if (-not $Preview -and -not $identity.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) { $start.Verb = 'RunAs' }
+    $child = Start-Process @start
+    exit $child.ExitCode
+}
+try {
+    $archive = Join-Path $PSScriptRoot $archiveName
+    if (-not (Test-Path -LiteralPath $archive -PathType Leaf)) { throw "Keep $archiveName beside this PowerShell file, then run it again." }
+    if ((Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash -ine $expectedSha256) { throw 'The setup ZIP failed verification. Download the matching ZIP and PowerShell file again.' }
+    $base = if ($Preview) { Join-Path ([IO.Path]::GetTempPath()) 'VsrEverywhere-Preview' } else { Join-Path $env:ProgramData 'VsrEverywhere' }
+    $cursor = [IO.Path]::GetFullPath($base)
+    while ($cursor) {
+        if ((Test-Path -LiteralPath $cursor) -and ((Get-Item -LiteralPath $cursor -Force).Attributes -band [IO.FileAttributes]::ReparsePoint)) { throw 'Setup cannot run through a symbolic link or junction.' }
+        $parent = [IO.Path]::GetDirectoryName($cursor)
+        if ($parent -eq $cursor) { break }; $cursor = $parent
+    }
+    $null = New-Item -ItemType Directory -Force -Path $base
+    if (-not $Preview) {
+        $acl = New-Object Security.AccessControl.DirectorySecurity
+        $acl.SetAccessRuleProtection($true, $false)
+        foreach ($entry in @(@('S-1-5-32-544', 'FullControl'), @('S-1-5-18', 'FullControl'), @('S-1-5-32-545', 'ReadAndExecute'))) {
+            $sid = New-Object Security.Principal.SecurityIdentifier($entry[0])
+            $rule = New-Object Security.AccessControl.FileSystemAccessRule($sid, $entry[1], 'ContainerInherit,ObjectInherit', 'None', 'Allow')
+            $acl.AddAccessRule($rule)
+        }
+        Set-Acl -LiteralPath $base -AclObject $acl
+    }
+    $destination = Join-Path $base ('setup\' + [Guid]::NewGuid().ToString('N'))
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    $null = New-Item -ItemType Directory -Force -Path $destination
+    $zip = [IO.Compression.ZipFile]::OpenRead($archive)
+    try {
+        foreach ($entry in $zip.Entries) {
+            $path = [IO.Path]::GetFullPath((Join-Path $destination $entry.FullName))
+            if (-not $path.StartsWith(($destination.TrimEnd('\') + '\'), [StringComparison]::OrdinalIgnoreCase)) { throw 'The ZIP contains an invalid path.' }
+            if ($entry.FullName.EndsWith('/') -or $entry.FullName.EndsWith('\')) { $null = New-Item -ItemType Directory -Force -Path $path; continue }
+            $null = New-Item -ItemType Directory -Force -Path ([IO.Path]::GetDirectoryName($path))
+            [IO.Compression.ZipFileExtensions]::ExtractToFile($entry, $path, $false)
+        }
+    } finally { $zip.Dispose() }
+    $code = & (Join-Path $destination 'SetupWizard.ps1') -Silent:$Silent -Preview:$Preview -Embedded -DataPath $DataPath -ServerPath $ServerPath -InstallFolder $InstallFolder
+    if ($Embedded) { return [int]$code }
+    exit ([int]$code)
+} catch {
+    if ($Silent) { Write-Error $_; if ($Embedded) { return 1 }; exit 1 }
+    Add-Type -AssemblyName System.Windows.Forms
+    [Windows.Forms.MessageBox]::Show($_.Exception.Message, 'VSR Everywhere 1.0.0 Setup', 'OK', 'Error') | Out-Null
+    if ($Embedded) { return 1 }
+    exit 1
+}

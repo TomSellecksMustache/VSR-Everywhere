@@ -1,0 +1,110 @@
+using System.Diagnostics;
+using System.Net;
+using System.Reflection;
+using System.Text.Json;
+using Jellyfin.Plugin.VsrEverywhere;
+using Jellyfin.Plugin.VsrEverywhere.Configuration;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Hosting.Server.Features;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+
+internal static class PlaybackChecks
+{
+    private static void Check(bool condition, string message)
+    {
+        if (!condition) throw new Exception(message);
+    }
+
+    internal static async Task Run(string python, string ffmpeg, string source, string workerDirectory)
+    {
+        var deployedWorker = Path.Combine(AppContext.BaseDirectory, "worker");
+        Directory.CreateDirectory(deployedWorker);
+        foreach (var file in Directory.EnumerateFiles(workerDirectory, "*.py"))
+            File.Copy(file, Path.Combine(deployedWorker, Path.GetFileName(file)), true);
+        using var logging = LoggerFactory.Create(builder => builder.AddSimpleConsole().SetMinimumLevel(LogLevel.Debug));
+        using var sessions = new BridgeSessions(logging.CreateLogger<BridgeSessions>());
+        var middleware = new BridgeMiddleware(_ => throw new Exception("Unexpected route"), NullLogger<BridgeMiddleware>.Instance);
+        var builder = WebApplication.CreateSlimBuilder();
+        builder.Logging.ClearProviders();
+        builder.WebHost.ConfigureKestrel(options => options.Listen(IPAddress.Loopback, 0));
+        await using var app = builder.Build();
+        app.Run(context => middleware.InvokeAsync(context, sessions));
+        await app.StartAsync();
+        var address = app.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>()!.Addresses.Single();
+        using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(40) };
+        foreach (var kind in new[] { "fmp4", "mpegts" })
+        {
+            var cache = Path.Combine(AppContext.BaseDirectory, "checks", "unused-cache-" + Guid.NewGuid().ToString("N"));
+            var cfg = new PluginConfiguration
+            {
+                PythonPath = python, FfmpegPath = ffmpeg,
+                FfprobePath = Path.Combine(Path.GetDirectoryName(ffmpeg)!, "ffprobe.exe"),
+                CacheMode = "memory", MemoryBudgetMb = 512, CacheDirectory = cache,
+                SegmentType = kind, SeekLookaheadSeconds = 2, SeekCatchupSeconds = 0
+            };
+            if (kind == "mpegts") { cfg.ProcessingWidth = 5120; cfg.ProcessingHeight = 2880; }
+            var token = sessions.Register(source, cfg)!;
+            var session = sessions.Find(token)!;
+            var url = address + "/VsrEverywhere/hls/" + token + "/";
+            var output = Path.Combine(AppContext.BaseDirectory, "checks", "playback-" + kind + "-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(output);
+            var clock = Stopwatch.StartNew();
+            var playlist = await client.GetStringAsync(url + "index.m3u8");
+            Check(playlist.Contains("#EXT-X-PLAYLIST-TYPE:VOD") && playlist.Contains("#EXT-X-ENDLIST"), "Complete seekable playlist");
+            var names = playlist.Split('\n').Where(line => line.StartsWith("seg_", StringComparison.Ordinal)).ToArray();
+            var durationLine = playlist.Split('\n').First(line => line.StartsWith("#EXTINF:", StringComparison.Ordinal));
+            var segmentSeconds = double.Parse(durationLine[8..].TrimEnd(','), System.Globalization.CultureInfo.InvariantCulture);
+            Check(names.Length >= 6, "Playback fixture needs at least twelve seconds");
+            Console.WriteLine($"READY {kind}: {clock.Elapsed.TotalSeconds:F3}s");
+            if (kind == "fmp4") await File.WriteAllBytesAsync(Path.Combine(output, "init.mp4"), await client.GetByteArrayAsync(url + "init.mp4"));
+            var worker = (Process)typeof(BridgeSession).GetField("_worker", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(session)!;
+            var pid = worker.Id;
+            var middle = Math.Min(1200, names.Length / 2);
+            foreach (var index in new[] { middle, 0, middle })
+            {
+                clock.Restart();
+                var bytes = await client.GetByteArrayAsync(url + names[index]);
+                Check(bytes.Length > 0, "Requested segment is empty");
+                await File.WriteAllBytesAsync(Path.Combine(output, names[index]), bytes);
+                Console.WriteLine($"SEGMENT {kind} {index}: {clock.Elapsed.TotalSeconds:F3}s, {bytes.Length} bytes");
+                Check(!worker.HasExited && worker.Id == pid, "Seek must retain the worker and VSR model");
+            }
+            using (var missing = await client.GetAsync(url + "seg_999999." + (kind == "fmp4" ? "m4s" : "ts")))
+                Check(missing.StatusCode == HttpStatusCode.NotFound, "Out-of-range segment must return 404");
+            var sample = "#EXTM3U\n#EXT-X-VERSION:7\n#EXT-X-TARGETDURATION:3\n#EXT-X-MEDIA-SEQUENCE:" + middle + "\n"
+                + (kind == "fmp4" ? "#EXT-X-MAP:URI=\"init.mp4\"\n" : "")
+                + durationLine + "\n" + names[middle] + "\n#EXT-X-ENDLIST\n";
+            var samplePath = Path.Combine(output, "sample.m3u8");
+            await File.WriteAllTextAsync(samplePath, sample);
+            var probe = new ProcessStartInfo(cfg.FfprobePath) { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true };
+            foreach (var argument in new[] { "-v", "error", "-show_streams", "-of", "json", samplePath }) probe.ArgumentList.Add(argument);
+            using (var process = Process.Start(probe)!)
+            {
+                var json = await process.StandardOutput.ReadToEndAsync();
+                var errors = await process.StandardError.ReadToEndAsync();
+                await process.WaitForExitAsync();
+                Check(process.ExitCode == 0, "Seek segment ffprobe failed: " + errors);
+                await File.WriteAllTextAsync(Path.Combine(output, "ffprobe.json"), json);
+                using var data = JsonDocument.Parse(json);
+                var video = data.RootElement.GetProperty("streams").EnumerateArray().First(stream => stream.GetProperty("codec_type").GetString() == "video");
+                Check(video.GetProperty("codec_name").GetString() == "hevc" && video.GetProperty("profile").GetString() == "Main 10", "GPU seek must remain HEVC Main 10");
+                Check(video.GetProperty("color_space").GetString() == "bt709", "Seek VUI must be BT.709");
+                var pts = double.Parse(video.GetProperty("start_time").GetString()!, System.Globalization.CultureInfo.InvariantCulture);
+                Check(Math.Abs(pts - middle * segmentSeconds) < segmentSeconds / 48,
+                    "Middle segment PTS must be absolute media time: " + pts);
+            }
+            Check(!Directory.Exists(cache), "Memory playback created disk cache files");
+            worker.StandardInput.Close();
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            await worker.WaitForExitAsync(timeout.Token);
+            Check(worker.ExitCode == 0, "Closing stdin must stop the worker cleanly");
+            session.Dispose();
+            Console.WriteLine("PASS: " + kind + " GPU memory playback, forward/backward seeks, buffered reuse, absolute PTS, and clean EOF exit.");
+        }
+        await app.StopAsync();
+    }
+}

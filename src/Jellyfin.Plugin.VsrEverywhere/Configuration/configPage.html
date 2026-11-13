@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>VSR Everywhere</title></head><body>
+<div id="VsrEverywherePage" data-role="page" class="page type-interior pluginConfigurationPage" data-require="emby-button,emby-input,emby-select,emby-checkbox">
+<div data-role="content"><div class="content-primary">
+<h2>VSR Everywhere</h2>
+<form id="VsrEverywhereForm">
+<div class="checkboxContainer"><label class="emby-checkbox-label"><input id="Enabled" type="checkbox" is="emby-checkbox"><span>Enable VSR playback interception</span></label></div>
+<h3>Previously connected Jellyfin devices</h3>
+<div class="checkboxContainer"><label class="emby-checkbox-label"><input id="EnableAllDevices" type="checkbox" is="emby-checkbox"><span>Enable VSR for all devices</span></label></div>
+<div id="VsrDevicesStatus" role="status" aria-live="polite">Loading connected devices…</div>
+<div id="VsrDevicesList" style="margin:1em 0;"></div>
+<button id="RefreshVsrDevices" type="button" is="emby-button" class="raised emby-button">Refresh devices</button>
+<hr>
+<div class="selectContainer"><label class="selectLabel" for="Backend">VSR backend</label><select id="Backend" is="emby-select"><option value="nvidia">NVIDIA Video Super Resolution + NVENC</option></select></div>
+<div class="inputContainer"><label class="inputLabel" for="PythonPath">Python executable</label><input id="PythonPath" type="text" is="emby-input"></div>
+<div class="inputContainer"><label class="inputLabel" for="FfmpegPath">FFmpeg executable</label><input id="FfmpegPath" type="text" is="emby-input"></div>
+<div class="inputContainer"><label class="inputLabel" for="FfprobePath">FFprobe executable</label><input id="FfprobePath" type="text" is="emby-input"></div>
+
+<h3>VSR cache management</h3>
+<div class="selectContainer"><label class="selectLabel" for="CacheMode">Segment cache</label><select id="CacheMode" is="emby-select"><option value="memory">Memory (automatic)</option><option value="disk">Disk</option></select></div>
+<div id="MemoryCacheFields">
+<div class="inputContainer"><label class="inputLabel" for="MemoryBudgetMb">Memory budget (MB, 0 = automatic)</label><input id="MemoryBudgetMb" type="number" min="0" step="1" is="emby-input"></div>
+<p id="MemoryBudgetStatus" class="fieldDescription" role="status"></p>
+</div>
+<div id="DiskCacheFields" hidden>
+<div class="inputContainer"><label class="inputLabel" for="CacheMaxGb">Total VSR cache budget (GB)</label><input id="CacheMaxGb" type="number" min="2" max="500" step="1" is="emby-input"><div class="fieldDescription">Rejects new enhanced streams when the plugin-owned cache is over budget. In full-playback mode, an active long movie may exceed the budget; use rolling mode to bound growth.</div></div>
+<div class="inputContainer"><label class="inputLabel" for="CacheMinFreeGb">Minimum free space before starting VSR (GB)</label><input id="CacheMinFreeGb" type="number" min="2" max="200" step="1" is="emby-input"></div>
+<div class="inputContainer"><label class="inputLabel" for="CacheDirectory">Writable temporary segment directory</label><input id="CacheDirectory" type="text" is="emby-input"></div>
+</div>
+<div class="inputContainer"><label class="inputLabel" for="CacheIdleMinutes">Clean inactive session after (minutes)</label><input id="CacheIdleMinutes" type="number" min="2" max="240" step="1" is="emby-input"><div class="fieldDescription">Idle sessions release their cached segments.</div></div>
+<div id="DiskRollingCache" class="checkboxContainer"><label class="emby-checkbox-label"><input id="EnableRollingCache" type="checkbox" is="emby-checkbox"><span>Rolling HLS cache (limited seek window)</span></label></div>
+<div class="inputContainer"><label class="inputLabel" for="RollingRewindMinutes">Rolling rewind window (minutes)</label><input id="RollingRewindMinutes" type="number" min="2" max="60" step="1" is="emby-input"><div class="fieldDescription">Memory and rolling disk caches retain this rewind window, within the available budget.</div></div>
+<h3>Processing and delivery resolution</h3>
+<div class="selectContainer"><label class="selectLabel" for="ProcessingResolution">VSR processing resolution</label><select id="ProcessingResolution" is="emby-select">
+<option value="1920x1080">1080p (1920 × 1080)</option>
+<option value="2560x1440">1440p (2560 × 1440)</option>
+<option value="3840x2160">4K (3840 × 2160)</option>
+<option value="5120x2880">5K (5120 × 2880)</option>
+<option value="5760x3240">6K (5760 × 3240)</option>
+<option value="7680x4320">8K (7680 × 4320)</option>
+</select></div>
+<div class="selectContainer"><label class="selectLabel" for="StreamResolution">Stream resolution</label><select id="StreamResolution" is="emby-select">
+<option value="1920x1080">1080p (1920 × 1080)</option>
+<option value="2560x1440">1440p (2560 × 1440)</option>
+<option value="3840x2160">4K (3840 × 2160)</option>
+<option value="5120x2880">5K (5120 × 2880)</option>
+<option value="5760x3240">6K (5760 × 3240)</option>
+<option value="7680x4320">8K (7680 × 4320)</option>
+</select></div>
+<div class="selectContainer"><label class="selectLabel" for="SegmentType">HLS segment type</label><select id="SegmentType" is="emby-select"><option value="mpegts">MPEG-TS</option><option value="fmp4">fMP4</option></select></div>
+
+<h3>VSR image enhancement</h3>
+<div class="selectContainer"><label class="selectLabel" for="VsrQuality">NVIDIA VSR processing mode</label><select id="VsrQuality" is="emby-select">
+<option value="STREAMING_MEDIUM">Streaming Medium</option>
+<option value="HIGH">Standard High (compressed video)</option>
+<option value="ULTRA">Standard Ultra (strongest standard mode)</option>
+<option value="HIGHBITRATE_MEDIUM">High-bitrate Medium (preserve texture)</option>
+<option value="HIGHBITRATE_HIGH">High-bitrate High (preserve texture)</option>
+<option value="HIGHBITRATE_ULTRA">High-bitrate Ultra (clean source, demanding)</option>
+<option value="STREAMING_ULTRA">Streaming Ultra</option>
+<option value="MEDIUM">Standard Medium</option>
+<option value="LOW">Standard Low (fastest AI mode)</option>
+</select><div class="fieldDescription">Standard modes remove compression artifacts; high-bitrate modes preserve more texture in cleaner sources. Modes depend on your installed NVIDIA VFX SDK.</div></div>
+<div class="inputContainer"><label class="inputLabel" for="VsrStrength">VSR enhancement strength (0–1)</label><input id="VsrStrength" type="number" min="0" max="1" step="0.05" is="emby-input"><div class="fieldDescription">Default 0.75. Try 0.5–0.75 to avoid waxy textures.</div></div>
+<h3>HEVC NVENC encoding</h3>
+<div class="inputContainer"><label class="inputLabel" for="VideoMbps">HEVC bitrate (Mbps)</label><input id="VideoMbps" type="number" min="4" max="60" is="emby-input"></div>
+
+<div class="selectContainer"><label class="selectLabel" for="NvencPreset">NVENC encoding preset</label><select id="NvencPreset" is="emby-select">
+<option value="p4">p4 – Balanced</option><option value="p5">p5 – good quality</option><option value="p6">p6 – higher quality</option><option value="p7">p7 – highest quality (slowest)</option></select></div>
+<div class="selectContainer"><label class="selectLabel" for="NvencTune">NVENC tuning</label><select id="NvencTune" is="emby-select"><option value="default">Default</option><option value="hq">High quality</option></select></div>
+<div class="inputContainer"><label class="inputLabel" for="NvencLookahead">NVENC rate-control lookahead frames (0–32)</label><input id="NvencLookahead" type="number" min="0" max="32" step="1" is="emby-input"><div class="fieldDescription">0 disables lookahead; 10–20 can help complex scenes but raises GPU load.</div></div>
+<div class="inputContainer"><label class="inputLabel" for="NvencCq">NVENC constant-quality target (0–35)</label><input id="NvencCq" type="number" min="0" max="35" step="1" is="emby-input"><div class="fieldDescription">0 disables CQ and retains bitrate-based encoding. When enabled, lower values mean higher quality; bitrate and maxrate still apply.</div></div>
+<div class="checkboxContainer"><label class="emby-checkbox-label"><input id="NvencSpatialAq" type="checkbox" is="emby-checkbox"><span>Spatial adaptive quantization</span></label></div>
+<div class="checkboxContainer"><label class="emby-checkbox-label"><input id="NvencTemporalAq" type="checkbox" is="emby-checkbox"><span>Temporal adaptive quantization</span></label></div>
+<p class="fieldDescription">Changes apply to new playback sessions. More demanding settings can increase processing load.</p>
+<div class="inputContainer"><label class="inputLabel" for="MaxSessions">Maximum concurrent sessions</label><input id="MaxSessions" type="number" min="1" max="16" is="emby-input"></div>
+<div class="inputContainer"><label class="inputLabel" for="SessionMinutes">Session lifetime (minutes)</label><input id="SessionMinutes" type="number" min="10" max="1440" is="emby-input"></div>
+<p class="fieldDescription">Unsupported sources use standard Jellyfin playback.</p>
+<button type="submit" is="emby-button" class="raised button-submit block emby-button"><span>Save configuration</span></button>
+</form>
+</div></div>
+<script>
+(function () {
+    'use strict';
+    const pluginId = '7ca129d0-7454-41c7-aad6-55250b1a7b5b';
+    const page = document.querySelector('#VsrEverywherePage');
+    const status = page.querySelector('#VsrDevicesStatus');
+    const list = page.querySelector('#VsrDevicesList');
+    const fields = ['Enabled','EnableAllDevices','Backend','PythonPath','FfmpegPath','FfprobePath','CacheMode','MemoryBudgetMb','CacheDirectory','CacheMaxGb','CacheMinFreeGb','CacheIdleMinutes','EnableRollingCache','RollingRewindMinutes','VideoMbps','VsrQuality','VsrStrength','NvencPreset','NvencTune','NvencLookahead','NvencSpatialAq','NvencTemporalAq','NvencCq','SegmentType','MaxSessions','SessionMinutes'];
+    const resolutionFields = ['Processing', 'Stream'];
+    let approvedIds = new Set();
+    let retrievedDevices = [];
+    let loadedConfig = false;
+    let effectiveMemoryBudgetMb = 0;
+
+    function updateCacheMode() {
+        const disk = page.querySelector('#CacheMode').value === 'disk';
+        page.querySelector('#DiskCacheFields').hidden = !disk;
+        page.querySelector('#DiskRollingCache').hidden = !disk;
+        page.querySelector('#MemoryCacheFields').hidden = disk;
+        const budget = Number(page.querySelector('#MemoryBudgetMb').value) || effectiveMemoryBudgetMb;
+        page.querySelector('#MemoryBudgetStatus').textContent = budget > 0
+            ? 'Effective memory budget: ' + budget + ' MB across all sessions.'
+            : 'Automatic: up to 7 GB or 60% of available RAM. Low memory uses disk.';
+    }
+
+    function loadResolutions(cfg) {
+        for (const key of resolutionFields) {
+            const control = page.querySelector('#' + key + 'Resolution');
+            control.querySelector('option[data-saved]')?.remove();
+            const width = cfg[key + 'Width'] ?? 3840;
+            const height = cfg[key + 'Height'] ?? 2160;
+            const value = width + 'x' + height;
+            // Keep an existing custom size until the user chooses a preset.
+            if (!Array.from(control.options).some(option => option.value === value)) {
+                const option = document.createElement('option');
+                option.value = value;
+                option.textContent = width + ' × ' + height + ' (saved)';
+                option.dataset.saved = '';
+                control.append(option);
+            }
+            control.value = value;
+        }
+    }
+
+    function render() {
+        list.replaceChildren();
+        const ids = new Set();
+        for (const device of retrievedDevices) {
+            if (!device || typeof device.Id !== 'string' || !device.Id.trim() || ids.has(device.Id)) continue;
+            ids.add(device.Id);
+            const row = document.createElement('label');
+            row.className = 'emby-checkbox-label';
+            row.style.cssText = 'display:flex;align-items:center;gap:1em;padding:0.75em;border-bottom:1px solid rgba(128,128,128,.25);cursor:pointer;';
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.className = 'vsr-device-choice';
+            checkbox.value = device.Id;
+            checkbox.disabled = page.querySelector('#EnableAllDevices').checked;
+            checkbox.checked = checkbox.disabled || approvedIds.has(device.Id);
+            checkbox.addEventListener('change', () => {
+                if (checkbox.checked) approvedIds.add(device.Id);
+                else approvedIds.delete(device.Id);
+            });
+            const text = document.createElement('span');
+            const name = document.createElement('strong');
+            name.textContent = device.CustomName || device.Name || 'Unnamed device';
+            const metadata = document.createElement('small');
+            metadata.style.cssText = 'display:block;opacity:.75;';
+            const activity = device.DateLastActivity ? ' · Last activity: ' + new Date(device.DateLastActivity).toLocaleString() : '';
+            metadata.textContent = (device.AppName || 'Unknown client') + (device.LastUserName ? ' · ' + device.LastUserName : '') + activity;
+            text.append(name, metadata);
+            row.append(checkbox, text);
+            list.append(row);
+        }
+        // Preserve and expose approvals for devices which are no longer returned by /Devices.
+        for (const id of approvedIds) {
+            if (ids.has(id)) continue;
+            const row = document.createElement('label');
+            row.className = 'emby-checkbox-label';
+            row.style.cssText = 'display:flex;align-items:center;gap:1em;padding:0.75em;';
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.checked = true;
+            checkbox.disabled = page.querySelector('#EnableAllDevices').checked;
+            checkbox.addEventListener('change', () => {
+                if (!checkbox.checked) approvedIds.delete(id);
+                else approvedIds.add(id);
+            });
+            const text = document.createElement('span');
+            text.textContent = 'Previously approved device (not currently listed): ' + id;
+            row.append(checkbox, text);
+            list.append(row);
+        }
+        if (!list.children.length) status.textContent = 'No devices found. Sign in using the Jellyfin client, then refresh.';
+    }
+
+    async function refreshDevices() {
+        status.textContent = 'Loading devices…';
+        try {
+            // /Devices is an administrator-only Jellyfin API. ApiClient supplies authentication.
+            const response = await ApiClient.getJSON(ApiClient.getUrl('Devices'));
+            const items = response && (response.Items || response.items);
+            if (!Array.isArray(items)) throw new Error('Unexpected /Devices response');
+            retrievedDevices = items;
+            status.textContent = items.length + ' registered devices found.';
+            render();
+        } catch (error) {
+            status.textContent = 'Unable to load Jellyfin devices. Verify administrator access. Existing approvals have been kept.';
+            console.error('VSR Everywhere: /Devices lookup failed', error);
+            render();
+        }
+    }
+
+    page.addEventListener('pageshow', async () => {
+        Dashboard.showLoadingMsg();
+        try {
+            const cfg = await ApiClient.getPluginConfiguration(pluginId);
+            for (const key of fields) {
+                const control = page.querySelector('#' + key);
+                if (!control) continue;
+                if (control.type === 'checkbox') control.checked = !!cfg[key];
+                else control.value = cfg[key] ?? ({ CacheMode: 'memory', MemoryBudgetMb: 0 }[key] ?? '');
+            }
+            loadResolutions(cfg);
+            effectiveMemoryBudgetMb = Number(cfg.EffectiveMemoryBudgetMb) || 0;
+            updateCacheMode();
+            approvedIds = new Set((Array.isArray(cfg.EnabledDeviceIds) ? cfg.EnabledDeviceIds : []).filter(v => typeof v === 'string' && v.length > 0));
+            loadedConfig = true;
+            await refreshDevices();
+        } catch (error) {
+            status.textContent = 'Unable to load plugin configuration.';
+            console.error('VSR Everywhere: configuration load failed', error);
+        } finally { Dashboard.hideLoadingMsg(); }
+    });
+
+    page.querySelector('#RefreshVsrDevices').addEventListener('click', refreshDevices);
+    page.querySelector('#EnableAllDevices').addEventListener('change', render);
+    page.querySelector('#CacheMode').addEventListener('change', updateCacheMode);
+    page.querySelector('#MemoryBudgetMb').addEventListener('input', updateCacheMode);
+    page.querySelector('#VsrEverywhereForm').addEventListener('submit', async event => {
+        event.preventDefault();
+        if (!loadedConfig) { status.textContent = 'Configuration did not load; cannot save.'; return; }
+        Dashboard.showLoadingMsg();
+        try {
+            const cfg = await ApiClient.getPluginConfiguration(pluginId);
+            for (const key of fields) {
+                const control = page.querySelector('#' + key);
+                cfg[key] = control.type === 'checkbox' ? control.checked : control.type === 'number' ? Number(control.value) : control.value;
+            }
+            for (const key of resolutionFields) {
+                const [width, height] = page.querySelector('#' + key + 'Resolution').value.split('x').map(Number);
+                cfg[key + 'Width'] = width;
+                cfg[key + 'Height'] = height;
+            }
+            cfg.EnabledDeviceIds = Array.from(approvedIds);
+            const result = await ApiClient.updatePluginConfiguration(pluginId, cfg);
+            Dashboard.processPluginConfigurationUpdateResult(result);
+        } catch (error) {
+            status.textContent = 'Failed to save VSR device settings.';
+            console.error('VSR Everywhere: configuration save failed', error);
+        } finally { Dashboard.hideLoadingMsg(); }
+    });
+})();
+</script></div></body></html>
