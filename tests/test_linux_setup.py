@@ -1,5 +1,6 @@
 """Linux installer helpers and service transactions, without GPU or service changes."""
 import importlib.util
+from contextlib import nullcontext
 import json
 import os
 from pathlib import Path
@@ -121,6 +122,9 @@ class LinuxSetupChecks(unittest.TestCase):
             old.mkdir(parents=True)
             (old / 'meta.json').write_text(json.dumps(dict(guid=setup.GUID)))
             (old / 'old.dll').write_bytes(b'original')
+            other = data / 'plugins/OtherPlugin'
+            other.mkdir()
+            (other / 'other.dll').write_bytes(b'untouched')
             config = data / 'plugins/configurations' / setup.CONFIG
             config.parent.mkdir()
             original = b'<PluginConfiguration><VsrQuality>ULTRA</VsrQuality></PluginConfiguration>'
@@ -147,7 +151,9 @@ class LinuxSetupChecks(unittest.TestCase):
                     raise OSError('copy interrupted')
                 return original_copy(source, destination, **kwargs)
 
-            with mock.patch.object(setup.os, 'chown', create=True), \
+            native_ownership = os.name == 'posix' and getattr(os, 'geteuid', lambda: -1)() == 0
+            ownership = nullcontext() if native_ownership else mock.patch.object(setup.os, 'chown', create=True)
+            with ownership, \
                  mock.patch.object(setup, 'run', side_effect=command), \
                  mock.patch.object(setup, 'wait_loaded', side_effect=KeyboardInterrupt() if interrupt else RuntimeError('not loaded') if fail_verify else None), \
                  mock.patch.object(setup.shutil, 'copytree', side_effect=copy):
@@ -161,8 +167,11 @@ class LinuxSetupChecks(unittest.TestCase):
                     setup.deploy(target, payload, b'<PluginConfiguration><Enabled>true</Enabled></PluginConfiguration>', prefix, 'jellyfin.service', expected)
                     self.assertTrue((data / 'plugins/VSR-Everywhere/new.dll').is_file())
                     self.assertFalse(old.exists())
+                    if native_ownership:
+                        self.assertEqual(config.stat().st_uid, 1000)
                 self.assertEqual(events[0], 'stop')
                 self.assertEqual(events[-1], 'start')
+                self.assertEqual((other / 'other.dll').read_bytes(), b'untouched')
 
     def test_reject_other_plugin_destination(self):
         with tempfile.TemporaryDirectory() as temporary:

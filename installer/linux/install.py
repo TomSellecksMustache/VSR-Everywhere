@@ -250,9 +250,14 @@ def deploy(target, payload, settings, prefix, service, expected_config):
             copy_tree(folder, saved_path)
             saved.append((folder, saved_path))
         if original_config is not None:
-            (backup / 'configuration.xml').write_bytes(original_config)
+            saved_config = backup / 'configuration.xml'
+            saved_config.write_bytes(original_config)
+            os.chmod(saved_config, stat.S_IMODE(config_stat.st_mode))
+            os.chown(saved_config, config_stat.st_uid, config_stat.st_gid)
         record = dict(product='VSR Everywhere', data=str(data), config=str(config_path),
-                      plugins=[str(path) for path in previous], had_config=original_config is not None)
+                      plugins=[str(path) for path in previous], had_config=original_config is not None,
+                      config_metadata=dict(uid=config_stat.st_uid, gid=config_stat.st_gid,
+                          mode=stat.S_IMODE(config_stat.st_mode)) if config_stat else None)
         (backup / 'restore.json').write_text(json.dumps(record, indent=2), encoding='utf-8')
         for folder, _ in saved:
             removed.append(folder)
