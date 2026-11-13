@@ -1,4 +1,6 @@
-# VSR Everywhere 1.0.0
+# VSR Everywhere — DLSS testing
+
+**This branch is the Windows DLSS/Veyra preview, based on `main`.** It adds experimental neural rendering, automatic animation/live-action profiles, NVIDIA Auto HDR, and adaptive interpolation that preserves the input frame rate. [Install, settings, requirements, and validation](docs/dlss-testing.md). Stable 1.0.0 remains the recommended default download below.
 
 **NVIDIA Video Super Resolution for your Jellyfin server.**
 

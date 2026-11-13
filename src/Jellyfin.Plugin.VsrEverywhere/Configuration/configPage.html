@@ -12,6 +12,11 @@
 <button id="RefreshVsrDevices" type="button" is="emby-button" class="raised emby-button">Refresh devices</button>
 <hr>
 <div class="selectContainer"><label class="selectLabel" for="Backend">VSR backend</label><select id="Backend" is="emby-select"><option value="nvidia">NVIDIA Video Super Resolution + NVENC</option></select></div>
+<h3>Experimental NVIDIA enhancements (Windows)</h3>
+<div class="checkboxContainer"><label class="emby-checkbox-label"><input id="EnableNeuralRendering" type="checkbox" is="emby-checkbox"><span>Veyra experimental neural rendering</span></label></div>
+<div class="selectContainer"><label class="selectLabel" for="ContentProfile">Content profile</label><select id="ContentProfile" is="emby-select"><option value="auto">Automatic (library title metadata)</option><option value="animation">Animation</option><option value="live_action">Live action</option></select></div>
+<div class="checkboxContainer"><label class="emby-checkbox-label"><input id="EnableAutoHdr" type="checkbox" is="emby-checkbox"><span>NVIDIA Auto HDR (HDR10 players)</span></label></div>
+<div class="checkboxContainer"><label class="emby-checkbox-label"><input id="EnableFrameInterpolation" type="checkbox" is="emby-checkbox"><span>Use interpolation to maintain the input frame rate</span></label></div>
 <div class="inputContainer"><label class="inputLabel" for="PythonPath">Python executable</label><input id="PythonPath" type="text" is="emby-input"></div>
 <div class="inputContainer"><label class="inputLabel" for="FfmpegPath">FFmpeg executable</label><input id="FfmpegPath" type="text" is="emby-input"></div>
 <div class="inputContainer"><label class="inputLabel" for="FfprobePath">FFprobe executable</label><input id="FfprobePath" type="text" is="emby-input"></div>
@@ -86,7 +91,7 @@
     const page = document.querySelector('#VsrEverywherePage');
     const status = page.querySelector('#VsrDevicesStatus');
     const list = page.querySelector('#VsrDevicesList');
-    const fields = ['Enabled','EnableAllDevices','Backend','PythonPath','FfmpegPath','FfprobePath','CacheMode','MemoryBudgetMb','CacheDirectory','CacheMaxGb','CacheMinFreeGb','CacheIdleMinutes','EnableRollingCache','RollingRewindMinutes','VideoMbps','VsrQuality','VsrStrength','NvencPreset','NvencTune','NvencLookahead','NvencSpatialAq','NvencTemporalAq','NvencCq','SegmentType','MaxSessions','SessionMinutes'];
+    const fields = ['Enabled','EnableAllDevices','Backend','EnableNeuralRendering','ContentProfile','EnableAutoHdr','EnableFrameInterpolation','PythonPath','FfmpegPath','FfprobePath','CacheMode','MemoryBudgetMb','CacheDirectory','CacheMaxGb','CacheMinFreeGb','CacheIdleMinutes','EnableRollingCache','RollingRewindMinutes','VideoMbps','VsrQuality','VsrStrength','NvencPreset','NvencTune','NvencLookahead','NvencSpatialAq','NvencTemporalAq','NvencCq','SegmentType','MaxSessions','SessionMinutes'];
     const resolutionFields = ['Processing', 'Stream'];
     let approvedIds = new Set();
     let retrievedDevices = [];
@@ -199,8 +204,8 @@
             for (const key of fields) {
                 const control = page.querySelector('#' + key);
                 if (!control) continue;
-                if (control.type === 'checkbox') control.checked = !!cfg[key];
-                else control.value = cfg[key] ?? ({ CacheMode: 'memory', MemoryBudgetMb: 0 }[key] ?? '');
+                if (control.type === 'checkbox') control.checked = !!(cfg[key] ?? (key === 'EnableFrameInterpolation'));
+                else control.value = cfg[key] ?? ({ CacheMode: 'memory', MemoryBudgetMb: 0, ContentProfile: 'auto' }[key] ?? '');
             }
             loadResolutions(cfg);
             effectiveMemoryBudgetMb = Number(cfg.EffectiveMemoryBudgetMb) || 0;

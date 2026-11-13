@@ -221,7 +221,12 @@ function Get-NvidiaStatus { return 'fixture GPU' }
 function Install-VsrCppRuntime { }
 function Set-Acl { }
 function Grant-SetupAccess { }
+function Get-VerifiedDownload {
+    if ($args[0].file -like 'Veyra-*') { return 'verified fixture archive' }
+    return Join-Path $args[1] $args[0].file
+}
 function Invoke-SetupProcess {
+    if ($args[1][0] -like '*prepare_veyra.py') { return 0 }
     Add-Content -LiteralPath $env:VSR_TEST_EVENTS -Value 'runtime-test'
     return 0
 }

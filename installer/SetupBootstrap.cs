@@ -34,7 +34,15 @@ internal static class SetupBootstrap
                 security.AddAccessRule(new FileSystemAccessRule(sid, FileSystemRights.FullControl, InheritanceFlags.ContainerInherit | InheritanceFlags.ObjectInherit, PropagationFlags.None, AccessControlType.Allow));
             Directory.CreateDirectory(root, security);
             var assembly = Assembly.GetExecutingAssembly();
-            foreach (string name in new[] { "Install-VSREverywhere.ps1", "VSR-Everywhere-1.0.0-Windows.zip" })
+            string zipName = null;
+            foreach (string name in assembly.GetManifestResourceNames())
+            {
+                if (!name.EndsWith("-Windows.zip", StringComparison.Ordinal)) continue;
+                if (zipName != null) throw new InvalidOperationException("Multiple setup ZIP resources found.");
+                zipName = name;
+            }
+            if (zipName == null) throw new InvalidOperationException("The setup ZIP resource is missing.");
+            foreach (string name in new[] { "Install-VSREverywhere.ps1", zipName })
             {
                 using (Stream input = assembly.GetManifestResourceStream(name))
                 using (Stream output = File.Create(Path.Combine(root, name)))
@@ -68,7 +76,7 @@ internal static class SetupBootstrap
         }
         catch (Exception error)
         {
-            MessageBox.Show(error.Message, "VSR Everywhere 1.0.0 Setup", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBox.Show(error.Message, "VSR Everywhere DLSS preview Setup", MessageBoxButtons.OK, MessageBoxIcon.Error);
             return 1;
         }
     }

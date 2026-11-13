@@ -23,6 +23,10 @@ public sealed class PluginConfiguration : BasePluginConfiguration
     public bool Enabled { get; set; } = false;
     public bool EnableAllDevices { get; set; } = false;
     public string Backend { get; set; } = "nvidia";
+    public bool EnableNeuralRendering { get; set; } = OperatingSystem.IsWindows();
+    public string ContentProfile { get; set; } = "auto";
+    public bool EnableAutoHdr { get; set; } = false;
+    public bool EnableFrameInterpolation { get; set; } = OperatingSystem.IsWindows();
     public string ClientFilter { get; set; } = "Roku";
     // Explicit device selection applies when EnableAllDevices is false.
     public string[] EnabledDeviceIds { get; set; } = Array.Empty<string>();

@@ -200,3 +200,5 @@ def serve(args, run_worker):
             import torch
             torch.cuda.synchronize()
             retained['effect'].close()
+        if retained.get('enhancements') is not None:
+            retained['enhancements'].close()

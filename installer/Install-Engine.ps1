@@ -97,12 +97,24 @@ try {
     $python = Join-Path $runtime 'python.exe'
     $ffmpeg = Join-Path $encoder 'ffmpeg.exe'; $ffprobe = Join-Path $encoder 'ffprobe.exe'
     $configuration = New-PluginConfiguration $snapshot.Config $python $ffmpeg $ffprobe $cache ([bool]$plan.AllDevices)
+    Write-SetupStatus $JobPath 'download' 'Downloading Veyra experimental neural-rendering runtime...' 69
+    $null = Get-VerifiedDownload $manifest.veyra $downloads $JobPath
+    $veyra = Join-Path $runtime 'veyra'
+    $prepareArgs = @((Join-Path $PSScriptRoot 'prepare_veyra.py'), '--manifest', $manifestPath, '--downloads', $downloads,
+        '--target', $veyra, '--component', (Join-Path $payload 'worker\veyra'))
+    if ((Invoke-SetupProcess $python $prepareArgs $JobPath 600) -ne 0) { throw 'Veyra could not be prepared. Jellyfin has not been changed. See the setup log.' }
+    Grant-SetupAccess $veyra $account 'RX'
+    Grant-SetupAccess (Join-Path $veyra 'runtime_local') $account 'M'
     Write-SetupStatus $JobPath 'test' 'Testing NVIDIA VSR, HEVC video, and audio...' 74
     $testArgs = @((Join-Path $PSScriptRoot 'Test-Runtime.py'), '--worker', (Join-Path $payload 'worker\vsr_everywhere.py'),
         '--ffmpeg', $ffmpeg, '--ffprobe', $ffprobe, '--report', (Join-Path $JobPath 'runtime-test.json'),
         '--quality', (Get-XmlValue $configuration 'VsrQuality'),
         '--processing-width', (Get-XmlValue $configuration 'ProcessingWidth'), '--processing-height', (Get-XmlValue $configuration 'ProcessingHeight'),
         '--stream-width', (Get-XmlValue $configuration 'StreamWidth'), '--stream-height', (Get-XmlValue $configuration 'StreamHeight'))
+    $testArgs += @('--veyra-filter', (Join-Path $veyra 'VsrVeyraFilter.exe'))
+    if ((Get-XmlValue $configuration 'EnableNeuralRendering') -eq 'true') { $testArgs += '--neural-rendering' }
+    if ((Get-XmlValue $configuration 'EnableAutoHdr') -eq 'true') { $testArgs += '--auto-hdr' }
+    if ((Get-XmlValue $configuration 'EnableFrameInterpolation' 'true') -eq 'true') { $testArgs += '--frame-interpolation' }
     if ((Invoke-SetupProcess $python $testArgs $JobPath 420) -ne 0) { throw 'The VSR or video encoding test failed. Jellyfin has not been changed. See the setup log for the exact cause.' }
     Test-SetupCancellation $JobPath
     # Refresh process/service state immediately before changing the selected server.

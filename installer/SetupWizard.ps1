@@ -44,7 +44,7 @@ Add-Type -AssemblyName System.Drawing
 $script:pageIndex = 0; $script:target = $null; $script:engine = $null; $script:job = ''; $script:installing = $false
 $script:exitCode = 2; $script:result = $null
 $form = New-Object Windows.Forms.Form
-$form.Text = 'VSR Everywhere 1.0.0 Setup'
+$form.Text = 'VSR Everywhere DLSS preview Setup'
 $form.ClientSize = New-Object Drawing.Size(760, 550)
 $form.StartPosition = 'CenterScreen'; $form.FormBorderStyle = 'FixedSingle'; $form.MaximizeBox = $false
 $form.AutoScaleMode = 'Dpi'; $form.BackColor = [Drawing.Color]::White
@@ -65,7 +65,7 @@ function Add-Link($Parent, [string]$Text, [string]$Url, [int]$X, [int]$Y, [int]$
     $Parent.Controls.Add($link); return $link
 }
 $null = Add-Label $form 'VSR Everywhere' 24 18 650 38 22 -Bold
-$null = Add-Label $form '1.0.0  |  Windows setup' 26 61 650 26 10
+$null = Add-Label $form 'DLSS preview  |  Windows setup' 26 61 650 26 10
 $divider = New-Object Windows.Forms.Label
 $divider.Location = New-Object Drawing.Point(0, 98); $divider.Size = New-Object Drawing.Size(760, 1); $divider.BackColor = [Drawing.Color]::Gainsboro
 $form.Controls.Add($divider)

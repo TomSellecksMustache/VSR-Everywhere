@@ -1,5 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
 using MediaBrowser.Controller.Net;
+using MediaBrowser.Controller.Library;
+using MediaBrowser.Controller.Entities.TV;
+using MediaBrowser.Model.Dlna;
 using Jellyfin.Data.Enums;
 using MediaBrowser.Model.Dto;
 using MediaBrowser.Model.MediaInfo;
@@ -148,7 +151,30 @@ public sealed class PlaybackFilter : IAsyncActionFilter
                 _logger.LogWarning("VsrEverywhere TRACE source rejected: >8-bit video excluded");
                 continue;
             }
-            var token = _sessions.Register(source.Path, cfg);
+            var profile = "unknown";
+            try
+            {
+                var itemValue = context.ActionArguments.FirstOrDefault(pair => pair.Key.Equals("itemId", StringComparison.OrdinalIgnoreCase)).Value
+                    ?? context.RouteData.Values["itemId"];
+                if (Guid.TryParse(itemValue?.ToString(), out var itemId))
+                {
+                    var item = context.HttpContext.RequestServices.GetRequiredService<ILibraryManager>().GetItemById(itemId);
+                    var series = (item as Episode)?.Series;
+                    var labels = (item?.Genres ?? []).Concat(item?.Tags ?? [])
+                        .Concat(series?.Genres ?? []).Concat(series?.Tags ?? []);
+                    profile = EnhancementProfiles.Classify(cfg.ContentProfile, item?.Name ?? series?.Name, labels);
+                }
+                else profile = EnhancementProfiles.Classify(cfg.ContentProfile, null, []);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning("VSR Everywhere content metadata unavailable: {ExceptionType}", ex.GetType().Name);
+                profile = EnhancementProfiles.Classify(cfg.ContentProfile, null, []);
+            }
+            var deviceProfile = context.ActionArguments.Values.Where(value => value is not null)
+                .Select(value => value!.GetType().GetProperty("DeviceProfile")?.GetValue(value)).OfType<DeviceProfile>().FirstOrDefault();
+            var hdr = cfg.EnableAutoHdr && EnhancementProfiles.SupportsHdr10(deviceProfile);
+            var token = _sessions.Register(source.Path, cfg, profile, hdr);
             if (token is null)
             {
                 _logger.LogWarning("VsrEverywhere TRACE source rejected: session registry unavailable");
@@ -160,6 +186,13 @@ public sealed class PlaybackFilter : IAsyncActionFilter
             source.TranscodingContainer = cfg.SegmentType == "mpegts" ? "ts" : "mp4";
             source.TranscodingSubProtocol = MediaStreamProtocol.hls;
             source.TranscodingUrl = $"/VsrEverywhere/hls/{token}/index.m3u8";
+            if (hdr)
+            {
+                v.ColorPrimaries = "bt2020";
+                v.ColorTransfer = "smpte2084";
+                v.ColorSpace = "bt2020nc";
+                v.BitDepth = 10;
+            }
             _logger.LogWarning("VsrEverywhere TRACE SUCCESS: VSR HLS source created for matching client");
             return;
         }

@@ -72,7 +72,7 @@ public sealed class BridgeSessions : IDisposable
         foreach (var session in _active.Values) session.Dispose();
         _active.Clear();
     }
-    public string? Register(string source, PluginConfiguration cfg)
+    public string? Register(string source, PluginConfiguration cfg, string contentProfile = "unknown", bool hdr = false)
     {
         foreach (var (key, old) in _active)
         {
@@ -101,7 +101,7 @@ public sealed class BridgeSessions : IDisposable
         var memoryBudget = cfg.CacheMode == "disk" ? 0 : VsrMemoryBudget.Calculate(cfg.MemoryBudgetMb, VsrMemoryBudget.Available());
         if (memoryBudget > 0 && _memory.Register(token, memoryBudget, onDemand: true))
         {
-            var memorySession = new BridgeSession(token, source, "", cfg, _logger, _memory);
+            var memorySession = new BridgeSession(token, source, "", cfg, _logger, _memory, contentProfile, hdr);
             if (_active.TryAdd(token, memorySession))
             {
                 _logger.LogInformation("VSR Everywhere cache mode=memory global budget={BudgetMb} MB", _memory.BudgetBytes / VsrMemoryBudget.MiB);
@@ -139,7 +139,7 @@ public sealed class BridgeSessions : IDisposable
         // Cache root was already validated above.
         var root = Path.Combine(Path.GetFullPath(cacheRoot), token);
         // All worker outputs are generated in the token-specific cache, never beside the media file.
-        var session = new BridgeSession(token, source, root, cfg, _logger);
+        var session = new BridgeSession(token, source, root, cfg, _logger, null, contentProfile, hdr);
         _logger.LogInformation("VSR Everywhere cache mode=disk");
         return _active.TryAdd(token, session) ? token : null;
     }
@@ -148,6 +148,8 @@ public sealed class BridgeSessions : IDisposable
 public sealed partial class BridgeSession : IDisposable
 {
     private readonly PluginConfiguration _cfg;
+    private readonly string _contentProfile;
+    private readonly bool _hdr;
     private readonly ILogger _logger;
     private readonly SemaphoreSlim _startLock = new(1, 1);
     private Process? _worker;
@@ -170,12 +172,15 @@ public sealed partial class BridgeSession : IDisposable
     public int IdleMinutes => Math.Clamp(_cfg.CacheIdleMinutes, 2, 240);
     public BridgeSession(string token, string source, string root, PluginConfiguration cfg, ILogger logger)
         : this(token, source, root, cfg, logger, null) { }
-    internal BridgeSession(string token, string source, string root, PluginConfiguration cfg, ILogger logger, MemoryHlsStore? memory)
+    internal BridgeSession(string token, string source, string root, PluginConfiguration cfg, ILogger logger, MemoryHlsStore? memory,
+        string contentProfile = "unknown", bool hdr = false)
     {
         Token = token;
         Source = source;
         Root = root;
         _cfg = cfg;
+        _contentProfile = contentProfile is "animation" or "live_action" ? contentProfile : "unknown";
+        _hdr = hdr && cfg.EnableAutoHdr;
         _logger = logger;
         _memory = memory;
         Expires = DateTimeOffset.UtcNow.AddMinutes(Math.Clamp(cfg.SessionMinutes, 10, 1440));
@@ -267,6 +272,11 @@ public sealed partial class BridgeSession : IDisposable
             }) psi.ArgumentList.Add(a);
             if (_cfg.NvencSpatialAq) psi.ArgumentList.Add("--nvenc-spatial-aq");
             if (_cfg.NvencTemporalAq) psi.ArgumentList.Add("--nvenc-temporal-aq");
+            if (OperatingSystem.IsWindows() && _cfg.EnableNeuralRendering) psi.ArgumentList.Add("--neural-rendering");
+            psi.ArgumentList.Add("--content-profile");
+            psi.ArgumentList.Add(_contentProfile);
+            if (_cfg.EnableFrameInterpolation) psi.ArgumentList.Add("--frame-interpolation");
+            if (_hdr) psi.ArgumentList.Add("--auto-hdr");
             _logger.LogInformation("VSR Everywhere profile quality={Quality} strength={Strength} preset={Preset} tune={Tune} " +
                 "lookahead={Lookahead} spatialAQ={SpatialAq} temporalAQ={TemporalAq} cq={CQ} bitrate={Mbps}",
                 vsrQuality, vsrStrength, preset, tune, lookahead, _cfg.NvencSpatialAq,

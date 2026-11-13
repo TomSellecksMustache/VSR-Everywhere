@@ -36,6 +36,16 @@ internal static class PlaybackChecks
         await app.StartAsync();
         var address = app.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>()!.Addresses.Single();
         using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(40) };
+        var advanced = Environment.GetEnvironmentVariable("VSR_TEST_ADVANCED") == "1";
+        var sourceProbe = new ProcessStartInfo(Path.Combine(Path.GetDirectoryName(ffmpeg)!, "ffprobe.exe"))
+            { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true };
+        foreach (var argument in new[] { "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=avg_frame_rate", "-of", "csv=p=0", source }) sourceProbe.ArgumentList.Add(argument);
+        using var sourceProcess = Process.Start(sourceProbe)!;
+        var sourceRate = (await sourceProcess.StandardOutput.ReadToEndAsync()).Trim();
+        await sourceProcess.WaitForExitAsync();
+        Check(sourceProcess.ExitCode == 0, "Source rate probe failed");
+        var rateParts = sourceRate.Split('/');
+        var sourceFps = double.Parse(rateParts[0], System.Globalization.CultureInfo.InvariantCulture) / double.Parse(rateParts[1], System.Globalization.CultureInfo.InvariantCulture);
         foreach (var kind in new[] { "fmp4", "mpegts" })
         {
             var cache = Path.Combine(AppContext.BaseDirectory, "checks", "unused-cache-" + Guid.NewGuid().ToString("N"));
@@ -44,10 +54,12 @@ internal static class PlaybackChecks
                 PythonPath = python, FfmpegPath = ffmpeg,
                 FfprobePath = Path.Combine(Path.GetDirectoryName(ffmpeg)!, "ffprobe.exe"),
                 CacheMode = "memory", MemoryBudgetMb = 512, CacheDirectory = cache,
-                SegmentType = kind, SeekLookaheadSeconds = 2, SeekCatchupSeconds = 0
+                SegmentType = kind, SeekLookaheadSeconds = 2, SeekCatchupSeconds = 0,
+                EnableNeuralRendering = advanced, EnableAutoHdr = advanced, EnableFrameInterpolation = advanced
             };
             if (kind == "mpegts") { cfg.ProcessingWidth = 5120; cfg.ProcessingHeight = 2880; }
-            var token = sessions.Register(source, cfg)!;
+            if (advanced) { cfg.ProcessingWidth = 1280; cfg.ProcessingHeight = 720; cfg.StreamWidth = 640; cfg.StreamHeight = 360; }
+            var token = sessions.Register(source, cfg, advanced ? "animation" : "unknown", advanced)!;
             var session = sessions.Find(token)!;
             var url = address + "/VsrEverywhere/hls/" + token + "/";
             var output = Path.Combine(AppContext.BaseDirectory, "checks", "playback-" + kind + "-" + Guid.NewGuid().ToString("N"));
@@ -81,7 +93,7 @@ internal static class PlaybackChecks
             var samplePath = Path.Combine(output, "sample.m3u8");
             await File.WriteAllTextAsync(samplePath, sample);
             var probe = new ProcessStartInfo(cfg.FfprobePath) { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true };
-            foreach (var argument in new[] { "-v", "error", "-show_streams", "-of", "json", samplePath }) probe.ArgumentList.Add(argument);
+            foreach (var argument in new[] { "-v", "error", "-show_streams", "-show_frames", "-of", "json", samplePath }) probe.ArgumentList.Add(argument);
             using (var process = Process.Start(probe)!)
             {
                 var json = await process.StandardOutput.ReadToEndAsync();
@@ -92,7 +104,16 @@ internal static class PlaybackChecks
                 using var data = JsonDocument.Parse(json);
                 var video = data.RootElement.GetProperty("streams").EnumerateArray().First(stream => stream.GetProperty("codec_type").GetString() == "video");
                 Check(video.GetProperty("codec_name").GetString() == "hevc" && video.GetProperty("profile").GetString() == "Main 10", "GPU seek must remain HEVC Main 10");
-                Check(video.GetProperty("color_space").GetString() == "bt709", "Seek VUI must be BT.709");
+                Check(video.GetProperty("color_space").GetString() == (advanced ? "bt2020nc" : "bt709"), "Seek color VUI changed");
+                if (advanced)
+                {
+                    Check(video.GetProperty("color_transfer").GetString() == "smpte2084", "HDR seek lost PQ signaling");
+                    Check(video.GetProperty("r_frame_rate").GetString() == sourceRate, "Output frame rate differs from source");
+                    var timestamps = data.RootElement.GetProperty("frames").EnumerateArray()
+                        .Where(frame => frame.GetProperty("media_type").GetString() == "video")
+                        .Select(frame => double.Parse(frame.GetProperty("best_effort_timestamp_time").GetString()!, System.Globalization.CultureInfo.InvariantCulture)).ToArray();
+                    Check(timestamps.Length > 1 && timestamps.Zip(timestamps.Skip(1), (a, b) => Math.Abs(b - a - 1.0 / sourceFps) < .0001).All(value => value), "Interpolated seek pacing is uneven");
+                }
                 var pts = double.Parse(video.GetProperty("start_time").GetString()!, System.Globalization.CultureInfo.InvariantCulture);
                 Check(Math.Abs(pts - middle * segmentSeconds) < segmentSeconds / 48,
                     "Middle segment PTS must be absolute media time: " + pts);

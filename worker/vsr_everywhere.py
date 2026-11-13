@@ -8,7 +8,7 @@ NVIDIA's SDK/pip packages and models are installed independently under their ter
 from __future__ import annotations
 
 import argparse
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from fractions import Fraction
 import json
 import ipaddress
@@ -89,7 +89,7 @@ def build_ffmpeg_command(ffmpeg: str, source: str, dest: str, width: int, height
                          rolling_rewind_minutes: int = 0, encoded_video: bool = False,
                          raw_pixel_format: str = "rgb24", memory_output: bool = False,
                          ingest_key: str = "", start_segment: int | None = None,
-                         source_start_time: float = 0) -> list[str]:
+                         source_start_time: float = 0, hdr_output: bool = False) -> list[str]:
     if memory_output:
         if not hls:
             raise ValueError("Memory output requires HLS")
@@ -106,7 +106,7 @@ def build_ffmpeg_command(ffmpeg: str, source: str, dest: str, width: int, height
     fps_str = f"{fps.numerator}/{fps.denominator}"
     vf = f"setsar={sar.numerator}/{sar.denominator},scale={stream_width}:{stream_height}:force_original_aspect_ratio=decrease:flags=lanczos," \
          f"pad={stream_width}:{stream_height}:(ow-iw)/2:(oh-ih)/2,setsar=1,format=p010le"
-    if raw_pixel_format not in {"rgb24", "nv12"}:
+    if raw_pixel_format not in {"rgb24", "nv12", "p010le"}:
         raise ValueError("invalid raw pixel format")
     cmd = [ffmpeg, "-hide_banner", "-nostdin", "-loglevel", "warning", "-y"]
     if start_segment is not None:
@@ -118,6 +118,8 @@ def build_ffmpeg_command(ffmpeg: str, source: str, dest: str, width: int, height
                 "-framerate", fps_str]
         if raw_pixel_format == "nv12":
             cmd += ["-colorspace", "bt709", "-color_range", "tv", "-color_primaries", "bt709", "-color_trc", "bt709"]
+        if hdr_output:
+            cmd += ["-colorspace", "bt2020nc", "-color_range", "tv", "-color_primaries", "bt2020", "-color_trc", "smpte2084"]
         cmd += ["-i", "pipe:0"]
     if start > 0:
         cmd += ["-ss", f"{start:.3f}"]
@@ -125,8 +127,9 @@ def build_ffmpeg_command(ffmpeg: str, source: str, dest: str, width: int, height
         cmd += ["-itsoffset", f"{-source_start_time:.9f}"]
     cmd += ["-i", source, "-map", "0:v:0", "-map", "1:a:0?"]
     if encoded_video:
+        colour = "colour_primaries=9:transfer_characteristics=16:matrix_coefficients=9" if hdr_output else "colour_primaries=1:transfer_characteristics=1:matrix_coefficients=1"
         cmd += ["-c:v", "copy", "-tag:v", "hvc1", "-bsf:v",
-                "hevc_metadata=video_full_range_flag=0:colour_primaries=1:transfer_characteristics=1:matrix_coefficients=1"]
+                "hevc_metadata=video_full_range_flag=0:" + colour]
     else:
         cmd += ["-vf", vf, "-c:v", "hevc_nvenc", "-pix_fmt", "p010le",
             "-profile:v", "main10", "-tag:v", "hvc1",
@@ -134,7 +137,8 @@ def build_ffmpeg_command(ffmpeg: str, source: str, dest: str, width: int, height
             "-bufsize", f"{int(mbps * 2)}M", "-g", str(round(float(fps) * 2))]
     cmd += ["-c:a", "aac", "-b:a", "192k", "-ar", "48000", "-ac", "2", "-shortest"]
     if not encoded_video:
-        cmd += ["-color_primaries", "bt709", "-color_trc", "bt709", "-colorspace", "bt709"]
+        cmd += (["-color_primaries", "bt2020", "-color_trc", "smpte2084", "-colorspace", "bt2020nc", "-color_range", "tv"] if hdr_output
+                else ["-color_primaries", "bt709", "-color_trc", "bt709", "-colorspace", "bt709"])
     cmd += ["-metadata:s:v:0", "title=VSR Everywhere", "-max_muxing_queue_size", "1024"]
     if not encoded_video:
         cmd += ["-preset", nvenc_preset]
@@ -193,6 +197,12 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--memory-output", action="store_true", help="Upload HLS to the plugin's loopback memory store")
     p.add_argument("--serve", action="store_true", help="Keep VSR loaded and accept seek commands on stdin")
     p.add_argument("--backend", default="nvidia", choices=["nvidia", "vsr"])
+    p.add_argument("--neural-rendering", action="store_true")
+    p.add_argument("--content-profile", choices=['animation', 'live_action', 'unknown'], default='unknown')
+    p.add_argument("--auto-hdr", action="store_true")
+    p.add_argument("--frame-interpolation", action="store_true")
+    runtime_filter = Path(sys.executable).resolve().parent / 'veyra' / 'VsrVeyraFilter.exe'
+    p.add_argument("--veyra-filter", default=str(runtime_filter if runtime_filter.is_file() else Path(__file__).resolve().parent / 'veyra' / 'VsrVeyraFilter.exe'))
     p.add_argument("--ffmpeg", default="ffmpeg")
     p.add_argument("--ffprobe", default="ffprobe")
     p.add_argument("--video-mbps", type=int, default=18)
@@ -259,6 +269,7 @@ def run(args: argparse.Namespace, retained=None, initialize_only=False, control=
     proc = None
     log_file = None
     effect = None
+    enhancements = None
     encoder = None
     stats = StageMetrics()
     pipe_bytes = 0
@@ -283,25 +294,30 @@ def run(args: argparse.Namespace, retained=None, initialize_only=False, control=
                        or getattr(stream, 'base_rate', None) or 24).limit_denominator(1001)
         if not (1 <= fps <= 120):
             raise RuntimeError("Unsupported input framerate")
-        if initialize_only:
+        source_fps = fps
+        from vsr_temporal import source_pairs
+        advanced = args.neural_rendering or args.auto_hdr or args.frame_interpolation
+        duration = 0
+        if initialize_only or advanced:
             duration = float(stream.duration * stream.time_base) if stream.duration is not None else float(container.duration or 0) / 1_000_000
             if not math.isfinite(duration) or duration <= 0:
                 raise ValueError("On-demand playback requires a source with a known duration")
-            retained['frame_origin'] = cfr_origin(container, stream, fps)
+        if initialize_only:
+            retained['frame_origin'] = cfr_origin(container, stream, source_fps)
             retained['ready'] = {"event": "ready", "fps_num": fps.numerator, "fps_den": fps.denominator,
                                  "gop_frames": round(2 * fps), "duration_s": duration,
                                  "source_start_time": float(container.start_time or 0) / 1_000_000}
-            print(json.dumps(retained['ready']), flush=True)
         pipeline = "legacy"
         if args.pipeline == "gpu":
             try:
                 from vsr_gpu import GpuEncoder
-                encoder = GpuEncoder(args, g, fps, sar)
+                encode_geometry = replace(g, vsr_width=args.stream_width, vsr_height=args.stream_height) if advanced else g
+                encoder = GpuEncoder(args, encode_geometry, fps, Fraction(1) if advanced else sar)
                 pipeline = "gpu"
             except Exception as exc:
                 print(json.dumps({"event": "fallback", "reason": f"{type(exc).__name__}: {exc}",
                                   "pipeline": "legacy"}), flush=True)
-        threaded = retained is None and encoder is None and args.legacy_schedule == "threaded"
+        threaded = not advanced and retained is None and encoder is None and args.legacy_schedule == "threaded"
         def create_effect(stream_ptr=0):
             created = VideoSuperRes(quality=VideoSuperRes.QualityLevel[args.quality],
                                    strength=args.strength, device=0,
@@ -323,23 +339,34 @@ def run(args: argparse.Namespace, retained=None, initialize_only=False, control=
                 effect = create_effect()
                 if retained is not None:
                     retained['effect'] = effect
+        if advanced:
+            from vsr_enhancements import Enhancements
+            enhancements = retained.get('enhancements') if retained is not None else None
+            if enhancements is None:
+                enhancements = Enhancements(args, width, height, source_fps)
+                if retained is not None:
+                    retained['enhancements'] = enhancements
+            enhancements.reset()
         if initialize_only:
+            print(json.dumps(retained['ready']), flush=True)
             return
+        seek_time = max(0, args.start_time - float(1 / source_fps)) if advanced else args.start_time
         if args.start_time:
-            container.seek(int(args.start_time / stream.time_base) + (getattr(stream, 'start_time', None) or 0),
+            container.seek(int(seek_time / stream.time_base) + (getattr(stream, 'start_time', None) or 0),
                            stream=stream, any_frame=False, backward=True)
         if not args.memory_output:
             log_file = open(dest.parent / "ffmpeg-vsr.log", "wb")
         cmd = build_ffmpeg_command(args.ffmpeg, str(source), str(dest),
-                                   g.vsr_width, g.vsr_height, fps, args.video_mbps,
-                                   args.segment_type, args.start_time, args.hls, sar,
+                                   args.stream_width if advanced else g.vsr_width, args.stream_height if advanced else g.vsr_height, fps, args.video_mbps,
+                                   args.segment_type, args.start_time, args.hls, Fraction(1) if advanced else sar,
                                    args.nvenc_preset, args.nvenc_tune, args.nvenc_lookahead,
                                    args.nvenc_spatial_aq, args.nvenc_temporal_aq, args.nvenc_cq,
                                    args.stream_width, args.stream_height, args.rolling_rewind_minutes,
                                    encoded_video=encoder is not None,
-                                   raw_pixel_format="nv12" if threaded else "rgb24",
+                                   raw_pixel_format="p010le" if args.auto_hdr else "nv12" if threaded else "rgb24",
                                    memory_output=args.memory_output, ingest_key=ingest_key, start_segment=start_segment,
-                                   source_start_time=retained['ready'].get('source_start_time', 0) if retained is not None else 0)
+                                   source_start_time=retained['ready'].get('source_start_time', 0) if retained is not None else 0,
+                                   hdr_output=args.auto_hdr)
         print(json.dumps({"event": "start", "source_size": [width, height],
                           "vsr_size": [g.vsr_width, g.vsr_height],
                           "output_size": [args.stream_width, args.stream_height],
@@ -349,6 +376,9 @@ def run(args: argparse.Namespace, retained=None, initialize_only=False, control=
                                     "spatial_aq": args.nvenc_spatial_aq,
                                     "temporal_aq": args.nvenc_temporal_aq},
                           "fps": float(fps),
+                          "source_fps": float(source_fps), "neural_rendering": args.neural_rendering,
+                          "content_profile": args.content_profile, "hdr": args.auto_hdr,
+                          "frame_interpolation": args.frame_interpolation,
                           "pipeline": pipeline,
                           "legacy_schedule": "threaded" if threaded else "serial",
                           "audio": bool(container.streams.audio)}), flush=True)
@@ -377,7 +407,14 @@ def run(args: argparse.Namespace, retained=None, initialize_only=False, control=
                                                  proc, stats, progress)
         else:
             gop = round(2 * fps)
-            frames = iter(cfr_frames(container, stream, fps, start_segment * gop,
+            if advanced:
+                first_output = start_segment * gop if control is not None else math.ceil(args.start_time * float(fps))
+                first_source = first_output
+                source_frames = cfr_frames(container, stream, source_fps, first_source,
+                    math.ceil(duration * float(source_fps)), frame_origin=retained.get('frame_origin') if retained else None)
+                frames = iter(source_pairs(source_frames, first_output, math.ceil(duration * float(fps)), lambda: enhancements.stride))
+            else:
+                frames = iter(cfr_frames(container, stream, fps, start_segment * gop,
                                      math.ceil(retained['ready']['duration_s'] * float(fps)),
                                      frame_origin=retained.get('frame_origin'))
                           if control is not None else container.decode(stream))
@@ -387,24 +424,35 @@ def run(args: argparse.Namespace, retained=None, initialize_only=False, control=
                     frame = next(frames)
                 except StopIteration:
                     break
-                if control is not None:
+                if advanced:
+                    stats.add("decode", (time.perf_counter() - decode_start) * 1000)
+                    if control is not None:
+                        control.wait_for_slot(frame[3], gop, run_id)
+                    frame_start = time.perf_counter()
+                    enhanced = enhancements.frame(frame, source_fps, effect, sar, stream_ptr, stats)
+                elif control is not None:
                     frame, slot = frame
                     control.wait_for_slot(slot, gop, run_id)
-                if (control is None and args.start_time and frame.time is not None
+                if (not advanced and control is None and args.start_time and frame.time is not None
                         and frame.time - float((getattr(stream, 'start_time', None) or 0) * stream.time_base) < args.start_time):
                     continue
-                rgb = np.ascontiguousarray(frame.to_ndarray(format="rgb24"))
-                stats.add("decode", (time.perf_counter() - decode_start) * 1000)
-                with stats.gpu("upload", torch):
-                    tensor = torch.from_numpy(rgb).to("cuda:0").permute(2, 0, 1).float().div(255).contiguous()
-                with stats.gpu("vsr", torch):
-                    result = effect.run(tensor, stream_ptr=stream_ptr)
-                    # clone because the VFX SDK retains ownership of the DLPack memory.
-                    enhanced = torch.from_dlpack(result.image).clone()
+                if not advanced:
+                    rgb = np.ascontiguousarray(frame.to_ndarray(format="rgb24"))
+                    stats.add("decode", (time.perf_counter() - decode_start) * 1000)
+                    with stats.gpu("upload", torch):
+                        tensor = torch.from_numpy(rgb).to("cuda:0").permute(2, 0, 1).float().div(255).contiguous()
+                    with stats.gpu("vsr", torch):
+                        result = effect.run(tensor, stream_ptr=stream_ptr)
+                        # clone because the VFX SDK retains ownership of the DLPack memory.
+                        enhanced = torch.from_dlpack(result.image).clone()
                 if encoder is None:
                     with stats.gpu("convert_download", torch):
-                        out = (enhanced.clamp(0, 1).mul(255).round().byte()
-                               .permute(1, 2, 0).contiguous().cpu().numpy())
+                        if args.auto_hdr:
+                            from vsr_colour import rgb_to_yuv420
+                            out = rgb_to_yuv420(enhanced, bits=10, matrix='bt2020').cpu().numpy()
+                        else:
+                            out = (enhanced.clamp(0, 1).mul(255).round().byte()
+                                   .permute(1, 2, 0).contiguous().cpu().numpy())
                     with stats.cpu("write"):
                         payload = out.tobytes()
                         assert proc.stdin is not None
@@ -419,12 +467,15 @@ def run(args: argparse.Namespace, retained=None, initialize_only=False, control=
                         write_all(proc.stdin, payload)
                 pipe_bytes += len(payload)
                 stats.resolve()
+                if advanced:
+                    enhancements.observe((time.perf_counter() - frame_start) * 1000)
                 processed += 1
                 if processed % 60 == 0:
                     elapsed = time.monotonic() - start_wall
                     print(json.dumps({"event": "progress", "frames": processed,
                                       "run": run_id, "segment": start_segment + processed // gop - 1 if control is not None else None,
                                       "effective_fps": round(processed / max(elapsed, .001), 2),
+                                      "enhancement_stride": enhancements.stride if enhancements else 1,
                                       "stages_ms": stats.means(), "pipe_bytes": pipe_bytes,
                                       "pipe_mbps": round(pipe_bytes * 8 / max(elapsed, .001) / 1e6, 3),
                                       "cuda_memory_allocated": torch.cuda.memory_allocated(),
@@ -450,6 +501,8 @@ def run(args: argparse.Namespace, retained=None, initialize_only=False, control=
                   "source": str(source), "output": str(dest),
                   "vsr": args.quality, "nvenc_requested": True, "pipeline": pipeline,
                   "legacy_schedule": "threaded" if threaded else "serial",
+                  "generated_frames": enhancements.generated if enhancements else 0,
+                  "enhancement_stride": enhancements.stride if enhancements else 1,
                   "stages_ms": stats.means(), "pipe_bytes": pipe_bytes,
                   "pipe_mb_per_second": round(pipe_bytes / max(elapsed, .001) / 1e6, 3),
                   "cuda_peak_allocated_bytes": torch.cuda.max_memory_allocated(),
@@ -468,6 +521,8 @@ def run(args: argparse.Namespace, retained=None, initialize_only=False, control=
             log_file.close()
         if effect is not None and retained is None:
             effect.close()
+        if enhancements is not None and retained is None:
+            enhancements.close()
         if encoder is not None:
             encoder.close()
         container.close()

@@ -55,6 +55,7 @@ class GpuEncoder:
         self._geometry = geometry
         self._width, self._height = args.stream_width, args.stream_height
         self._sar = sar
+        self._hdr = getattr(args, 'auto_hdr', False)
         if args.nvenc_lookahead:
             raise NotImplementedError('GPU encoder cannot disable adaptive keyframes with lookahead; using legacy encoding')
         if args.nvenc_preset not in {'p4', 'p5', 'p6', 'p7'} or args.nvenc_tune not in {'default', 'hq'}:
@@ -135,7 +136,8 @@ class GpuEncoder:
             raise ValueError('Expected the VSR CHW RGB tensor on CUDA device 0')
         self._stream.wait_stream(self._torch.cuda.current_stream(0))
         with self._torch.cuda.stream(self._stream):
-            self._surface = _CudaInput(rgb_to_yuv420(fit_rgb(rgb, self._width, self._height, self._sar), bits=10, matrix='bt709'))
+            self._surface = _CudaInput(rgb_to_yuv420(fit_rgb(rgb, self._width, self._height, self._sar),
+                bits=10, matrix='bt2020' if self._hdr else 'bt709'))
         # Raw DLPack input has no consumer-stream handoff; keep its allocation until copying finishes.
         self._stream.synchronize()
         try:

@@ -60,7 +60,8 @@ let config = {
     RollingRewindMinutes: 10, VideoMbps: 40, VsrQuality: 'HIGH', VsrStrength: 0.75,
     NvencPreset: 'p5', NvencTune: 'hq', NvencLookahead: 12, NvencSpatialAq: true,
     NvencTemporalAq: false, NvencCq: 0, SegmentType: 'mpegts', MaxSessions: 1,
-    SessionMinutes: 180, FutureSetting: 'keep me'
+    SessionMinutes: 180, FutureSetting: 'keep me',
+    EnableNeuralRendering: false, ContentProfile: 'auto', EnableAutoHdr: false, EnableFrameInterpolation: true
 };
 const pluginId = '7ca129d0-7454-41c7-aad6-55250b1a7b5b';
 vm.runInNewContext(script, {
@@ -83,6 +84,22 @@ const save = () => controls.VsrEverywhereForm.listeners.submit({ preventDefault(
     const original = structuredClone(config);
     await save();
     assert.deepEqual(config, original, 'Opening and saving must retain the existing configuration');
+    for (const enabled of [false, true]) {
+        controls.EnableFrameInterpolation.checked = enabled;
+        await save(); await load();
+        assert.equal(config.EnableFrameInterpolation, enabled);
+        assert.equal(controls.EnableFrameInterpolation.checked, enabled);
+    }
+    controls.ContentProfile.value = 'animation';
+    controls.EnableNeuralRendering.checked = true;
+    controls.EnableAutoHdr.checked = true;
+    await save(); await load();
+    assert.equal(config.ContentProfile, 'animation');
+    assert.equal(config.EnableNeuralRendering, true);
+    assert.equal(config.EnableAutoHdr, true);
+    assert.equal(controls.ContentProfile.value, 'animation');
+    assert.equal(controls.EnableNeuralRendering.checked, true);
+    assert.equal(controls.EnableAutoHdr.checked, true);
     assert.equal(controls.DiskCacheFields.hidden, false);
     assert.equal(controls.MemoryCacheFields.hidden, true);
     controls.CacheMode.value = 'memory';
@@ -142,4 +159,11 @@ const save = () => controls.VsrEverywhereForm.listeners.submit({ preventDefault(
     assert.equal(config.MemoryBudgetMb, 0);
     assert.equal(config.CacheDirectory, original.CacheDirectory);
     console.log('PASS: all 36 resolution pairs, device approvals, saved sizes, memory/disk controls, budget display and compatible defaults.');
+    delete config.ContentProfile; delete config.EnableFrameInterpolation;
+    await load();
+    assert.equal(controls.ContentProfile.value, 'auto');
+    assert.equal(controls.EnableFrameInterpolation.checked, true);
+    await save();
+    assert.equal(config.ContentProfile, 'auto');
+    assert.equal(config.EnableFrameInterpolation, true);
 })().catch(error => { console.error(error); process.exitCode = 1; });

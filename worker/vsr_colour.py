@@ -7,7 +7,9 @@ def coefficients(matrix):
         return 0.2126, 0.7152, 0.0722
     if matrix == "bt601":
         return 0.299, 0.587, 0.114
-    raise ValueError("Expected bt601 or bt709 colour matrix")
+    if matrix == "bt2020":
+        return 0.2627, 0.6780, 0.0593
+    raise ValueError("Expected bt601, bt709, or bt2020 colour matrix")
 
 
 def rgb_to_yuv_reference(rgb, bits=8, matrix="bt709"):

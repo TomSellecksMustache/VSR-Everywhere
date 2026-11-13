@@ -189,7 +189,8 @@ function Get-NvidiaStatus {
 function New-PluginConfiguration($Existing, [string]$Python, [string]$Ffmpeg, [string]$Ffprobe, [string]$Cache, [bool]$AllDevices) {
     if ($Existing) { $xml = [xml]$Existing.OuterXml }
     else { $xml = [xml]'<?xml version="1.0" encoding="utf-8"?><PluginConfiguration />' }
-    $defaults = [ordered]@{ Backend = 'nvidia'; VideoMbps = '20'; VsrQuality = 'STREAMING_MEDIUM'; VsrStrength = '0.75';
+    $defaults = [ordered]@{ Backend = 'nvidia'; EnableNeuralRendering = 'true'; ContentProfile = 'auto'; EnableAutoHdr = 'false'; EnableFrameInterpolation = 'true';
+        VideoMbps = '20'; VsrQuality = 'STREAMING_MEDIUM'; VsrStrength = '0.75';
         NvencPreset = 'p4'; NvencTune = 'default'; NvencLookahead = '0'; NvencSpatialAq = 'false'; NvencTemporalAq = 'false';
         NvencCq = '0'; SegmentType = 'mpegts'; MaxSessions = '1'; SessionMinutes = '180';
         CacheMode = 'memory'; MemoryBudgetMb = '0'; SeekLookaheadSeconds = '90'; SeekCatchupSeconds = '20';
