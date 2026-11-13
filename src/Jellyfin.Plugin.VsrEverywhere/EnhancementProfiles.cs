@@ -4,6 +4,9 @@ namespace Jellyfin.Plugin.VsrEverywhere;
 
 internal static class EnhancementProfiles
 {
+    internal static int DeliveryMbps(int requested, string? client)
+        => Math.Clamp(requested, 4, client?.Contains("roku", StringComparison.OrdinalIgnoreCase) == true ? 40 : 60);
+
     internal static string Classify(string requested, string? title, IEnumerable<string> labels)
     {
         if (requested is "animation" or "live_action") return requested;

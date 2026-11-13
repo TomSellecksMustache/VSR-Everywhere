@@ -12,6 +12,10 @@ internal static class EnhancementChecks
         Check(EnhancementProfiles.Classify("animation", "Any title", ["Drama"]) == "animation");
         Check(EnhancementProfiles.Classify("live_action", "Any title", ["Anime"]) == "live_action");
         Check(!EnhancementProfiles.SupportsHdr10(null));
+        Check(EnhancementProfiles.DeliveryMbps(60, "Jellyfin Roku") == 40);
+        Check(EnhancementProfiles.DeliveryMbps(18, "Roku") == 18);
+        Check(EnhancementProfiles.DeliveryMbps(60, "Jellyfin Web") == 60);
+        Check(EnhancementProfiles.DeliveryMbps(1, null) == 4);
         var range = new ProfileCondition { Property = ProfileConditionValue.VideoRangeType, Condition = ProfileConditionType.EqualsAny, Value = "SDR|HDR10" };
         var profile = new DeviceProfile { CodecProfiles = [new CodecProfile { Type = CodecType.Video, Codec = "hevc", Conditions = [range] }] };
         Check(EnhancementProfiles.SupportsHdr10(profile));

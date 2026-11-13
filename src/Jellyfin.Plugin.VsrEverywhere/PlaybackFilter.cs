@@ -173,8 +173,17 @@ public sealed class PlaybackFilter : IAsyncActionFilter
             }
             var deviceProfile = context.ActionArguments.Values.Where(value => value is not null)
                 .Select(value => value!.GetType().GetProperty("DeviceProfile")?.GetValue(value)).OfType<DeviceProfile>().FirstOrDefault();
-            var hdr = cfg.EnableAutoHdr && EnhancementProfiles.SupportsHdr10(deviceProfile);
-            var token = _sessions.Register(source.Path, cfg, profile, hdr);
+            var profileSource = deviceProfile is null ? "registered device" : "playback request";
+            deviceProfile ??= context.HttpContext.RequestServices.GetRequiredService<MediaBrowser.Controller.Devices.IDeviceManager>()
+                .GetCapabilities(registeredDevice.DeviceId)?.DeviceProfile;
+            var supportsHdr = EnhancementProfiles.SupportsHdr10(deviceProfile);
+            var hdr = cfg.EnableAutoHdr && supportsHdr;
+            _logger.LogInformation("VSR Everywhere HDR requested={Requested} clientHdr10={ClientHdr10} profile={ProfileSource} output={Range}",
+                cfg.EnableAutoHdr, supportsHdr, deviceProfile is null ? "missing" : profileSource, hdr ? "HDR10" : "SDR");
+            var videoMbps = EnhancementProfiles.DeliveryMbps(cfg.VideoMbps, registeredDevice.AppName);
+            if (videoMbps != cfg.VideoMbps)
+                _logger.LogInformation("VSR Everywhere delivery bitrate limited to {Mbps} Mbps for this client", videoMbps);
+            var token = _sessions.Register(source.Path, cfg, profile, hdr, videoMbps);
             if (token is null)
             {
                 _logger.LogWarning("VsrEverywhere TRACE source rejected: session registry unavailable");

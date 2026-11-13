@@ -50,3 +50,15 @@ def rgb_to_yuv420(rgb, bits=8, matrix="bt709"):
     surface[height:, 0::2].copy_((chroma[0] * shift).to(dtype))
     surface[height:, 1::2].copy_((chroma[1] * shift).to(dtype))
     return surface
+
+
+def sdr_to_hdr(rgb):
+    """sRGB/BT.709 primaries to BT.2020/PQ, with SDR white at 203 nits."""
+    import torch
+    linear = torch.where(rgb <= .04045, rgb / 12.92, ((rgb + .055) / 1.055).pow(2.4))
+    matrix = rgb.new_tensor([[.6274039, .3292830, .0433131],
+                             [.0690973, .9195404, .0113623],
+                             [.0163914, .0880133, .8955953]])
+    wide = torch.einsum('ij,jhw->ihw', matrix, linear).clamp_(0, 1).mul_(203 / 10000)
+    power = wide.pow(2610 / 16384)
+    return ((3424 / 4096 + 2413 / 128 * power) / (1 + 2392 / 128 * power)).pow(2523 / 32)

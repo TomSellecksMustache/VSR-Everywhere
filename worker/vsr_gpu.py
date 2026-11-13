@@ -87,7 +87,7 @@ class GpuEncoder:
                        fps=f'{fps.numerator}/{fps.denominator}', gop=round(2 * fps),
                        idrperiod=round(2 * fps), bf=0, lookahead=0, rc='vbr',
                        bitrate=args.video_mbps * 1_000_000,
-                       maxbitrate=int(args.video_mbps * 1.3) * 1_000_000,
+                       maxbitrate=args.video_mbps * 1_000_000,
                        vbvbufsize=args.video_mbps * 2_000_000, repeatspspps=1)
         # In 2.2.3 these options enable AQ by presence, including a supplied zero.
         if args.nvenc_spatial_aq:

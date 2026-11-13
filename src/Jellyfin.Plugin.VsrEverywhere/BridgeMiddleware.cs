@@ -130,7 +130,7 @@ public sealed class BridgeMiddleware
         while (!http.RequestAborted.IsCancellationRequested)
         {
             var changed = session.MemoryChanged;
-            using var body = session.OpenMemory(name);
+            using var body = session.MemoryReady(name) ? session.OpenMemory(name) : null;
             if (body is not null)
             {
                 http.Response.ContentType = name.EndsWith(".m3u8", StringComparison.Ordinal) ? "application/vnd.apple.mpegurl"

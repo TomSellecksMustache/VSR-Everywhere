@@ -116,7 +116,7 @@ def build_ffmpeg_command(ffmpeg: str, source: str, dest: str, width: int, height
     else:
         cmd += ["-f", "rawvideo", "-pixel_format", raw_pixel_format, "-video_size", f"{width}x{height}",
                 "-framerate", fps_str]
-        if raw_pixel_format == "nv12":
+        if raw_pixel_format in {"nv12", "p010le"} and not hdr_output:
             cmd += ["-colorspace", "bt709", "-color_range", "tv", "-color_primaries", "bt709", "-color_trc", "bt709"]
         if hdr_output:
             cmd += ["-colorspace", "bt2020nc", "-color_range", "tv", "-color_primaries", "bt2020", "-color_trc", "smpte2084"]
@@ -133,7 +133,7 @@ def build_ffmpeg_command(ffmpeg: str, source: str, dest: str, width: int, height
     else:
         cmd += ["-vf", vf, "-c:v", "hevc_nvenc", "-pix_fmt", "p010le",
             "-profile:v", "main10", "-tag:v", "hvc1",
-            "-b:v", f"{mbps}M", "-maxrate", f"{int(mbps * 1.3)}M",
+            "-b:v", f"{mbps}M", "-maxrate", f"{mbps}M",
             "-bufsize", f"{int(mbps * 2)}M", "-g", str(round(float(fps) * 2))]
     cmd += ["-c:a", "aac", "-b:a", "192k", "-ar", "48000", "-ac", "2", "-shortest"]
     if not encoded_video:
@@ -155,7 +155,8 @@ def build_ffmpeg_command(ffmpeg: str, source: str, dest: str, width: int, height
     if start_segment is not None:
         if not 0 <= start_segment <= 999999:
             raise ValueError("Invalid starting segment")
-        cmd += ["-avoid_negative_ts", "make_non_negative", "-muxdelay", "0", "-muxpreload", "0"]
+        cmd += ["-avoid_negative_ts", "make_non_negative", "-muxdelay", "0", "-muxpreload", "0",
+                "-shortest_buf_duration", "1"]
         if not encoded_video:
             cmd += ["-forced-idr", "1", "-no-scenecut", "1", "-bf", "0"]
     if hls:
@@ -296,7 +297,7 @@ def run(args: argparse.Namespace, retained=None, initialize_only=False, control=
             raise RuntimeError("Unsupported input framerate")
         source_fps = fps
         from vsr_temporal import source_pairs
-        advanced = args.neural_rendering or args.auto_hdr or args.frame_interpolation
+        advanced = args.neural_rendering or args.auto_hdr or args.frame_interpolation or args.serve
         duration = 0
         if initialize_only or advanced:
             duration = float(stream.duration * stream.time_base) if stream.duration is not None else float(container.duration or 0) / 1_000_000
@@ -308,7 +309,7 @@ def run(args: argparse.Namespace, retained=None, initialize_only=False, control=
                                  "gop_frames": round(2 * fps), "duration_s": duration,
                                  "source_start_time": float(container.start_time or 0) / 1_000_000}
         pipeline = "legacy"
-        if args.pipeline == "gpu":
+        if args.pipeline == "gpu" and not initialize_only:
             try:
                 from vsr_gpu import GpuEncoder
                 encode_geometry = replace(g, vsr_width=args.stream_width, vsr_height=args.stream_height) if advanced else g
@@ -333,13 +334,52 @@ def run(args: argparse.Namespace, retained=None, initialize_only=False, control=
             except BaseException:
                 created.close()
                 raise
-        if not threaded:
+        if initialize_only:
+            from vsr_startup import Startup
+            def load_models():
+                from vsr_enhancements import Enhancements
+                warm_effect = warm_enhancements = None
+                warm_stats = StageMetrics()
+                stage = 'VSR model loading'
+                try:
+                    torch.cuda.set_device(0)
+                    # shortcut: pinned TrueHDR rejects custom streams; revisit after a verified SDK update.
+                    warm_stream = torch.cuda.default_stream(device=0)
+                    with torch.cuda.stream(warm_stream):
+                        warm_effect = create_effect(warm_stream.cuda_stream)
+                        stage = 'NR/HDR/interpolation model loading'
+                        warm_enhancements = Enhancements(args, width, height, source_fps)
+                        frame = av.VideoFrame.from_ndarray(np.zeros((height, width, 3), dtype=np.uint8), format='rgb24')
+                        alpha = Fraction(1, 2) if args.frame_interpolation else Fraction(0)
+                        stage = 'first enhanced frame'
+                        warm_enhancements.frame((frame, frame, alpha, 0, 0, int(bool(alpha))), source_fps,
+                            warm_effect, sar, warm_stream.cuda_stream, warm_stats)
+                        warm_stats.resolve()
+                        warm_enhancements.reset()
+                    return warm_effect, warm_enhancements
+                except Exception as exc:
+                    events = warm_stats.take_events()
+                    if events:
+                        stage = events[-1][0]
+                    if warm_enhancements is not None:
+                        warm_enhancements.close()
+                    if warm_effect is not None:
+                        warm_effect.close()
+                    raise RuntimeError(f'Enhancement warmup failed during {stage}: {exc}') from exc
+            retained['startup'] = Startup(args, fps, load_models)
+            print(json.dumps(retained['ready']), flush=True)
+            return
+        startup = retained.get('startup') if retained is not None else None
+        if not threaded and startup is None:
             effect = retained.get('effect') if retained is not None else None
             if effect is None:
                 effect = create_effect()
                 if retained is not None:
                     retained['effect'] = effect
-        if advanced:
+        if startup is not None:
+            enhancements = startup
+            enhancements.reset()
+        elif advanced:
             from vsr_enhancements import Enhancements
             enhancements = retained.get('enhancements') if retained is not None else None
             if enhancements is None:
@@ -347,9 +387,6 @@ def run(args: argparse.Namespace, retained=None, initialize_only=False, control=
                 if retained is not None:
                     retained['enhancements'] = enhancements
             enhancements.reset()
-        if initialize_only:
-            print(json.dumps(retained['ready']), flush=True)
-            return
         seek_time = max(0, args.start_time - float(1 / source_fps)) if advanced else args.start_time
         if args.start_time:
             container.seek(int(seek_time / stream.time_base) + (getattr(stream, 'start_time', None) or 0),
@@ -363,7 +400,7 @@ def run(args: argparse.Namespace, retained=None, initialize_only=False, control=
                                    args.nvenc_spatial_aq, args.nvenc_temporal_aq, args.nvenc_cq,
                                    args.stream_width, args.stream_height, args.rolling_rewind_minutes,
                                    encoded_video=encoder is not None,
-                                   raw_pixel_format="p010le" if args.auto_hdr else "nv12" if threaded else "rgb24",
+                                   raw_pixel_format="p010le" if advanced else "nv12" if threaded else "rgb24",
                                    memory_output=args.memory_output, ingest_key=ingest_key, start_segment=start_segment,
                                    source_start_time=retained['ready'].get('source_start_time', 0) if retained is not None else 0,
                                    hdr_output=args.auto_hdr)
@@ -447,9 +484,10 @@ def run(args: argparse.Namespace, retained=None, initialize_only=False, control=
                         enhanced = torch.from_dlpack(result.image).clone()
                 if encoder is None:
                     with stats.gpu("convert_download", torch):
-                        if args.auto_hdr:
+                        if advanced:
                             from vsr_colour import rgb_to_yuv420
-                            out = rgb_to_yuv420(enhanced, bits=10, matrix='bt2020').cpu().numpy()
+                            out = rgb_to_yuv420(enhanced, bits=10,
+                                matrix='bt2020' if args.auto_hdr else 'bt709').cpu().numpy()
                         else:
                             out = (enhanced.clamp(0, 1).mul(255).round().byte()
                                    .permute(1, 2, 0).contiguous().cpu().numpy())

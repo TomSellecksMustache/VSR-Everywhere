@@ -72,7 +72,7 @@ public sealed class BridgeSessions : IDisposable
         foreach (var session in _active.Values) session.Dispose();
         _active.Clear();
     }
-    public string? Register(string source, PluginConfiguration cfg, string contentProfile = "unknown", bool hdr = false)
+    public string? Register(string source, PluginConfiguration cfg, string contentProfile = "unknown", bool hdr = false, int? maxVideoMbps = null)
     {
         foreach (var (key, old) in _active)
         {
@@ -101,7 +101,7 @@ public sealed class BridgeSessions : IDisposable
         var memoryBudget = cfg.CacheMode == "disk" ? 0 : VsrMemoryBudget.Calculate(cfg.MemoryBudgetMb, VsrMemoryBudget.Available());
         if (memoryBudget > 0 && _memory.Register(token, memoryBudget, onDemand: true))
         {
-            var memorySession = new BridgeSession(token, source, "", cfg, _logger, _memory, contentProfile, hdr);
+            var memorySession = new BridgeSession(token, source, "", cfg, _logger, _memory, contentProfile, hdr, maxVideoMbps);
             if (_active.TryAdd(token, memorySession))
             {
                 _logger.LogInformation("VSR Everywhere cache mode=memory global budget={BudgetMb} MB", _memory.BudgetBytes / VsrMemoryBudget.MiB);
@@ -139,7 +139,7 @@ public sealed class BridgeSessions : IDisposable
         // Cache root was already validated above.
         var root = Path.Combine(Path.GetFullPath(cacheRoot), token);
         // All worker outputs are generated in the token-specific cache, never beside the media file.
-        var session = new BridgeSession(token, source, root, cfg, _logger, null, contentProfile, hdr);
+        var session = new BridgeSession(token, source, root, cfg, _logger, null, contentProfile, hdr, maxVideoMbps);
         _logger.LogInformation("VSR Everywhere cache mode=disk");
         return _active.TryAdd(token, session) ? token : null;
     }
@@ -150,6 +150,7 @@ public sealed partial class BridgeSession : IDisposable
     private readonly PluginConfiguration _cfg;
     private readonly string _contentProfile;
     private readonly bool _hdr;
+    private readonly int _videoMbps;
     private readonly ILogger _logger;
     private readonly SemaphoreSlim _startLock = new(1, 1);
     private Process? _worker;
@@ -173,7 +174,7 @@ public sealed partial class BridgeSession : IDisposable
     public BridgeSession(string token, string source, string root, PluginConfiguration cfg, ILogger logger)
         : this(token, source, root, cfg, logger, null) { }
     internal BridgeSession(string token, string source, string root, PluginConfiguration cfg, ILogger logger, MemoryHlsStore? memory,
-        string contentProfile = "unknown", bool hdr = false)
+        string contentProfile = "unknown", bool hdr = false, int? maxVideoMbps = null)
     {
         Token = token;
         Source = source;
@@ -181,6 +182,7 @@ public sealed partial class BridgeSession : IDisposable
         _cfg = cfg;
         _contentProfile = contentProfile is "animation" or "live_action" ? contentProfile : "unknown";
         _hdr = hdr && cfg.EnableAutoHdr;
+        _videoMbps = Math.Min(Math.Clamp(cfg.VideoMbps, 4, 60), Math.Clamp(maxVideoMbps ?? 60, 4, 60));
         _logger = logger;
         _memory = memory;
         Expires = DateTimeOffset.UtcNow.AddMinutes(Math.Clamp(cfg.SessionMinutes, 10, 1440));
@@ -230,7 +232,7 @@ public sealed partial class BridgeSession : IDisposable
                 WorkingDirectory = pluginDir };
             foreach (var a in new [] { workerPath, Source, "--output", IsMemory ? _memoryOutput! : Path.Combine(Root, "index.m3u8"),
                 "--hls", "--seconds", "0", "--backend", "nvidia", "--ffmpeg", _cfg.FfmpegPath,
-                "--ffprobe", _cfg.FfprobePath, "--video-mbps", Math.Clamp(_cfg.VideoMbps, 4, 60).ToString(),
+                "--ffprobe", _cfg.FfprobePath, "--video-mbps", _videoMbps.ToString(),
                 "--segment-type", _cfg.SegmentType == "mpegts" ? "mpegts" : "fmp4" })
                 psi.ArgumentList.Add(a);
             if (IsMemory)
@@ -253,7 +255,7 @@ public sealed partial class BridgeSession : IDisposable
             var lookahead = Math.Clamp(_cfg.NvencLookahead, 0, 32);
             var cq = Math.Clamp(_cfg.NvencCq, 0, 35);
             var rewindMinutes = IsMemory
-                ? Math.Min(Math.Clamp(_cfg.RollingRewindMinutes, 2, 60), Math.Max(1, (int)(_memory!.BudgetBytes * 8 / (Math.Clamp(_cfg.VideoMbps, 4, 60) * 1_000_000L) / 60)))
+                ? Math.Min(Math.Clamp(_cfg.RollingRewindMinutes, 2, 60), Math.Max(1, (int)(_memory!.BudgetBytes * 8 / (_videoMbps * 1_000_000L) / 60)))
                 : _cfg.EnableRollingCache ? Math.Clamp(_cfg.RollingRewindMinutes, 2, 60) : 0;
             foreach (var a in new[] {
                 "--quality", vsrQuality,
@@ -280,7 +282,7 @@ public sealed partial class BridgeSession : IDisposable
             _logger.LogInformation("VSR Everywhere profile quality={Quality} strength={Strength} preset={Preset} tune={Tune} " +
                 "lookahead={Lookahead} spatialAQ={SpatialAq} temporalAQ={TemporalAq} cq={CQ} bitrate={Mbps}",
                 vsrQuality, vsrStrength, preset, tune, lookahead, _cfg.NvencSpatialAq,
-                _cfg.NvencTemporalAq, cq, _cfg.VideoMbps);
+                _cfg.NvencTemporalAq, cq, _videoMbps);
 
             try
             {

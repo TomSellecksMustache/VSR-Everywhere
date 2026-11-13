@@ -68,7 +68,7 @@
 </select><div class="fieldDescription">Standard modes remove compression artifacts; high-bitrate modes preserve more texture in cleaner sources. Modes depend on your installed NVIDIA VFX SDK.</div></div>
 <div class="inputContainer"><label class="inputLabel" for="VsrStrength">VSR enhancement strength (0–1)</label><input id="VsrStrength" type="number" min="0" max="1" step="0.05" is="emby-input"><div class="fieldDescription">Default 0.75. Try 0.5–0.75 to avoid waxy textures.</div></div>
 <h3>HEVC NVENC encoding</h3>
-<div class="inputContainer"><label class="inputLabel" for="VideoMbps">HEVC bitrate (Mbps)</label><input id="VideoMbps" type="number" min="4" max="60" is="emby-input"></div>
+<div class="inputContainer"><label class="inputLabel" for="VideoMbps">HEVC bitrate limit (Mbps; Roku maximum 40)</label><input id="VideoMbps" type="number" min="4" max="60" is="emby-input"></div>
 
 <div class="selectContainer"><label class="selectLabel" for="NvencPreset">NVENC encoding preset</label><select id="NvencPreset" is="emby-select">
 <option value="p4">p4 – Balanced</option><option value="p5">p5 – good quality</option><option value="p6">p6 – higher quality</option><option value="p7">p7 – highest quality (slowest)</option></select></div>

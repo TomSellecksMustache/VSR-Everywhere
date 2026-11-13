@@ -202,3 +202,5 @@ def serve(args, run_worker):
             retained['effect'].close()
         if retained.get('enhancements') is not None:
             retained['enhancements'].close()
+        if retained.get('startup') is not None:
+            retained['startup'].close()

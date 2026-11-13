@@ -40,6 +40,15 @@ class EnhancementChecks(unittest.TestCase):
                 self.assertEqual(command[command.index('-pixel_format') + 1], 'p010le')
                 self.assertIn('-rc-lookahead', command)
 
+    def test_sdr_gpu_conversion_preserves_bt709_without_hdr_tags(self):
+        command = build_ffmpeg_command('ffmpeg', 'source', 'output', 3840, 2160,
+            Fraction(24000, 1001), 40, 'mpegts', raw_pixel_format='p010le')
+        self.assertEqual(command[command.index('-pixel_format') + 1], 'p010le')
+        self.assertEqual(command.count('bt709'), 6)
+        self.assertNotIn('smpte2084', command)
+        self.assertEqual(command[command.index('-framerate') + 1], '24000/1001')
+        self.assertEqual(command[command.index('-maxrate') + 1], '40M')
+
     def test_bt2020_reference_levels_and_packed_hdr_channels(self):
         import numpy as np
         values = rgb_to_yuv_reference([[0, 0, 0], [1, 1, 1], [1, 0, 0]], bits=10, matrix='bt2020')

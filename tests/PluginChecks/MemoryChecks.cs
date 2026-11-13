@@ -145,17 +145,50 @@ internal static class MemoryChecks
         store.Remove("protected");
         Check(store.AllocatedBytes == 0, "Rejected upload retains no reserved buffers");
         await EndpointChecks(python);
+        await PrerollChecks(python);
         Console.WriteLine("PASS: memory budget/fallback, shared eviction, retained playlist, atomic uploads, read leases, lifecycle, size caps and ingest security.");
     }
 
     private static Task<int> Put(MemoryHlsStore store, string token, string name, byte[] bytes)
         => store.PutAsync(token, name, new MemoryStream(bytes), bytes.Length, CancellationToken.None);
 
+    private static async Task PrerollChecks(string python)
+    {
+        foreach (var first in new[] { 0, 4, 5 })
+        {
+            using var sessions = new BridgeSessions(NullLogger<BridgeSessions>.Instance);
+            var configuration = new PluginConfiguration { CacheMode = "memory", MemoryBudgetMb = 8, PythonPath = python, SegmentType = "mpegts", SeekLookaheadSeconds = 2 };
+            var token = sessions.Register("test-preroll.mp4", configuration)!;
+            var session = sessions.Find(token)!;
+            var name = $"seg_{first:D6}.ts";
+            Check(await session.PrepareMemory(name, $"http://127.0.0.1:8096/VsrEverywhere/ingest/{token}/0/index.m3u8", CancellationToken.None) == 200,
+                "Cold playback prepares its requested segment");
+            Check(await session.PutMemory(name, new MemoryStream([7]), 1, CancellationToken.None, 1) == 204, "Upload first preroll segment");
+            var middleware = new BridgeMiddleware(_ => throw new Exception("Unexpected route"), NullLogger<BridgeMiddleware>.Instance);
+            var request = new DefaultHttpContext();
+            request.Connection.LocalPort = 8096;
+            request.Request.Method = "GET";
+            request.Request.Path = $"/VsrEverywhere/hls/{token}/{name}";
+            request.Response.Body = new MemoryStream();
+            var serving = middleware.InvokeAsync(request, sessions);
+            var last = Math.Min(5, first + 2);
+            for (var segment = first + 1; segment <= last; segment++)
+            {
+                Check(!serving.IsCompleted, "First response must wait for a contiguous startup reserve");
+                Check(await session.PutMemory($"seg_{segment:D6}.ts", new MemoryStream([8]), 1, CancellationToken.None, 1) == 204,
+                    "Upload next preroll segment");
+            }
+            await serving.WaitAsync(TimeSpan.FromSeconds(5));
+            Check(request.Response.StatusCode == 200 && ((MemoryStream)request.Response.Body).ToArray().SequenceEqual(new byte[] { 7 }),
+                "Startup reserve releases the original response, including short source tails");
+        }
+    }
+
     private static async Task EndpointChecks(string python)
     {
         using var sessions = new BridgeSessions(NullLogger<BridgeSessions>.Instance);
-        var cfg = new PluginConfiguration { CacheMode = "memory", MemoryBudgetMb = 8, PythonPath = python, SegmentType = "mpegts" };
-        var token = sessions.Register("test-source.mp4", cfg)!;
+        var cfg = new PluginConfiguration { CacheMode = "memory", MemoryBudgetMb = 8, PythonPath = python, SegmentType = "mpegts", VideoMbps = 60 };
+        var token = sessions.Register("test-source.mp4", cfg, maxVideoMbps: 40)!;
         var session = sessions.Find(token)!;
         Check(session.IsMemory && session.Root == "", "Memory registration creates no cache directory");
         var middleware = new BridgeMiddleware(_ => throw new Exception("Unexpected route"), NullLogger<BridgeMiddleware>.Instance);
@@ -205,6 +238,8 @@ internal static class MemoryChecks
             var command = result.RootElement.GetProperty("args").EnumerateArray().Select(value => value.GetString()!).ToArray();
             Check(command.Contains("--memory-output"), "Memory launch flag");
             Check(command.Contains("--serve"), "Memory worker persists across seeks");
+            Check(command[Array.IndexOf(command, "--video-mbps") + 1] == "40" && cfg.VideoMbps == 60,
+                "Client bitrate limit reaches the worker without changing saved settings");
             Check(command[Array.IndexOf(command, "--output") + 1] == $"http://127.0.0.1:8096/jellyfin/VsrEverywhere/ingest/{token}/0/index.m3u8", "Ingest output uses actual loopback port and path base");
             Check(result.RootElement.GetProperty("key").GetString() == session.IngestKey, "Secret only passed via worker environment");
             Check(!command.Contains(session.IngestKey), "Secret absent from command line");

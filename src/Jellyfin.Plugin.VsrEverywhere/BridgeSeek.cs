@@ -17,7 +17,19 @@ public sealed partial class BridgeSession
     private int _segmentCount, _runStart, _runHead = -1;
     private long _run;
     private bool _runActive;
+    private int _prerollStart = -1, _prerollEnd;
     internal bool AcceptsRun(long? run) => run.HasValue ? run.Value == Interlocked.Read(ref _run) : !Started;
+
+    internal bool MemoryReady(string name)
+    {
+        var first = Volatile.Read(ref _prerollStart);
+        var extension = _cfg.SegmentType == "mpegts" ? ".ts" : ".m4s";
+        if (first < 0 || name != $"seg_{first:D6}{extension}") return true;
+        for (var segment = first; segment <= _prerollEnd; segment++)
+            if (!_memory!.Contains(Token, $"seg_{segment:D6}{extension}")) return false;
+        Interlocked.CompareExchange(ref _prerollStart, -1, first);
+        return true;
+    }
 
     private bool AllowRestart()
     {
@@ -46,7 +58,11 @@ public sealed partial class BridgeSession
                 {
                     using var message = JsonDocument.Parse(line[jsonStart..]);
                     var root = message.RootElement;
-                    if (!root.TryGetProperty("event", out var kind) || kind.GetString() != "ready") continue;
+                    if (!root.TryGetProperty("event", out var kind)) continue;
+                    if (kind.GetString() == "enhancements_ready")
+                        _logger.LogInformation("VSR Everywhere enhancements active after {Seconds}s of preview at media time {MediaTime}s",
+                            root.GetProperty("preview_seconds").GetDouble(), root.GetProperty("media_time").GetDouble());
+                    if (kind.GetString() != "ready") continue;
                     var numerator = root.GetProperty("fps_num").GetInt32();
                     var denominator = root.GetProperty("fps_den").GetInt32();
                     var gop = root.GetProperty("gop_frames").GetInt32();
@@ -117,14 +133,17 @@ public sealed partial class BridgeSession
         {
             if (IsDisposed) return 404;
             var cached = _memory.Contains(Token, name);
-            var lookahead = Math.Max(1, (int)Math.Ceiling(Math.Clamp(_cfg.SeekLookaheadSeconds, 2, 600) / _segmentSeconds));
+            var lookahead = Math.Max(3, (int)Math.Ceiling(Math.Clamp(_cfg.SeekLookaheadSeconds, 2, 600) / _segmentSeconds));
             var catchup = (int)Math.Ceiling(Math.Clamp(_cfg.SeekCatchupSeconds, 0, 60) / _segmentSeconds);
+            var catchupEnd = Math.Max(_runStart, _runHead + 1) + catchup;
             var limit = Math.Min(_segmentCount - 1, segment + lookahead);
-            var commandLimit = cached && _runActive && (segment < _runStart || segment > _runHead + catchup)
+            var commandLimit = cached && _runActive && (segment < _runStart || segment > catchupEnd)
                 ? Math.Max(0, _runHead) : limit;
-            if (!cached && (!_runActive || segment < _runStart || segment > _runHead + catchup))
+            if (!cached && (!_runActive || segment < _runStart || segment > catchupEnd))
             {
                 _run++; _runStart = segment; _runHead = segment - 1; _runActive = true;
+                _prerollEnd = Math.Min(_segmentCount - 1, segment + 2);
+                Volatile.Write(ref _prerollStart, segment);
                 _memory.BeginRun(Token, _run, segment);
                 await SendCommand(new { cmd = "seek", segment, run = _run }, ct).ConfigureAwait(false);
             }

@@ -31,6 +31,11 @@ class ServerChecks(unittest.TestCase):
             with self.subTest(command=command), self.assertRaises(ValueError):
                 Commands().accept(command)
 
+    def test_on_demand_audio_video_buffer_cannot_hold_ten_seconds_of_segments(self):
+        command = build_ffmpeg_command('ffmpeg', 'source', 'output', 3840, 2160,
+            Fraction(24000, 1001), 40, 'mpegts', start_segment=0, nvenc_lookahead=12)
+        self.assertEqual(command[command.index('-shortest_buf_duration') + 1], '1')
+
     def test_cfr_normalizes_the_origin_and_handles_gaps_and_duplicates(self):
         frames = [types.SimpleNamespace(pts=p, label=v) for p, v in [(100, 'a'), (101, 'b'), (101, 'duplicate'), (103, 'd')]]
         container = types.SimpleNamespace(decode=lambda stream: iter(frames))

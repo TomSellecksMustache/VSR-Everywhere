@@ -89,7 +89,7 @@ class GpuEncoderChecks(unittest.TestCase):
             self.assertEqual((options['fps'], options['gop'], options['idrperiod'], options['bf']), ('24000/1001', 48, 48, 0))
             self.assertEqual((options['aq'], options['temporalaq'], options['lookahead']), (8, 1, 0))
             self.assertNotIn('cq', options)
-            self.assertEqual(vars(state['params']), dict(averageBitrate=20_000_000, maxBitRate=26_000_000,
+            self.assertEqual(vars(state['params']), dict(averageBitrate=20_000_000, maxBitRate=20_000_000,
                                                        vbvBufferSize=40_000_000, targetQuality=19))
             encoder.close()
             encoder.close()

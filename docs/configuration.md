@@ -27,7 +27,7 @@ Choose delivery settings the player can decode. 6K/8K output also depends on the
 | --- | --- | --- |
 | VSR quality | Streaming Medium | Enhancement model/profile. Use the examples to judge stronger modes. |
 | Strength | 0.75 | Enhancement blend; higher values can make artifacts or texture changes more apparent. |
-| Video bitrate | 20 Mbps | Encoded stream's target bitrate. The configurable range is 4–60 Mbps. |
+| Video bitrate | 20 Mbps | Encoded stream's bitrate limit. The configurable range is 4–60 Mbps; this preview caps Roku delivery at 40 Mbps. Short VBV bursts can exceed the average. |
 | NVENC preset | p4 | Encoding work; p5–p7 can increase GPU load. |
 | Tune | Default | Optional HQ tuning. |
 | Lookahead | 0 | Keeps the direct GPU encoder path available. Values above 0 select compatible FFmpeg encoding. |
