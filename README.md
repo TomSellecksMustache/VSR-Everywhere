@@ -22,17 +22,17 @@ The NVIDIA **1.0.0** release remains the latest and recommended default download
 
 ## See the difference
 
-**Left: original with Lanczos scaling. Right: actual encoded VSR output.** Each pair uses the same decoded frame. Open an image to inspect the detail.
+**Left: original with Lanczos scaling. Right: this branch's encoded output with Veyra NR, NVIDIA VSR, Auto HDR, and adaptive interpolation enabled.** These use the original frame selections and crop positions at matching source presentation times.
 
 ### Animation
 
-![The Venture Bros. — original and VSR detail comparison](docs/assets/comparisons/venture-bros-scene-1-detail.webp)
+![The Venture Bros. — original and DLSS-branch detail comparison](docs/assets/comparisons/dlss/venture-bros-scene-1-detail.webp)
 
 ### Live action
 
-![Doctor Who — original and VSR detail comparison](docs/assets/comparisons/doctor-who-scene-2-detail.webp)
+![Doctor Who — original and DLSS-branch detail comparison](docs/assets/comparisons/dlss/doctor-who-scene-2-detail.webp)
 
-These examples use **ULTRA, strength 1, 5K processing, and 4K delivery**. They demonstrate that profile, rather than the installer's balanced defaults. Results depend on the source, settings, GPU, and player.
+These examples use **ULTRA, strength 1, 5K processing, and 4K delivery**, with the animation or live-action NR profile. HDR output is tone-mapped to SDR for GitHub. Interpolated frames may be synthesized; stills cannot demonstrate motion quality or actual HDR display range. Open an image to inspect the detail.
 
 [View all eight comparisons and the capture method](docs/comparisons.md), including Futurama and Xena.
 

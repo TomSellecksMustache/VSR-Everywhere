@@ -1,0 +1,310 @@
+{
+  "branch": "testing-dlss",
+  "profile": {
+    "VsrQuality": "ULTRA",
+    "VsrStrength": "1",
+    "ProcessingWidth": "5120",
+    "ProcessingHeight": "2880",
+    "StreamWidth": "3840",
+    "StreamHeight": "2160",
+    "VideoMbps": "60",
+    "NvencPreset": "p7",
+    "NvencTune": "hq",
+    "NvencLookahead": "12",
+    "NvencCq": "1",
+    "NvencSpatialAq": "true",
+    "NvencTemporalAq": "false",
+    "EnableNeuralRendering": true,
+    "EnableAutoHdr": true,
+    "EnableFrameInterpolation": true,
+    "TrueHdrPeakNits": 1000
+  },
+  "hdr_sdr_preview_filter": "zscale=transfer=linear:npl=100,format=gbrpf32le,zscale=primaries=bt709,tonemap=tonemap=mobius:desat=2:peak=10,zscale=transfer=bt709:matrix=gbr:range=full,format=gbrp,format=rgb24",
+  "worker_sha256": {
+    "vsr_everywhere.py": "38321e4cbed826d9a98457b0d9e6b081e0c1b3cc42412973cd17e607827f6af8",
+    "vsr_enhancements.py": "df1ea9022538fa1e3b881885b2b02b602e1ac643bc0d897a2ff5864772ceaf0a",
+    "vsr_temporal.py": "f7f3ba4e7d5b950b282519eb97cbbd7ec49e4d7c9c07a8d2bba2da1208a0f2a7"
+  },
+  "scenes": [
+    {
+      "title": "Doctor Who",
+      "slug": "doctor-who",
+      "scene": 1,
+      "source_time_s": 899.4486666666667,
+      "source_frame_index": 16,
+      "crop_xywh": [
+        1280,
+        600,
+        1280,
+        960
+      ],
+      "content_profile": "live_action",
+      "source_fps": "24000/1001",
+      "source_clip_sha256": "1189b6c98d76ca9dcab131007e3751e6d50b0d6e1ee9d7acf0e48edcbb87c59e",
+      "native_rgb_sha256": "fb2f6c162ff10cb85f14e88d576a5232a195aa5860edfcd98ec8085be2997c28",
+      "source_10bit_converted_to_8bit": false,
+      "interpolation": {
+        "anchors": [
+          14,
+          18
+        ],
+        "alpha": "1/2"
+      },
+      "assets": {
+        "overview": {
+          "file": "doctor-who-scene-1-overview.webp",
+          "sha256": "e83fd475dc7ab30eb48f6378e29cb4d513a467974e6635f90865dc5421815a32"
+        },
+        "detail": {
+          "file": "doctor-who-scene-1-detail.webp",
+          "sha256": "ac831a671983bd028f3d9bce5b830df7fda538c9c1728678cdd40d3154d7457c"
+        }
+      }
+    },
+    {
+      "title": "Doctor Who",
+      "slug": "doctor-who",
+      "scene": 2,
+      "source_time_s": 1798.8973333333333,
+      "source_frame_index": 40,
+      "crop_xywh": [
+        1280,
+        600,
+        1280,
+        960
+      ],
+      "content_profile": "live_action",
+      "source_fps": "24000/1001",
+      "source_clip_sha256": "1189b6c98d76ca9dcab131007e3751e6d50b0d6e1ee9d7acf0e48edcbb87c59e",
+      "native_rgb_sha256": "710320f36913c5ff3889a14744b428c79f6046cc2c093e61769a733026e6c9a2",
+      "source_10bit_converted_to_8bit": false,
+      "interpolation": {
+        "anchors": [
+          39,
+          42
+        ],
+        "alpha": "1/3"
+      },
+      "assets": {
+        "overview": {
+          "file": "doctor-who-scene-2-overview.webp",
+          "sha256": "a42a7b2be89d8f7badc91273c9155159bfa4fcb6a98adebf85701f153fe0ce6a"
+        },
+        "detail": {
+          "file": "doctor-who-scene-2-detail.webp",
+          "sha256": "6d86a4f1bc3a0fd370416fa3560c1f33c30f9dc1bb502ce9568e434e21619079"
+        }
+      }
+    },
+    {
+      "title": "Futurama",
+      "slug": "futurama",
+      "scene": 1,
+      "source_time_s": 452.08200000000005,
+      "source_frame_index": 16,
+      "crop_xywh": [
+        1280,
+        600,
+        1280,
+        960
+      ],
+      "content_profile": "animation",
+      "source_fps": "24000/1001",
+      "source_clip_sha256": "21ed1d874908f954453656e7da04d8e1101cc9df4d92bef8e67b1b504affce96",
+      "native_rgb_sha256": "88d83329118646051df96e29e18addc71bdf4711378f9921df5e4000eb9eacdf",
+      "source_10bit_converted_to_8bit": false,
+      "interpolation": {
+        "anchors": [
+          14,
+          18
+        ],
+        "alpha": "1/2"
+      },
+      "assets": {
+        "overview": {
+          "file": "futurama-scene-1-overview.webp",
+          "sha256": "67d5b5d97e8d002053370d0f37790ae1e9f832e5546995d3649c5fe86fa86cb8"
+        },
+        "detail": {
+          "file": "futurama-scene-1-detail.webp",
+          "sha256": "327a4e021ef0dc534de261678ef1d4ab2bbc4ae8682777509bfcc65e66a17a45"
+        }
+      }
+    },
+    {
+      "title": "Futurama",
+      "slug": "futurama",
+      "scene": 2,
+      "source_time_s": 904.1640000000001,
+      "source_frame_index": 40,
+      "crop_xywh": [
+        1280,
+        600,
+        1280,
+        960
+      ],
+      "content_profile": "animation",
+      "source_fps": "24000/1001",
+      "source_clip_sha256": "21ed1d874908f954453656e7da04d8e1101cc9df4d92bef8e67b1b504affce96",
+      "native_rgb_sha256": "5aef802afb7b22b345ddc372d03e31d21b2a3c5535b0fb430181bd99aa0161f7",
+      "source_10bit_converted_to_8bit": false,
+      "interpolation": {
+        "anchors": [
+          40,
+          42
+        ],
+        "alpha": "0"
+      },
+      "assets": {
+        "overview": {
+          "file": "futurama-scene-2-overview.webp",
+          "sha256": "fc3d96776343d7608ba2fe19e6f454c3efadd88ca6970f2a51ddb25e0e70d901"
+        },
+        "detail": {
+          "file": "futurama-scene-2-detail.webp",
+          "sha256": "43eac338af3f60eb13aa51dd13b7eebb8028bf1b2ffe09f3b3865f63c6bfbe75"
+        }
+      }
+    },
+    {
+      "title": "The Venture Bros.",
+      "slug": "venture-bros",
+      "scene": 1,
+      "source_time_s": 455.247,
+      "source_frame_index": 16,
+      "crop_xywh": [
+        768,
+        400,
+        1280,
+        960
+      ],
+      "content_profile": "animation",
+      "source_fps": "24000/1001",
+      "source_clip_sha256": "37fb7b0666af826e8d77c4fd073290c18f140e79456e6e999384454a871466cc",
+      "native_rgb_sha256": "cdb0ecef543fcf148714cba27c95ab6440214ea4ca35e5051529e9dcf04883bf",
+      "source_10bit_converted_to_8bit": false,
+      "interpolation": {
+        "anchors": [
+          14,
+          18
+        ],
+        "alpha": "1/2"
+      },
+      "assets": {
+        "overview": {
+          "file": "venture-bros-scene-1-overview.webp",
+          "sha256": "9bc5b1a264f614ddbcb9d77b0a98f89e7e4a567b63e611ad35fb8e54f007e8bd"
+        },
+        "detail": {
+          "file": "venture-bros-scene-1-detail.webp",
+          "sha256": "aa1d2b24ea6c84712dd6125f4d40cf19628a2a13eef07a801bbe090c2a65ec0d"
+        }
+      }
+    },
+    {
+      "title": "The Venture Bros.",
+      "slug": "venture-bros",
+      "scene": 2,
+      "source_time_s": 910.494,
+      "source_frame_index": 40,
+      "crop_xywh": [
+        1280,
+        600,
+        1280,
+        960
+      ],
+      "content_profile": "animation",
+      "source_fps": "24000/1001",
+      "source_clip_sha256": "37fb7b0666af826e8d77c4fd073290c18f140e79456e6e999384454a871466cc",
+      "native_rgb_sha256": "962ec2119b24d05e7037c0fb26490cf0a40c673dc049919b42407d4ab9ff52c4",
+      "source_10bit_converted_to_8bit": false,
+      "interpolation": {
+        "anchors": [
+          39,
+          41
+        ],
+        "alpha": "1/2"
+      },
+      "assets": {
+        "overview": {
+          "file": "venture-bros-scene-2-overview.webp",
+          "sha256": "3413f7f4f9ad00140053e4c7997d6fb12d5873c1e7b1e1dac54dc1c497ecb3ab"
+        },
+        "detail": {
+          "file": "venture-bros-scene-2-detail.webp",
+          "sha256": "825094b3c5a250ed8cc43e850f560879034d3faf025c78be45f743c4119d8504"
+        }
+      }
+    },
+    {
+      "title": "Xena",
+      "slug": "xena",
+      "scene": 1,
+      "source_time_s": 885.489,
+      "source_frame_index": 16,
+      "crop_xywh": [
+        1280,
+        600,
+        1280,
+        960
+      ],
+      "content_profile": "live_action",
+      "source_fps": "24000/1001",
+      "source_clip_sha256": "52c9625b1958d4931c5b4460514acde806d61b31732edd98d5e98bedd8359166",
+      "native_rgb_sha256": "4698f106afc712418b6f08252f34290b9e46bc24748800722a311f02bb243033",
+      "source_10bit_converted_to_8bit": true,
+      "interpolation": {
+        "anchors": [
+          14,
+          18
+        ],
+        "alpha": "1/2"
+      },
+      "assets": {
+        "overview": {
+          "file": "xena-scene-1-overview.webp",
+          "sha256": "4d574f1ffbaed3e1f9e1ff4021d4e402c09dcba8cb35692d9d76ca9bb557a2e7"
+        },
+        "detail": {
+          "file": "xena-scene-1-detail.webp",
+          "sha256": "a39eb57aa81806ca03630cc7ec9f538dba83799e2f62b6f6e1c8ba47682607b7"
+        }
+      }
+    },
+    {
+      "title": "Xena",
+      "slug": "xena",
+      "scene": 2,
+      "source_time_s": 1770.978,
+      "source_frame_index": 40,
+      "crop_xywh": [
+        1280,
+        600,
+        1280,
+        960
+      ],
+      "content_profile": "live_action",
+      "source_fps": "24000/1001",
+      "source_clip_sha256": "52c9625b1958d4931c5b4460514acde806d61b31732edd98d5e98bedd8359166",
+      "native_rgb_sha256": "ba20d48d7f13730abf85b579c7b0130b4c805695e77293d9a45c2cda0006b45c",
+      "source_10bit_converted_to_8bit": true,
+      "interpolation": {
+        "anchors": [
+          39,
+          41
+        ],
+        "alpha": "1/2"
+      },
+      "assets": {
+        "overview": {
+          "file": "xena-scene-2-overview.webp",
+          "sha256": "97c017645d64e0e86010ac3320e5c377b3b11274d7494cada5b594f8b39da7f3"
+        },
+        "detail": {
+          "file": "xena-scene-2-detail.webp",
+          "sha256": "da8b24dbe7f1af28a04b2c8bb14dc4820a854fcde86cc3bf538dd52da379ea02"
+        }
+      }
+    }
+  ]
+}
