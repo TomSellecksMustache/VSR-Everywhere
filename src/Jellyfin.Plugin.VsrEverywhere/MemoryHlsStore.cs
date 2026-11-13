@@ -17,9 +17,66 @@ internal static class VsrMemoryBudget
 
     internal static long Available()
     {
+        if (OperatingSystem.IsLinux()) return AvailableLinux();
         if (!OperatingSystem.IsWindows()) return 0;
         var status = new MemoryStatus { Length = (uint)Marshal.SizeOf<MemoryStatus>() };
         return GlobalMemoryStatusEx(ref status) ? (long)status.AvailablePhysical : 0;
+    }
+
+    internal static long ParseMemAvailable(IEnumerable<string> lines)
+    {
+        foreach (var line in lines)
+        {
+            var parts = line.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length == 0 || parts[0] != "MemAvailable:") continue;
+            if (parts.Length != 3 || parts[2] != "kB" || !long.TryParse(parts[1],
+                System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var value)) return 0;
+            try { return checked(value * 1024); }
+            catch (OverflowException) { return 0; }
+        }
+        return 0;
+    }
+
+    internal static long AvailableLinux(string proc = "/proc", string cgroups = "/sys/fs/cgroup")
+    {
+        try
+        {
+            var available = ParseMemAvailable(File.ReadLines(Path.Combine(proc, "meminfo")));
+            foreach (var line in File.ReadLines(Path.Combine(proc, "self", "cgroup")))
+            {
+                var fields = line.Split(':', 3);
+                if (fields.Length != 3) return 0;
+                var v2 = fields[0] == "0" && fields[1] == "";
+                if (!v2 && !fields[1].Split(',').Contains("memory", StringComparer.Ordinal)) continue;
+                var root = Path.GetFullPath(v2 ? cgroups : Path.Combine(cgroups, "memory"));
+                if (!Directory.Exists(root)) return 0;
+                var path = Path.GetFullPath(Path.Combine(root, fields[2].TrimStart('/')));
+                if (path != root && !path.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.Ordinal))
+                {
+                    // A cgroup namespace can expose our group as the mount root.
+                    if (v2 && File.Exists(Path.Combine(root, "memory.max"))) path = root;
+                    else return 0;
+                }
+                while (true)
+                {
+                    var limitPath = Path.Combine(path, v2 ? "memory.max" : "memory.limit_in_bytes");
+                    if (File.Exists(limitPath))
+                    {
+                        var text = File.ReadAllText(limitPath).Trim();
+                        if (text != "max")
+                        {
+                            if (!long.TryParse(text, out var limit) || limit < 0 || !long.TryParse(
+                                File.ReadAllText(Path.Combine(path, v2 ? "memory.current" : "memory.usage_in_bytes")).Trim(), out var used) || used < 0) return 0;
+                            available = Math.Min(available, limit > used ? limit - used : 0);
+                        }
+                    }
+                    if (path == root) break;
+                    path = Path.GetDirectoryName(path)!;
+                }
+            }
+            return available;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException) { return 0; }
     }
 
     [DllImport("kernel32.dll", SetLastError = true)]

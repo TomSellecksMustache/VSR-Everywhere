@@ -1,0 +1,8 @@
+--index-url https://pypi.org/simple
+--extra-index-url https://pypi.nvidia.com
+--extra-index-url https://download.pytorch.org/whl/cu128
+av==18.1.0
+numpy==2.4.6
+torch==2.11.0+cu128
+nvidia-vfx==0.2.0.0
+pynvvideocodec==2.2.3

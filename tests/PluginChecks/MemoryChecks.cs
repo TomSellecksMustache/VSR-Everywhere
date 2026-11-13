@@ -21,6 +21,39 @@ internal static class MemoryChecks
         Check(VsrMemoryBudget.Calculate(0, 4 * 1024 * mb) == 4 * 1024 * mb / 5 * 3, "Automatic 60% memory budget");
         Check(VsrMemoryBudget.Calculate(512, 32 * 1024 * mb) == 512 * mb, "Explicit memory budget");
         Check(VsrMemoryBudget.Calculate(512, 1024 * mb - 1) == 0, "Low-memory disk fallback");
+        Check(VsrMemoryBudget.ParseMemAvailable(["MemTotal: 1 kB", "MemAvailable:\t2048 kB"]) == 2 * mb, "Linux MemAvailable uses kB and accepts tabs");
+        foreach (var bad in new[] { "MemAvailable: -1 kB", "MemAvailable: 10 MB", "MemAvailable: 10", "MemAvailable: 10 kB extra", "MemAvailable: 9223372036854775807 kB" })
+            Check(VsrMemoryBudget.ParseMemAvailable([bad]) == 0, "Malformed Linux memory must fall back safely");
+        var linuxMemory = Path.Combine(Path.GetTempPath(), "vsr-memory-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            var proc = Path.Combine(linuxMemory, "proc");
+            var cgroups = Path.Combine(linuxMemory, "cgroups");
+            Directory.CreateDirectory(Path.Combine(proc, "self"));
+            var parent = Path.Combine(cgroups, "system.slice");
+            var leaf = Path.Combine(parent, "jellyfin.service");
+            Directory.CreateDirectory(leaf);
+            File.WriteAllText(Path.Combine(proc, "meminfo"), "MemAvailable: 8192000 kB\n");
+            File.WriteAllText(Path.Combine(proc, "self", "cgroup"), "0::/system.slice/jellyfin.service\n");
+            File.WriteAllText(Path.Combine(leaf, "memory.max"), (4 * 1024 * mb).ToString());
+            File.WriteAllText(Path.Combine(leaf, "memory.current"), (3 * 1024 * mb).ToString());
+            Check(VsrMemoryBudget.AvailableLinux(proc, cgroups) == 1024 * mb, "Linux cgroup v2 budget");
+            File.WriteAllText(Path.Combine(parent, "memory.max"), (2 * 1024 * mb).ToString());
+            File.WriteAllText(Path.Combine(parent, "memory.current"), (1536 * mb).ToString());
+            Check(VsrMemoryBudget.AvailableLinux(proc, cgroups) == 512 * mb, "Linux parent cgroup limit");
+            var v1 = Path.Combine(cgroups, "memory", "jellyfin");
+            Directory.CreateDirectory(v1);
+            File.WriteAllText(Path.Combine(proc, "self", "cgroup"), "5:memory:/jellyfin\n");
+            File.WriteAllText(Path.Combine(v1, "memory.limit_in_bytes"), (2 * 1024 * mb).ToString());
+            File.WriteAllText(Path.Combine(v1, "memory.usage_in_bytes"), (1024 * mb).ToString());
+            Check(VsrMemoryBudget.AvailableLinux(proc, cgroups) == 1024 * mb, "Linux cgroup v1 budget");
+            File.WriteAllText(Path.Combine(proc, "self", "cgroup"), "0::/../../outside\n");
+            Check(VsrMemoryBudget.AvailableLinux(proc, cgroups) == 0, "Linux cgroup paths stay under mount");
+            File.WriteAllText(Path.Combine(cgroups, "memory.max"), (1024 * mb).ToString());
+            File.WriteAllText(Path.Combine(cgroups, "memory.current"), (512 * mb).ToString());
+            Check(VsrMemoryBudget.AvailableLinux(proc, cgroups) == 512 * mb, "Linux namespaced cgroup mount root");
+        }
+        finally { Directory.Delete(linuxMemory, true); }
         var serializer = new XmlSerializer(typeof(PluginConfiguration));
         using (var oldConfiguration = new StringReader("<PluginConfiguration><CacheDirectory>retained-cache</CacheDirectory><CacheMaxGb>42</CacheMaxGb></PluginConfiguration>"))
         {

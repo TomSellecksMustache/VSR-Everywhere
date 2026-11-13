@@ -26,7 +26,7 @@ public sealed class PluginConfiguration : BasePluginConfiguration
     public string ClientFilter { get; set; } = "Roku";
     // Explicit device selection applies when EnableAllDevices is false.
     public string[] EnabledDeviceIds { get; set; } = Array.Empty<string>();
-    public string PythonPath { get; set; } = "python";
+    public string PythonPath { get; set; } = OperatingSystem.IsWindows() ? "python" : "python3";
     public string FfmpegPath { get; set; } = "ffmpeg";
     public string FfprobePath { get; set; } = "ffprobe";
     public string CacheDirectory { get; set; } = "";

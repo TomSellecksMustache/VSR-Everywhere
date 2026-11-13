@@ -1,0 +1,106 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+prefix=/opt/vsr-everywhere
+assume_yes=0
+args=("$@")
+while (($#)); do
+    case "$1" in
+        --install-dir) [[ $# -ge 2 ]] || { echo '--install-dir needs a path' >&2; exit 2; }; prefix=$2; shift 2 ;;
+        --install-dir=*) prefix=${1#*=}; shift ;;
+        --yes) assume_yes=1; shift ;;
+        -h|--help)
+            cat <<'HELP'
+VSR Everywhere 1.0.0 Linux setup
+Usage: sudo bash Install-VSREverywhere-Linux.sh [options]
+  --install-dir PATH  Private runtime/download folder (default /opt/vsr-everywhere)
+  --service UNIT      Jellyfin systemd unit (default jellyfin.service)
+  --data-dir PATH     Override detected Jellyfin data folder
+  --config-dir PATH   Override detected Jellyfin configuration folder
+  --ffmpeg PATH       Override the server's FFmpeg executable
+  --ffprobe PATH      Override FFprobe
+  --check             Check platform, service, GPU, and package without installing
+  --yes               Accept the detected settings without prompts
+Requires x86-64 Linux with glibc 2.28+, systemd, NVIDIA VSR/HEVC support,
+Jellyfin 12.1, internet, and 25 GiB free for a fresh runtime.
+HELP
+            exit 0 ;;
+        *) shift ;;
+    esac
+done
+[[ $(uname -s) == Linux && $(uname -m) == x86_64 ]] || { echo 'This package requires x86-64 Linux.' >&2; exit 1; }
+[[ ${EUID} -eq 0 ]] || exec sudo -- bash "$0" "${args[@]}"
+libc=$(getconf GNU_LIBC_VERSION 2>/dev/null || true)
+[[ $libc == 'glibc '* ]] || { echo 'The NVIDIA runtime needs glibc; musl/Alpine is unsupported.' >&2; exit 1; }
+IFS=. read -r libc_major libc_minor <<< "${libc#glibc }"
+(( libc_major > 2 || libc_major == 2 && libc_minor >= 28 )) || { echo 'glibc 2.28 or newer is required.' >&2; exit 1; }
+for command in tar base64 sha256sum realpath stat flock; do
+    command -v "$command" >/dev/null || { echo "Required command is missing: $command (install coreutils/util-linux)." >&2; exit 1; }
+done
+if [[ $assume_yes == 0 && -t 0 ]]; then
+    read -r -p "Runtime/download folder [$prefix]: " choice
+    prefix=${choice:-$prefix}
+fi
+[[ $prefix == /* && $prefix != / && $prefix != *$'\n'* ]] || { echo 'Choose an absolute installation folder below /.' >&2; exit 1; }
+prefix=$(realpath -m -- "$prefix")
+[[ $prefix != / ]] || { echo 'Choose an installation folder below /.' >&2; exit 1; }
+parent=$prefix
+while [[ $parent != / ]]; do
+    if [[ -e $parent ]]; then
+        [[ -d $parent && ! -L $parent && $(stat -c %u -- "$parent") == 0 ]] || { echo "Setup needs a root-owned folder: $parent" >&2; exit 1; }
+        mode=$(stat -c %a -- "$parent")
+        (( (8#$mode & 0022) == 0 )) || { echo "Other users can write to $parent. Choose a root-owned installation path." >&2; exit 1; }
+    fi
+    parent=$(dirname -- "$parent")
+done
+umask 022
+mkdir -p -- "$prefix"
+for name in bootstrap downloads jobs runtimes backups; do
+    managed="$prefix/$name"
+    if [[ -e $managed || -L $managed ]]; then
+        [[ -d $managed && ! -L $managed && $(stat -c %u -- "$managed") == 0 ]] || { echo "Unsafe runtime directory: $managed" >&2; exit 1; }
+        mode=$(stat -c %a -- "$managed")
+        (( (8#$mode & 0022) == 0 )) || { echo "Other users can write to $managed." >&2; exit 1; }
+    else
+        mkdir -- "$managed"
+    fi
+done
+exec 9>"$prefix/bootstrap.lock"
+flock -n 9 || { echo 'Another VSR Everywhere bootstrap is running.' >&2; exit 1; }
+setup=$(mktemp -d "$prefix/jobs/setup-XXXXXXXX")
+chmod 755 "$setup"
+mkdir "$setup/tmp"
+export TMPDIR="$setup/tmp"
+export PIP_CACHE_DIR="$prefix/downloads/pip"
+export PYTHONDONTWRITEBYTECODE=1
+line=$(awk '/^__VSR_PAYLOAD__$/ {print NR+1; exit}' "$0")
+[[ -n $line ]] || { echo 'The installer payload is missing.' >&2; exit 1; }
+tail -n +"$line" "$0" | base64 --decode > "$setup/payload.tar.gz"
+printf '%s  %s\n' '__PAYLOAD_SHA256__' "$setup/payload.tar.gz" | sha256sum -c -
+tar -xzf "$setup/payload.tar.gz" -C "$setup"
+python_root="$prefix/bootstrap/python-__PYTHON_VERSION__"
+if [[ ! -f $python_root/.verified || $(cat "$python_root/.verified") != '__PYTHON_SHA256__' ]]; then
+    [[ ! -e $python_root ]] || { echo "Incomplete Python runtime at $python_root; move it aside and retry." >&2; exit 1; }
+    archive="$prefix/downloads/python-__PYTHON_VERSION__.tar.gz"
+    if ! printf '%s  %s\n' '__PYTHON_SHA256__' "$archive" | sha256sum -c - >/dev/null 2>&1; then
+        echo 'Downloading private Python...'
+        if command -v curl >/dev/null; then
+            curl --fail --location --retry 3 --proto '=https' --output "$archive.part" '__PYTHON_URL__'
+        elif command -v wget >/dev/null; then
+            wget --https-only --output-document="$archive.part" '__PYTHON_URL__'
+        else
+            echo 'Install curl or wget, then rerun setup.' >&2; exit 1
+        fi
+        printf '%s  %s\n' '__PYTHON_SHA256__' "$archive.part" | sha256sum -c -
+        mv -- "$archive.part" "$archive"
+    fi
+    stage=$(mktemp -d "$prefix/bootstrap/stage-XXXXXXXX")
+    chmod 755 "$stage"
+    tar -xzf "$archive" -C "$stage" --strip-components=1
+    printf '%s' '__PYTHON_SHA256__' > "$stage/.verified"
+    mv -- "$stage" "$python_root"
+fi
+# Keep the prefix lock through setup so two services cannot prepare the same runtime at once.
+exec "$python_root/bin/python3" -B "$setup/install.py" "${args[@]}" --install-dir "$prefix"
+exit 1
+__VSR_PAYLOAD__

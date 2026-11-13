@@ -18,6 +18,7 @@ def main():
     p.add_argument("--stream-width", default=3840, type=int)
     p.add_argument("--stream-height", default=2160, type=int)
     p.add_argument("--quality", default="STREAMING_MEDIUM")
+    p.add_argument("--nvenc-lookahead", type=int, default=0)
     p.add_argument("--report", required=True)
     args = p.parse_args()
     import torch
@@ -41,6 +42,7 @@ def main():
         cmd = [sys.executable, args.worker, str(source), "--output", str(output),
                "--hls", "--seconds", "0.125", "--ffmpeg", args.ffmpeg, "--ffprobe", args.ffprobe,
                "--segment-type", "mpegts", "--quality", args.quality,
+               "--nvenc-lookahead", str(args.nvenc_lookahead),
                "--processing-width", str(args.processing_width),
                "--processing-height", str(args.processing_height),
                "--stream-width", str(args.stream_width), "--stream-height", str(args.stream_height)]
@@ -61,7 +63,8 @@ def main():
             raise RuntimeError("The encoded test stream did not match the requested format.")
         report = {"success": True, "gpu": gpu, "torch": torch.__version__, "python": sys.version,
                   "processing": [args.processing_width, args.processing_height],
-                  "stream": [video["width"], video["height"]], "videoCodec": "hevc", "audioCodec": "aac"}
+                  "stream": [video["width"], video["height"]], "videoCodec": "hevc", "audioCodec": "aac",
+                  "nvencLookahead": args.nvenc_lookahead}
         Path(args.report).write_text(json.dumps(report, indent=2), encoding="utf-8")
         print("VSR, HEVC, AAC, and HLS checks passed.", flush=True)
 

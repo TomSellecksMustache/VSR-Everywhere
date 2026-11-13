@@ -1,0 +1,12 @@
+{
+  "product": "VSR Everywhere",
+  "version": "1.0.0",
+  "targetAbi": "12.1.0.0",
+  "architecture": "x86_64",
+  "minimumGlibc": "2.28",
+  "python": {
+    "version": "3.12.16",
+    "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20261110/cpython-3.12.16%2B20261110-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz",
+    "sha256": "6a9e62dad033790aef722dbd370e0ce76ce17b73627ba3ae679f537049350b39"
+  }
+}

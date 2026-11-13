@@ -1,6 +1,6 @@
 """VSR Everywhere: NVIDIA Video Effects SDK (Maxine) -> NVENC -> HLS.
 
-Windows worker. Supports 8-bit SDR source video and the first
+Windows/Linux worker. Supports 8-bit SDR source video and the first
 (default) audio stream. A single process handles one session. No network API.
 Copyright 2026 VSR Everywhere contributors. This file is original integration code.
 NVIDIA's SDK/pip packages and models are installed independently under their terms.

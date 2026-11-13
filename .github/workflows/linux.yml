@@ -1,0 +1,61 @@
+name: Linux server checks
+
+on:
+  push:
+    branches: [main, linux-server]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  linux:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        image: ['ubuntu:24.04', 'rockylinux:9']
+    container: ${{ matrix.image }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Install build prerequisites
+        run: |
+          if command -v apt-get >/dev/null; then
+            apt-get update
+            DEBIAN_FRONTEND=noninteractive apt-get install -y git python3 curl ca-certificates tar gzip libicu-dev libssl-dev zlib1g util-linux
+          else
+            dnf install -y --allowerasing git python3 curl ca-certificates tar gzip libicu openssl-libs zlib which findutils util-linux
+          fi
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Use the installer's pinned private Python
+        run: |
+          python3 - <<'PY'
+          from hashlib import sha256
+          import json
+          import os
+          from pathlib import Path
+          import subprocess
+          import urllib.request
+          spec = json.loads(Path('installer/linux/runtime.json').read_text())['python']
+          target = Path('installer/build/ci-python').resolve()
+          target.mkdir(parents=True, exist_ok=True)
+          archive = target / 'python.tar.gz'
+          urllib.request.urlretrieve(spec['url'], archive)
+          assert sha256(archive.read_bytes()).hexdigest() == spec['sha256']
+          subprocess.run(['tar', '-xzf', str(archive), '-C', str(target)], check=True)
+          with open(os.environ['GITHUB_PATH'], 'a') as output:
+              output.write(str(target / 'python/bin') + '\n')
+          PY
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          dotnet-version: '10.0.x'
+      - name: Installer settings, deployment, and rollback fixtures
+        run: python3 -m unittest discover -s tests -p test_linux_setup.py -v
+      - name: Plugin, RAM cache, process control, and Linux cgroup checks
+        run: dotnet run --project tests/PluginChecks/PluginChecks.csproj -c Release -- python3
+      - name: Build and verify the Linux distribution
+        run: |
+          python3 tools/build_linux.py --no-restore
+          python3 installer/linux/test_package.py
