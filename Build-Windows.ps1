@@ -47,7 +47,7 @@ $metadata = [ordered]@{
     changelog = 'DLSS testing: Veyra experimental neural rendering, automatic content profiles, NVIDIA Auto HDR, and interpolation that preserves input frame rate.'
 }
 [IO.File]::WriteAllText((Join-Path $dist 'meta.json'), ($metadata | ConvertTo-Json -Depth 5), (New-Object Text.UTF8Encoding($false)))
-$zip = Join-Path $outputRoot "VSR-Everywhere-$version-dlss.1-plugin.zip"
+$zip = Join-Path $outputRoot "VSR-Everywhere-$version-dlss.2-plugin.zip"
 if (Test-Path -LiteralPath $zip) { Remove-Item -LiteralPath $zip -Force }
 Compress-Archive -Path (Join-Path $dist '*') -DestinationPath $zip -Force
 Write-Host "Built plugin directory: $dist" -ForegroundColor Green

@@ -72,6 +72,62 @@ $null = New-Item -ItemType Directory -Force -Path (Join-Path $unknown.Data 'plug
 Set-Content -LiteralPath (Join-Path $unknown.Data 'plugins\VSR-Everywhere\unrelated.txt') -Value 'preserve'
 Expect-Failure { Install-VsrPluginFiles $unknown.Data $payload (Join-Path $unknown.Data 'backup') $configuration { } } 'Unrecognized destination was overwritten.'
 Check (Test-Path -LiteralPath (Join-Path $unknown.Data 'plugins\VSR-Everywhere\unrelated.txt')) 'An unrelated file was changed.'
+Expect-Failure { Get-PluginSnapshot $unknown.Data } 'Unknown destination was not rejected during preflight.'
+
+$manualAssembly = Join-Path $work 'Jellyfin.Plugin.VsrEverywhere.dll'
+Add-Type -TypeDefinition 'public sealed class VsrManualInstallFixture { }' -OutputAssembly $manualAssembly
+$foreignAssembly = Join-Path $work 'ForeignPlugin.dll'
+Add-Type -TypeDefinition 'public sealed class ForeignInstallFixture { }' -OutputAssembly $foreignAssembly
+function New-ManualFixture([string]$Name) {
+    $original = New-Fixture $Name
+    $source = Assert-ChildPath $original.Data $original.Plugin
+    $destination = Assert-ChildPath $original.Data (Join-Path $original.Data 'plugins\VSR-Everywhere')
+    Move-Item -LiteralPath $source -Destination $destination
+    Remove-Item -LiteralPath (Join-Path $destination 'meta.json'), (Join-Path $destination 'Jellyfin.Plugin.Fixture.dll')
+    Copy-Item -LiteralPath $manualAssembly -Destination (Join-Path $destination 'Jellyfin.Plugin.VsrEverywhere.dll')
+    $configPath = Join-Path $original.Data 'plugins\configurations\Jellyfin.Plugin.VsrEverywhere.xml'
+    Move-Item -LiteralPath $original.Config -Destination $configPath
+    return [pscustomobject]@{ Data = $original.Data; Plugin = $destination; Config = $configPath; ConfigHash = $original.ConfigHash }
+}
+$manual = New-ManualFixture 'manual-success'
+$manualDll = Join-Path $manual.Plugin 'Jellyfin.Plugin.VsrEverywhere.dll'
+$manualHash = (Get-FileHash -LiteralPath $manualDll).Hash
+$manualSnapshot = Get-PluginSnapshot $manual.Data
+Check ($manualSnapshot.PluginPath -eq $manual.Plugin) 'DLL-only installation was not recognized.'
+Check ($manualSnapshot.ConfigPath -eq $manual.Config) 'Manual installation configuration was not found.'
+$manualConfig = New-PluginConfiguration $manualSnapshot.Config 'C:\Runtime\python.exe' 'C:\Encoder\ffmpeg.exe' 'C:\Encoder\ffprobe.exe' 'D:\Cache' $false
+$manualBackup = Join-Path $manual.Data 'vsr-everywhere-backups\check'
+$null = Install-VsrPluginFiles $manual.Data $payload $manualBackup $manualConfig { }
+Check ((Get-FileHash -LiteralPath (Join-Path $manualBackup 'plugin\Jellyfin.Plugin.VsrEverywhere.dll')).Hash -eq $manualHash) 'Manual DLL backup differs from original.'
+Check ((Get-FileHash -LiteralPath (Join-Path $manualBackup 'configuration.xml')).Hash -eq $manual.ConfigHash) 'Manual configuration backup differs from original.'
+Check (Test-Path -LiteralPath (Join-Path $manual.Plugin 'meta.json')) 'Manual upgrade did not install plugin metadata.'
+Check (Test-Path -LiteralPath (Join-Path $manual.Plugin 'worker\vsr_everywhere.py')) 'Manual upgrade did not install the worker.'
+$manualSaved = [xml](Get-Content -LiteralPath $manual.Config -Raw)
+Check ((Get-XmlValue $manualSaved 'ProcessingWidth') -eq '5120' -and (Get-XmlValue $manualSaved 'StreamWidth') -eq '3840') 'Manual upgrade changed resolutions.'
+Check ($manualSaved.DocumentElement.SelectSingleNode('EnabledDeviceIds/string').InnerText -eq 'living-room') 'Manual upgrade lost device approvals.'
+Check ((Get-XmlValue $manualSaved 'UnknownSetting') -eq 'keep') 'Manual upgrade lost unknown settings.'
+
+$manualRollback = New-ManualFixture 'manual-rollback'
+$rollbackDll = Join-Path $manualRollback.Plugin 'Jellyfin.Plugin.VsrEverywhere.dll'
+$rollbackHash = (Get-FileHash -LiteralPath $rollbackDll).Hash
+Expect-Failure { Install-VsrPluginFiles $manualRollback.Data $payload (Join-Path $manualRollback.Data 'backup') $manualConfig { throw 'Simulated startup failure' } } 'Manual rollback did not report verification failure.'
+Check ((Get-FileHash -LiteralPath $rollbackDll).Hash -eq $rollbackHash) 'Manual rollback did not restore the exact DLL.'
+Check ((Get-FileHash -LiteralPath $manualRollback.Config).Hash -eq $manualRollback.ConfigHash) 'Manual rollback did not restore the exact configuration.'
+Check (-not (Test-Path -LiteralPath (Join-Path $manualRollback.Plugin 'meta.json'))) 'Manual rollback added metadata to the original installation.'
+Check ((Get-PluginSnapshot $manualRollback.Data).PluginPath -eq $manualRollback.Plugin) 'Restored manual installation was not recognized.'
+
+$wrongIdentity = New-ManualFixture 'manual-foreign-identity'
+$wrongDll = Join-Path $wrongIdentity.Plugin 'Jellyfin.Plugin.VsrEverywhere.dll'
+Copy-Item -LiteralPath $foreignAssembly -Destination $wrongDll -Force
+$foreignHash = (Get-FileHash -LiteralPath $wrongDll).Hash
+Expect-Failure { Get-PluginSnapshot $wrongIdentity.Data } 'A renamed foreign assembly was accepted.'
+Check ((Get-FileHash -LiteralPath $wrongDll).Hash -eq $foreignHash) 'Foreign assembly was modified during discovery.'
+$invalidIdentity = New-ManualFixture 'manual-invalid-assembly'
+Set-Content -LiteralPath (Join-Path $invalidIdentity.Plugin 'Jellyfin.Plugin.VsrEverywhere.dll') -Value 'not an assembly'
+Expect-Failure { Get-PluginSnapshot $invalidIdentity.Data } 'A non-assembly DLL was accepted.'
+$conflictingMeta = New-ManualFixture 'manual-conflicting-metadata'
+@{ guid = '00000000-0000-0000-0000-000000000000' } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $conflictingMeta.Plugin 'meta.json') -Encoding UTF8
+Expect-Failure { Get-PluginSnapshot $conflictingMeta.Data } 'Conflicting metadata was bypassed using the DLL identity.'
 
 $safe = Join-Path $work 'safe'
 $null = New-Item -ItemType Directory -Force -Path $safe
@@ -165,8 +221,13 @@ Check (-not (Test-SetupRuntimeManifest $runtimeMarker $runtimeManifest)) 'A runt
 @{ product = 'VSR Everywhere'; version = '1.0.0'; manifestSha256 = (Get-FileHash -LiteralPath $runtimeManifest).Hash } | ConvertTo-Json | Set-Content -LiteralPath $runtimeMarker -Encoding UTF8
 Check (Test-SetupRuntimeManifest $runtimeMarker $runtimeManifest) 'An exact runtime manifest was not reused.'
 
-function Test-Engine([string]$Name, [bool]$FailStartup, [bool]$CustomStorage = $false, [bool]$PreviousRuntime = $false) {
+function Test-Engine([string]$Name, [bool]$FailStartup, [bool]$CustomStorage = $false, [bool]$PreviousRuntime = $false, [bool]$UnknownDestination = $false) {
     $fixture = New-Fixture ($Name + '\data')
+    if ($UnknownDestination) {
+        $unknownPath = Join-Path $fixture.Data 'plugins\VSR-Everywhere'
+        $null = New-Item -ItemType Directory -Force -Path $unknownPath
+        Set-Content -LiteralPath (Join-Path $unknownPath 'unrelated.txt') -Value 'preserve'
+    }
     $case = Join-Path $work $Name
     $engine = Join-Path $case 'engine'
     $programData = Join-Path $case 'ProgramData'
@@ -257,6 +318,13 @@ Export-ModuleMember -Function *
     $lines | Set-Content -LiteralPath $wrapper -Encoding UTF8
     $code = Invoke-SetupProcess (Join-Path $env:WINDIR 'System32\WindowsPowerShell\v1.0\powershell.exe') @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $wrapper) $job 60
     $result = Get-Content -LiteralPath (Join-Path $job 'result.json') -Raw | ConvertFrom-Json
+    if ($UnknownDestination) {
+        Check ($code -eq 1 -and -not $result.Success -and $result.Message -like '*unrecognized folder*') 'Engine did not reject an unknown destination.'
+        Check (-not (Test-Path -LiteralPath $events)) 'Engine tested the runtime or stopped Jellyfin before rejecting the destination.'
+        Check ((Get-FileHash -LiteralPath $fixture.Config).Hash -eq $fixture.ConfigHash) 'Preflight changed the original configuration.'
+        Check ((Get-Content -LiteralPath (Join-Path $unknownPath 'unrelated.txt') -Raw).Trim() -eq 'preserve') 'Preflight changed an unrelated file.'
+        return
+    }
     if ($FailStartup) {
         Check ($code -eq 1 -and -not $result.Success) 'Engine did not report startup failure.'
         Check ((Get-FileHash -LiteralPath $fixture.Config).Hash -eq $fixture.ConfigHash) 'Engine rollback did not restore exact settings.'
@@ -277,4 +345,5 @@ Test-Engine 'engine-success' $false
 Test-Engine 'engine-rollback' $true
 Test-Engine 'engine-custom-storage' $false $true
 Test-Engine 'engine-version-upgrade' $false $true $true
+Test-Engine 'engine-unknown-destination' $false $false $false $true
 Write-Output "PASS: $script:checks installer checks (settings, discovery, deployment, rollback, paths, downloads, cancellation, native arguments, and complete engine transactions)."

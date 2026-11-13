@@ -6,11 +6,13 @@ This Windows preview integrates [Veyra-NRVideo](https://github.com/Likely7/Veyra
 
 ## Install
 
-Run the preview `VSR-Everywhere-1.0.0-dlss.1-Setup.exe`, or download the matching Windows ZIP and `Install-VSREverywhere.ps1` together. Choose a drive with **25 GB free**. Setup downloads and verifies Python, GPU libraries, the video encoder, and Veyra's runtime. No compiler, system Python, Veyra GUI, or model download steps are needed on the server.
+Run the preview `VSR-Everywhere-1.0.0-dlss.2-Setup.exe`, or download the matching Windows ZIP and `Install-VSREverywhere.ps1` together. Choose a drive with **25 GB free**. Setup downloads and verifies Python, GPU libraries, the video encoder, and Veyra's runtime. No compiler, system Python, Veyra GUI, or model download steps are needed on the server.
 
 Use Windows 11 x64 with an NVIDIA RTX GPU, a compatible NVIDIA driver, and a native Jellyfin 12.1 service or desktop installation. The RTX 4070 Ti SUPER is validated; other GPU models still need testing. These new enhancements use DirectX 12 on Windows. The existing Linux VSR path remains available; Veyra neural rendering is not a Linux implementation.
 
 Setup tests the selected processing and stream resolutions before restarting Jellyfin. It preserves existing device approvals and quality settings, backs up the installation, and restores the previous files if Jellyfin fails to load the plugin. Switching back to the stable installer restores the stable worker while retaining compatible settings.
+
+This installer also upgrades manual installations containing only `Jellyfin.Plugin.VsrEverywhere.dll` in the `VSR-Everywhere` plugin folder. It checks the DLL's assembly identity when `meta.json` is absent. Unknown folders are rejected before downloads or a server restart; existing files and configuration are backed up for rollback.
 
 ## Settings
 

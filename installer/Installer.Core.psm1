@@ -64,13 +64,26 @@ function Get-PluginSnapshot([string]$DataPath) {
     if (Test-Path -LiteralPath $plugins) {
         foreach ($dir in Get-ChildItem -LiteralPath $plugins -Directory) {
             $metaPath = Join-Path $dir.FullName 'meta.json'
-            if (-not (Test-Path -LiteralPath $metaPath -PathType Leaf)) { continue }
-            try { $meta = Get-Content -LiteralPath $metaPath -Raw | ConvertFrom-Json } catch { continue }
-            if ([string]$meta.guid -ne $script:PluginId) { continue }
+            if (Test-Path -LiteralPath $metaPath -PathType Leaf) {
+                try {
+                    $meta = Get-Content -LiteralPath $metaPath -Raw | ConvertFrom-Json
+                    if ([string]$meta.guid -ne $script:PluginId) { continue }
+                } catch { continue }
+            } else {
+                if ($dir.Name -ine 'VSR-Everywhere') { continue }
+                $dllPath = Join-Path $dir.FullName $script:AssemblyFile
+                if (-not (Test-Path -LiteralPath $dllPath -PathType Leaf)) { continue }
+                try { $identity = [Reflection.AssemblyName]::GetAssemblyName($dllPath) } catch { continue }
+                if ($identity.Name -ine [IO.Path]::GetFileNameWithoutExtension($script:AssemblyFile)) { continue }
+            }
             $found += $dir.FullName
         }
     }
     if ($found.Count -gt 1) { throw 'More than one copy of this plugin is installed. Remove the duplicate copy before running setup.' }
+    $destination = Assert-ChildPath $plugins (Join-Path $plugins 'VSR-Everywhere')
+    if ((Test-Path -LiteralPath $destination) -and ($found.Count -eq 0 -or $found[0] -ine $destination)) {
+        throw 'The VSR Everywhere destination contains an unrecognized folder. No files were replaced.'
+    }
     $config = Join-Path $plugins 'configurations\Jellyfin.Plugin.VsrEverywhere.xml'
     if ($found.Count -eq 1 -and -not (Test-Path -LiteralPath $config)) {
         foreach ($dll in Get-ChildItem -LiteralPath $found[0] -Filter 'Jellyfin.Plugin.*.dll' -File) {
@@ -382,7 +395,6 @@ function Install-VsrPluginFiles([string]$DataPath, [string]$PayloadPath, [string
     $plugins = Join-Path $DataPath 'plugins'
     $destination = Assert-ChildPath $plugins (Join-Path $plugins 'VSR-Everywhere')
     $configPath = Assert-ChildPath $plugins (Join-Path $plugins 'configurations\Jellyfin.Plugin.VsrEverywhere.xml')
-    if ((Test-Path -LiteralPath $destination) -and $snapshot.PluginPath -ine $destination) { throw 'The VSR Everywhere destination contains an unrecognized folder. No files were replaced.' }
     $null = New-Item -ItemType Directory -Force -Path $BackupPath
     $oldPlugin = Join-Path $BackupPath 'plugin'
     $oldConfig = Join-Path $BackupPath 'configuration.xml'
