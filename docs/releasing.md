@@ -40,4 +40,10 @@ Push the reviewed source tree to the repository, then create a **v1.0.0** releas
 
 Keep generated `dist/`, dependency runtimes, build directories, test work directories, internal handoff notes, source videos, and local server settings out of the Git history. `.gitignore` covers generated files inside this project. Release binaries belong in release assets rather than the source history.
 
+## Testing channel
+
+The `testing` branch carries automatic GPU detection and the experimental Intel OpenVINO/Quick Sync backend. Publish it as the **v1.0.0-testing.1** prerelease with **latest disabled**. Keep the existing **v1.0.0** release marked latest; its asset files and the default README download links stay unchanged. The main README links the prerelease below the stable downloads in **Intel/AMD-based upscaling (testing)**.
+
+Include the matching Windows EXE, ZIP, and PowerShell installer, Linux installer and bundle, source, manual plugin package, MIT license, and checksums. Put the Windows EXE link before Linux in the release notes. The packaged plugin remains version 1.0.0; the testing tag identifies this separate build. State that Intel GPU playback needs hardware validation and AMD enhancement is not implemented.
+
 These are maintainer instructions. Preparing this package does not create a remote repository, commit, tag, release, or push.

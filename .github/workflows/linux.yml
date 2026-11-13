@@ -2,7 +2,7 @@ name: Linux server checks
 
 on:
   push:
-    branches: [main, linux-server, gpu-auto-intel]
+    branches: [main, linux-server, gpu-auto-intel, testing]
   pull_request:
 
 permissions:

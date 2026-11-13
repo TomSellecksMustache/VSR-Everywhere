@@ -2,7 +2,7 @@
 
 **NVIDIA Video Super Resolution for your Jellyfin server.**
 
-**In development:** automatic GPU detection and an Intel OpenVINO/Quick Sync backend. [GPU selection and validation status](docs/gpu-backends.md). The published 1.0.0 downloads below remain NVIDIA-only.
+**Testing branch:** automatic GPU detection and an experimental Intel OpenVINO/Quick Sync backend. [Download the testing prerelease](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/tag/v1.0.0-testing.1). The recommended stable 1.0.0 downloads below remain NVIDIA-only.
 
 Enhance lower-resolution video on a Windows or Linux server and deliver an HEVC stream to your Jellyfin clients. Choose how much resolution VSR processes, choose what resolution your player receives, and let setup handle the runtime.
 
@@ -11,6 +11,14 @@ Enhance lower-resolution video on a Windows or Linux server and deliver an HEVC 
 **Linux servers:** [download the Linux installer](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/download/v1.0.0/Install-VSREverywhere-1.0.0-Linux.sh) · [setup and requirements](INSTALL-LINUX.md). The Linux port targets native systemd services on compatible x86-64 glibc distributions, including Ubuntu and RPM-based systems. Native Linux GPU playback still needs validation.
 
 [Install](INSTALL-WINDOWS.md) · [Comparisons](docs/comparisons.md) · [Settings](docs/configuration.md) · [Troubleshooting](docs/troubleshooting.md) · [Build from source](docs/development.md)
+
+## Intel/AMD-based upscaling (testing)
+
+[Download the testing prerelease](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/tag/v1.0.0-testing.1) · [View the testing branch](https://github.com/TomSellecksMustache/VSR-Everywhere/tree/testing)
+
+The testing build adds automatic GPU detection, a backend override, and experimental Intel OpenVINO/Quick Sync upscaling. It downloads the required runtime and public model automatically. **Intel GPU playback still needs hardware validation. AMD GPU enhancement is planned and is not included yet.** [Backend details and validation status](https://github.com/TomSellecksMustache/VSR-Everywhere/blob/testing/docs/gpu-backends.md).
+
+The NVIDIA **1.0.0** release remains the latest and recommended default download above.
 
 ## See the difference
 
