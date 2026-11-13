@@ -84,7 +84,7 @@ class WorkerExecutionChecks(unittest.TestCase):
                 output = root / 'cache/index.m3u8'
                 destination = ('http://127.0.0.1:8096/VsrEverywhere/ingest/' + 'a' * 48 + '/index.m3u8'
                                if memory else str(output))
-                argv = ['worker', str(source), '--output', destination, '--hls', '--pipeline', pipeline,
+                argv = ['worker', str(source), '--backend', 'nvidia', '--output', destination, '--hls', '--pipeline', pipeline,
                         '--start-time', '3.5', '--legacy-schedule', schedule]
                 if memory:
                     argv += ['--memory-output']

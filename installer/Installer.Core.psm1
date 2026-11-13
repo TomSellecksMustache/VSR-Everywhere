@@ -186,10 +186,21 @@ function Get-NvidiaStatus {
     return ($values[0].Trim() + ' - driver ' + $values[1].Trim())
 }
 
+function Get-GpuStatus {
+    $backends = @(); $names = @(); $nvidiaError = ''
+    try { $names += Get-NvidiaStatus; $backends += 'nvidia' } catch { $nvidiaError = $_.Exception.Message }
+    $intel = @()
+    try { $intel = @(Get-CimInstance Win32_VideoController -ErrorAction Stop | Where-Object { $_.Name -match 'Intel' -and $_.ConfigManagerErrorCode -eq 0 }) }
+    catch { if ($backends.Count -eq 0) { throw 'Windows could not enumerate graphics adapters. Run setup as administrator and check the graphics driver.' } }
+    if ($intel.Count -gt 0) { $backends += 'intel'; $names += @($intel | ForEach-Object { $_.Name }) }
+    if ($backends.Count -eq 0) { throw ('A supported NVIDIA RTX or Intel GPU with its graphics driver is required. ' + $nvidiaError) }
+    return [pscustomobject]@{ Backends = $backends; Display = ($names -join '; ') }
+}
+
 function New-PluginConfiguration($Existing, [string]$Python, [string]$Ffmpeg, [string]$Ffprobe, [string]$Cache, [bool]$AllDevices) {
     if ($Existing) { $xml = [xml]$Existing.OuterXml }
     else { $xml = [xml]'<?xml version="1.0" encoding="utf-8"?><PluginConfiguration />' }
-    $defaults = [ordered]@{ Backend = 'nvidia'; VideoMbps = '20'; VsrQuality = 'STREAMING_MEDIUM'; VsrStrength = '0.75';
+    $defaults = [ordered]@{ Backend = 'auto'; VideoMbps = '20'; VsrQuality = 'STREAMING_MEDIUM'; VsrStrength = '0.75';
         NvencPreset = 'p4'; NvencTune = 'default'; NvencLookahead = '0'; NvencSpatialAq = 'false'; NvencTemporalAq = 'false';
         NvencCq = '0'; SegmentType = 'mpegts'; MaxSessions = '1'; SessionMinutes = '180';
         CacheMode = 'memory'; MemoryBudgetMb = '0'; SeekLookaheadSeconds = '90'; SeekCatchupSeconds = '20';

@@ -77,7 +77,7 @@ class WorkerChecks(unittest.TestCase):
         modules = {"av": types.ModuleType("av"), "numpy": types.ModuleType("numpy"),
                    "torch": types.SimpleNamespace(cuda=cuda),
                    "nvvfx": types.SimpleNamespace(VideoSuperRes=object)}
-        args = self.args("--processing-width", "7680", "--processing-height", "4320",
+        args = self.args("--backend", "nvidia", "--processing-width", "7680", "--processing-height", "4320",
                          "--stream-width", "7680", "--stream-height", "4320", "--probe")
         output = io.StringIO()
         with patch.dict(sys.modules, modules), contextlib.redirect_stdout(output):

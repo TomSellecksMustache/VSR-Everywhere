@@ -5,6 +5,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import shutil
 import zipfile
 
 
@@ -51,7 +52,12 @@ def main():
             # The bootstrap interpreter is already running from this directory.
             continue
         print("Installing " + item["file"], flush=True)
-        extract(path, args.target, wheel=item["kind"] == "wheel")
+        if item['kind'] == 'model':
+            destination = args.target / 'models/intel' / path.name
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(path, destination)
+        else:
+            extract(path, args.target, wheel=item["kind"] == "wheel")
     tag = "".join(manifest["pythonVersion"].split(".")[:2])
     (args.target / f"python{tag}._pth").write_text(
         f"python{tag}.zip\n.\nLib/site-packages\nimport site\n", encoding="utf-8")

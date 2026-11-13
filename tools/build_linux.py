@@ -29,6 +29,7 @@ def build(no_restore=False):
     files = {
         'install.py': (linux / 'install.py').read_bytes(),
         'requirements.lock.txt': (linux / 'requirements.lock.txt').read_bytes(),
+        'requirements-intel.lock.txt': (linux / 'requirements-intel.lock.txt').read_bytes(),
         'runtime.json': (linux / 'runtime.json').read_bytes(),
         'Test-Runtime.py': (root / 'installer/Test-Runtime.py').read_bytes(),
         'INSTALL-LINUX.md': (root / 'INSTALL-LINUX.md').read_bytes(),
@@ -41,7 +42,7 @@ def build(no_restore=False):
     files.update({'plugin/worker/' + path.name: path.read_bytes() for path in sorted((root / 'worker').glob('*.py'))})
     metadata = dict(category='General', guid='7ca129d0-7454-41c7-aad6-55250b1a7b5b', name='VSR Everywhere',
                     version=version + '.0', status='Active', targetAbi='12.1.0.0',
-                    description='NVIDIA VSR with GPU processing, RAM caching, and independent processing/delivery resolutions.')
+                    description='Automatic NVIDIA/Intel GPU super resolution, RAM caching, and independent processing/delivery resolutions.')
     files['plugin/meta.json'] = json.dumps(metadata, indent=2).encode('utf-8')
     files['payload.sha256.json'] = json.dumps({name: sha256(data).hexdigest() for name, data in files.items()}, indent=2).encode()
     buffer = io.BytesIO()

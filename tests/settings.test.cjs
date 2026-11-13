@@ -49,6 +49,7 @@ for (const key of ['ProcessingResolution', 'StreamResolution']) {
 assert(!html.includes('All new devices default to disabled.'));
 assert(!html.includes("Selection uses that device's Jellyfin registration ID"));
 assert(!controls.ProcessingWidth && !controls.StreamWidth);
+assert.deepEqual(controls.Backend.options.map(o => o.value), ['auto', 'nvidia', 'intel']);
 assert(html.includes('<title>VSR Everywhere</title>'));
 
 let config = {
@@ -141,5 +142,17 @@ const save = () => controls.VsrEverywhereForm.listeners.submit({ preventDefault(
     assert.equal(config.CacheMode, 'memory');
     assert.equal(config.MemoryBudgetMb, 0);
     assert.equal(config.CacheDirectory, original.CacheDirectory);
-    console.log('PASS: all 36 resolution pairs, device approvals, saved sizes, memory/disk controls, budget display and compatible defaults.');
+    for (const backend of ['intel', 'auto', 'nvidia']) {
+        controls.Backend.value = backend;
+        await save(); await load();
+        assert.equal(config.Backend, backend);
+        assert.equal(controls.Backend.value, backend);
+        assert.equal(config.VsrQuality, original.VsrQuality);
+        assert.equal(config.NvencLookahead, original.NvencLookahead);
+        assert.deepEqual(config.EnabledDeviceIds, ['device-1']);
+    }
+    delete config.Backend;
+    await load();
+    assert.equal(controls.Backend.value, 'auto');
+    console.log('PASS: GPU override round trips, all 36 resolution pairs, device approvals, saved sizes, memory/disk controls, budget display and compatible defaults.');
 })().catch(error => { console.error(error); process.exitCode = 1; });

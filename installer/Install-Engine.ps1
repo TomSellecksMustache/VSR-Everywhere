@@ -15,11 +15,11 @@ try {
     $manifest = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'downloads.lock.json') -Raw | ConvertFrom-Json
     if ($plan.Product -ne 'VSR Everywhere' -or $plan.Version -ne '1.0.0') { throw 'The setup plan does not match this release.' }
     if (-not [Environment]::Is64BitOperatingSystem -or $env:PROCESSOR_ARCHITECTURE -eq 'ARM64') { throw 'This release requires Windows 10 or 11 on an x64 computer.' }
-    Write-SetupStatus $JobPath 'prepare' 'Checking Jellyfin and NVIDIA hardware...' 2
+    Write-SetupStatus $JobPath 'prepare' 'Checking Jellyfin and GPU hardware...' 2
     $target = Get-JellyfinTarget -DataPath $plan.DataPath -ServerPath $plan.ServerPath
     $result.Url = $target.Url
-    $gpu = Get-NvidiaStatus
-    Write-SetupLog $JobPath $gpu
+    $gpu = Get-GpuStatus
+    Write-SetupLog $JobPath $gpu.Display
     $snapshot = Get-PluginSnapshot $target.DataPath
     $payload = Join-Path $PSScriptRoot 'plugin'
     $hashes = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'payload.sha256.json') -Raw | ConvertFrom-Json
@@ -31,7 +31,12 @@ try {
     $root = New-SetupStorageRoot $folder
     $drive = New-Object IO.DriveInfo([IO.Path]::GetPathRoot($root))
     $downloads = Join-Path $root 'downloads'
-    $manifestPath = Join-Path $PSScriptRoot 'downloads.lock.json'
+    # The runtime identity includes the hardware-specific dependency set.
+    $manifest.downloads = @($manifest.downloads | Where-Object {
+        -not $_.PSObject.Properties['backends'] -or @($_.backends | Where-Object { $_ -in $gpu.Backends }).Count -gt 0
+    })
+    $manifestPath = Join-Path $JobPath 'runtime.lock.json'
+    [IO.File]::WriteAllText($manifestPath, ($manifest | ConvertTo-Json -Depth 12), (New-Object Text.UTF8Encoding($false)))
     $lockHash = (Get-FileHash -LiteralPath $manifestPath -Algorithm SHA256).Hash.ToLowerInvariant()
     $runtime = Join-Path $root ('runtimes\1.0.0-' + $lockHash.Substring(0, 12))
     $marker = Join-Path $runtime 'vsr-runtime.json'
@@ -62,7 +67,7 @@ try {
         $staging = Assert-ChildPath $root (Join-Path $root ('runtimes\stage-' + [Guid]::NewGuid().ToString('N')))
         $pythonPackage = @($manifest.downloads | Where-Object { $_.kind -eq 'python' })[0]
         Expand-SetupArchive (Join-Path $downloads $pythonPackage.file) $staging
-        $code = Invoke-SetupProcess (Join-Path $staging 'python.exe') @((Join-Path $PSScriptRoot 'vendor_runtime.py'), '--manifest', (Join-Path $PSScriptRoot 'downloads.lock.json'), '--downloads', $downloads, '--target', $staging) $JobPath 2400
+        $code = Invoke-SetupProcess (Join-Path $staging 'python.exe') @((Join-Path $PSScriptRoot 'vendor_runtime.py'), '--manifest', $manifestPath, '--downloads', $downloads, '--target', $staging) $JobPath 2400
         if ($code -ne 0) { throw 'The private runtime could not be prepared. Jellyfin has not been changed.' }
         if (Test-Path -LiteralPath $runtime) {
             $null = Assert-ChildPath $root $runtime
@@ -97,9 +102,10 @@ try {
     $python = Join-Path $runtime 'python.exe'
     $ffmpeg = Join-Path $encoder 'ffmpeg.exe'; $ffprobe = Join-Path $encoder 'ffprobe.exe'
     $configuration = New-PluginConfiguration $snapshot.Config $python $ffmpeg $ffprobe $cache ([bool]$plan.AllDevices)
-    Write-SetupStatus $JobPath 'test' 'Testing NVIDIA VSR, HEVC video, and audio...' 74
+    Write-SetupStatus $JobPath 'test' 'Testing GPU super resolution, HEVC video, and audio...' 74
     $testArgs = @((Join-Path $PSScriptRoot 'Test-Runtime.py'), '--worker', (Join-Path $payload 'worker\vsr_everywhere.py'),
         '--ffmpeg', $ffmpeg, '--ffprobe', $ffprobe, '--report', (Join-Path $JobPath 'runtime-test.json'),
+        '--backend', (Get-XmlValue $configuration 'Backend'),
         '--quality', (Get-XmlValue $configuration 'VsrQuality'),
         '--processing-width', (Get-XmlValue $configuration 'ProcessingWidth'), '--processing-height', (Get-XmlValue $configuration 'ProcessingHeight'),
         '--stream-width', (Get-XmlValue $configuration 'StreamWidth'), '--stream-height', (Get-XmlValue $configuration 'StreamHeight'))

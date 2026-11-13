@@ -4,6 +4,23 @@
   "targetAbi": "12.1.0.0",
   "architecture": "x86_64",
   "minimumGlibc": "2.28",
+  "intelModels": [
+    {
+      "file": "single-image-super-resolution-1033.xml",
+      "url": "https://storage.openvinotoolkit.org/repositories/open_model_zoo/2023.0/models_bin/1/single-image-super-resolution-1033/FP16/single-image-super-resolution-1033.xml",
+      "sha256": "9af449041f28495cfbc346899dd2effb6b4de93bed420c01afc0c8e38d31b095"
+    },
+    {
+      "file": "single-image-super-resolution-1033.bin",
+      "url": "https://storage.openvinotoolkit.org/repositories/open_model_zoo/2023.0/models_bin/1/single-image-super-resolution-1033/FP16/single-image-super-resolution-1033.bin",
+      "sha256": "9a9d5a8cbd9520e4c282600feea95b31228d7de9716e8807acb53c572bd9cd31"
+    },
+    {
+      "file": "LICENSE-OPENVINO-MODEL.txt",
+      "url": "https://www.apache.org/licenses/LICENSE-2.0.txt",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+    }
+  ],
   "python": {
     "version": "3.12.16",
     "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20261110/cpython-3.12.16%2B20261110-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz",

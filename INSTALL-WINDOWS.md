@@ -3,11 +3,11 @@
 ## Requirements
 
 - An initialized Jellyfin **12.1** server on this computer. Setup supports normal tray and Windows service installations.
-- Windows 10 or 11 **x64**, a supported NVIDIA GPU, and NVIDIA driver **570.65 or newer**. Setup checks the actual GPU pipeline before installation.
+- Windows 10 or 11 **x64**, a supported NVIDIA GPU with driver **570.65+**, or an Intel GPU with OpenVINO GPU access and HEVC Main 10 Quick Sync. Setup checks the actual GPU pipeline before installation.
 - Internet access and **25 GB free** on a local drive of your choice for downloads, the private runtime, and setup temporary files. C: is not required for these large components. Playback uses RAM automatically; disk fallback uses the Jellyfin data drive.
 - Permission to approve Windows administrator access.
 
-Setup downloads Python, PyTorch with CUDA libraries, NVIDIA VFX, NumPy, PyAV, their supporting packages, the video encoder, and the Microsoft Visual C++ runtime if needed. It does not require a system Python installation, the .NET SDK, or the CUDA Toolkit. It does not install or upgrade Jellyfin or change the graphics driver.
+Setup downloads Python, NumPy, PyAV, the video encoder, and the Microsoft Visual C++ runtime if needed. Detected NVIDIA systems receive PyTorch/CUDA and NVIDIA VFX; Intel systems receive OpenVINO and the public SR-1033 model. Both are provisioned on dual-vendor systems. It does not require system Python, the .NET SDK, or the CUDA Toolkit. It does not upgrade Jellyfin or change the graphics driver. New installs use Automatic; existing GPU overrides are retained. [GPU requirements and Intel validation status](docs/gpu-backends.md).
 
 ## Recommended: setup wizard
 

@@ -13,13 +13,6 @@
       "size": 12673227
     },
     {
-      "file": "pynvvideocodec-2.2.3-cp314-cp314-win_amd64.whl",
-      "url": "https://files.pythonhosted.org/packages/7b/9d/3aa82e8df0b3d958d9f77212b3b318ba4f06b03104f3c037b31d7e01bc7b/pynvvideocodec-2.2.3-cp314-cp314-win_amd64.whl",
-      "sha256": "223271328633fa256eb30903008ab7bccf6fccfa51647a5755e0df486fecdd25",
-      "kind": "wheel",
-      "size": 20596247
-    },
-    {
       "file": "av-18.1.0-cp311-abi3-win_amd64.whl",
       "url": "https://files.pythonhosted.org/packages/33/b4/76ba21e46704f632004276b85289a1582e95f5eff760436d6149875a1881/av-18.1.0-cp311-abi3-win_amd64.whl",
       "sha256": "ea1480b7a8d5405cb5f382b344731bf125fd2c1c6fae3964f6c48595628387ff",
@@ -38,75 +31,165 @@
       "url": "https://files.pythonhosted.org/packages/e0/1b/5e74289a1878e666bb4b65fe5805a04cafcac2aa5f519ef1ead67ef91c56/filelock-4.2.4-py3-none-any.whl",
       "sha256": "301241438c57936ef93f4243a94f2559022268bfcf9b375a9a72eb0f8db8358e",
       "kind": "wheel",
-      "size": 162475
+      "size": 162475,
+      "backends": [
+        "nvidia"
+      ]
     },
     {
       "file": "fsspec-2026.9.0-py3-none-any.whl",
       "url": "https://files.pythonhosted.org/packages/6c/c0/a98505f18594f1bce828bb159cec0fcf9860562f1a2c85913409fc8f3d9e/fsspec-2026.9.0-py3-none-any.whl",
       "sha256": "8dd6e646e99ea382bd85f97a45e6b526a442d79423a7dc673f1e2756d05fcb5f",
       "kind": "wheel",
-      "size": 221738
+      "size": 221738,
+      "backends": [
+        "nvidia"
+      ]
     },
     {
       "file": "jinja2-3.1.6-py3-none-any.whl",
       "url": "https://files.pythonhosted.org/packages/62/a1/3d680cbfd5f4b8f15abc1d571870c5fc3e594bb582bc3b64ea099db13e56/jinja2-3.1.6-py3-none-any.whl",
       "sha256": "85ece4451f492d0c13c5dd7c13a64681a86afae63a5f347908daf103ce6d2f67",
       "kind": "wheel",
-      "size": 134899
+      "size": 134899,
+      "backends": [
+        "nvidia"
+      ]
     },
     {
       "file": "markupsafe-3.0.4-cp314-cp314-win_amd64.whl",
       "url": "https://files.pythonhosted.org/packages/80/f0/5792ff768a410f93ee3f84fc19345295ffc352d2c936b424cb37e514714c/markupsafe-3.0.4-cp314-cp314-win_amd64.whl",
       "sha256": "c1bc67752d5f21013cfe430df4062441714eab79f65a6a05e01505957e9c35fe",
       "kind": "wheel",
-      "size": 14501
+      "size": 14501,
+      "backends": [
+        "nvidia"
+      ]
     },
     {
       "file": "mpmath-1.3.0-py3-none-any.whl",
       "url": "https://files.pythonhosted.org/packages/43/e3/7d92a15f894aa0c9c4b49b8ee9ac9850d6e63b03c9c32c0367a13ae62209/mpmath-1.3.0-py3-none-any.whl",
       "sha256": "a0b2b9fe80bbcd81a6647ff13108738cfb482d481d826cc0e02f5b35e5c88d2c",
       "kind": "wheel",
-      "size": 536198
+      "size": 536198,
+      "backends": [
+        "nvidia"
+      ]
     },
     {
       "file": "networkx-3.6.1-py3-none-any.whl",
       "url": "https://files.pythonhosted.org/packages/9e/c9/b2622292ea83fbb4ec318f5b9ab867d0a28ab43c5717bb85b0a5f6b3b0a4/networkx-3.6.1-py3-none-any.whl",
       "sha256": "d47fbf302e7d9cbbb9e2555a0d267983d2aa476bac30e90dfbe5669bd57f3762",
       "kind": "wheel",
-      "size": 2068504
+      "size": 2068504,
+      "backends": [
+        "nvidia"
+      ]
     },
     {
       "file": "sympy-1.14.0-py3-none-any.whl",
       "url": "https://files.pythonhosted.org/packages/a2/09/77d55d46fd61b4a135c444fc97158ef34a095e5681d0a6c10b75bf356191/sympy-1.14.0-py3-none-any.whl",
       "sha256": "e091cc3e99d2141a0ba2847328f5479b05d94a6635cb96148ccb3f34671bd8f5",
       "kind": "wheel",
-      "size": 6299353
+      "size": 6299353,
+      "backends": [
+        "nvidia"
+      ]
     },
     {
       "file": "typing_extensions-4.16.0-py3-none-any.whl",
       "url": "https://files.pythonhosted.org/packages/49/d3/b8441a820a491ddfc024b0b0cf0393375b75ea13866d9c66727e54c2fc80/typing_extensions-4.16.0-py3-none-any.whl",
       "sha256": "481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8",
       "kind": "wheel",
-      "size": 45571
+      "size": 45571,
+      "backends": [
+        "nvidia"
+      ]
     },
     {
       "file": "setuptools-80.9.0-py3-none-any.whl",
       "url": "https://files.pythonhosted.org/packages/a3/dc/17031897dae0efacfea57dfd3a82fdd2a2aeb58e0ff71b77b87e44edc772/setuptools-80.9.0-py3-none-any.whl",
       "sha256": "062d34222ad13e0cc312a4c02d73f059e86a4acbfbdea8f8f76b28c99f306922",
       "kind": "wheel",
-      "size": 1201486
+      "size": 1201486,
+      "backends": [
+        "nvidia"
+      ]
+    },
+    {
+      "file": "pynvvideocodec-2.2.3-cp314-cp314-win_amd64.whl",
+      "url": "https://files.pythonhosted.org/packages/7b/9d/3aa82e8df0b3d958d9f77212b3b318ba4f06b03104f3c037b31d7e01bc7b/pynvvideocodec-2.2.3-cp314-cp314-win_amd64.whl",
+      "sha256": "223271328633fa256eb30903008ab7bccf6fccfa51647a5755e0df486fecdd25",
+      "kind": "wheel",
+      "size": 20596247,
+      "backends": [
+        "nvidia"
+      ]
+    },
+    {
+      "file": "openvino-2026.1.0-21367-cp314-cp314-win_amd64.whl",
+      "url": "https://files.pythonhosted.org/packages/62/38/c917105e370ae75a49e925a90ce3dc787716e3d9011ac8d13d027a0cb60b/openvino-2026.1.0-21367-cp314-cp314-win_amd64.whl",
+      "sha256": "592b0b9708ae3ad93dc2d2994d87a355874861245ac01f9ebceabe046267d2d2",
+      "kind": "wheel",
+      "size": 71178943,
+      "backends": [
+        "intel"
+      ]
+    },
+    {
+      "file": "openvino_telemetry-2025.2.0-py3-none-any.whl",
+      "url": "https://files.pythonhosted.org/packages/3b/ac/5ab0ca0aa269ad3c73f7bfc3801b10e5f56f75a31bf68c1ae8bd51cf70a4/openvino_telemetry-2025.2.0-py3-none-any.whl",
+      "sha256": "bcb667e83a44f202ecf4cfa49281715c6d7e21499daec04ff853b7f964833599",
+      "kind": "wheel",
+      "size": 25227,
+      "backends": [
+        "intel"
+      ]
     },
     {
       "file": "torch-2.11.0+cu128-cp314-cp314-win_amd64.whl",
       "url": "https://download-r2.pytorch.org/whl/cu128/torch-2.11.0%2Bcu128-cp314-cp314-win_amd64.whl",
       "sha256": "d6c21797ff75271b4fbdd905e2d703be4ecea5ea5bbdde4d1c201e9c71bc411d",
-      "kind": "wheel"
+      "kind": "wheel",
+      "backends": [
+        "nvidia"
+      ]
     },
     {
       "file": "nvidia_vfx-0.2.0.0-cp312-abi3-win_amd64.whl",
       "url": "https://pypi.nvidia.com/nvidia-vfx/nvidia_vfx-0.2.0.0-cp312-abi3-win_amd64.whl",
       "sha256": "cebaa12411f7e22b39293205c5c4d07b8073d14ca1e0e7727ee4375207a36445",
-      "kind": "wheel"
+      "kind": "wheel",
+      "backends": [
+        "nvidia"
+      ]
+    },
+    {
+      "file": "single-image-super-resolution-1033.xml",
+      "url": "https://storage.openvinotoolkit.org/repositories/open_model_zoo/2023.0/models_bin/1/single-image-super-resolution-1033/FP16/single-image-super-resolution-1033.xml",
+      "sha256": "9af449041f28495cfbc346899dd2effb6b4de93bed420c01afc0c8e38d31b095",
+      "kind": "model",
+      "backends": [
+        "intel"
+      ]
+    },
+    {
+      "file": "single-image-super-resolution-1033.bin",
+      "url": "https://storage.openvinotoolkit.org/repositories/open_model_zoo/2023.0/models_bin/1/single-image-super-resolution-1033/FP16/single-image-super-resolution-1033.bin",
+      "sha256": "9a9d5a8cbd9520e4c282600feea95b31228d7de9716e8807acb53c572bd9cd31",
+      "kind": "model",
+      "backends": [
+        "intel"
+      ]
+    },
+    {
+      "file": "LICENSE-OPENVINO-MODEL.txt",
+      "url": "https://www.apache.org/licenses/LICENSE-2.0.txt",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "kind": "model",
+      "backends": [
+        "intel"
+      ]
     }
   ],
   "visualCppUrl": "https://aka.ms/vc14/vc_redist.x64.exe",

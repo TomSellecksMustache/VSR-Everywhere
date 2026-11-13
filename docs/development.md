@@ -29,6 +29,8 @@ flowchart LR
 
 This diagram shows the direct GPU encoder path. Lookahead above 0 selects compatible FFmpeg encoding and copies enhanced frames through RAM. Completed encoded segments use the bounded RAM store; memory fallback can use disk. A persistent worker can retain the VSR model while the server requests uncached seek ranges.
 
+The Intel backend shares this worker, frame scheduler, seek protocol, and segment store. It uses OpenVINO SR-1033 and a resident model, then passes RGB frames through RAM to FFmpeg Quick Sync. `worker/vsr_backends.py` probes hardware/runtime/encoder readiness; `GpuBackendProbe.cs` caches its result before advertising enhanced playback. [Backend details and validation limits](gpu-backends.md).
+
 ## Build
 
 Use Windows x64 with the **.NET 10 SDK**. From the repository root:
@@ -62,6 +64,8 @@ python installer/tests/Test-Package.py
 The package check runs after building. It verifies that the EXE embeds the same ZIP and PowerShell file as the standalone artifacts, checks payload hashes and current sources, rejects an invalid manifest encoding, and confirms the documentation is included in the source archive.
 
 Installer fixtures cover settings migration, local-folder routing, downloads, simultaneous log reads/writes, fresh startup confirmation, deployment, and rollback. Transport/playback integration checks are separate from the basic CPU/configuration checks.
+
+`tests/test_intel.py` includes optional CPU/software reference checks for the actual public model, RGB colour, detail, audio timestamps, model retention, and seek scheduling. Install the Intel requirements and set `VSR_INTEL_TEST_MODEL` to the verified model XML. Set `VSR_TEST_FFMPEG` and `VSR_TEST_FFPROBE` to enable the software mux reference. These tests explicitly substitute CPU inference/software encoding; production always requires an Intel GPU and Quick Sync. Linux CI covers the CPU model on Ubuntu and Rocky; GPU hardware validation is separate.
 
 ## Evidence and limits
 

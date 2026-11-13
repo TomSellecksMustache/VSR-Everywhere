@@ -1,4 +1,4 @@
-"""VSR Everywhere: NVIDIA Video Effects SDK (Maxine) -> NVENC -> HLS.
+"""VSR Everywhere: NVIDIA VSR/NVENC or Intel OpenVINO/Quick Sync -> HLS.
 
 Windows/Linux worker. Supports 8-bit SDR source video and the first
 (default) audio stream. A single process handles one session. No network API.
@@ -89,13 +89,15 @@ def build_ffmpeg_command(ffmpeg: str, source: str, dest: str, width: int, height
                          rolling_rewind_minutes: int = 0, encoded_video: bool = False,
                          raw_pixel_format: str = "rgb24", memory_output: bool = False,
                          ingest_key: str = "", start_segment: int | None = None,
-                         source_start_time: float = 0) -> list[str]:
+                         source_start_time: float = 0, backend: str = "nvidia") -> list[str]:
     if memory_output:
         if not hls:
             raise ValueError("Memory output requires HLS")
         validate_memory_output(dest, ingest_key)
     if segment_type not in {"fmp4", "mpegts"}:
         raise ValueError("invalid segment type")
+    if backend not in {"nvidia", "intel"}:
+        raise ValueError("invalid encoder backend")
     if not (4 <= mbps <= 60 and 0 <= start < 1_000_000 and 1 <= fps <= 120):
         raise ValueError("invalid encode settings")
     if nvenc_preset not in {"p4", "p5", "p6", "p7"} or nvenc_tune not in {"default", "hq"}:
@@ -109,6 +111,9 @@ def build_ffmpeg_command(ffmpeg: str, source: str, dest: str, width: int, height
     if raw_pixel_format not in {"rgb24", "nv12"}:
         raise ValueError("invalid raw pixel format")
     cmd = [ffmpeg, "-hide_banner", "-nostdin", "-loglevel", "warning", "-y"]
+    if backend == 'intel':
+        from vsr_backends import qsv_device_args
+        cmd += qsv_device_args()
     if start_segment is not None:
         cmd += ["-copyts", "-itsoffset", f"{start:.9f}"]
     if encoded_video:
@@ -128,7 +133,7 @@ def build_ffmpeg_command(ffmpeg: str, source: str, dest: str, width: int, height
         cmd += ["-c:v", "copy", "-tag:v", "hvc1", "-bsf:v",
                 "hevc_metadata=video_full_range_flag=0:colour_primaries=1:transfer_characteristics=1:matrix_coefficients=1"]
     else:
-        cmd += ["-vf", vf, "-c:v", "hevc_nvenc", "-pix_fmt", "p010le",
+        cmd += ["-vf", vf, "-c:v", "hevc_qsv" if backend == "intel" else "hevc_nvenc", "-pix_fmt", "p010le",
             "-profile:v", "main10", "-tag:v", "hvc1",
             "-b:v", f"{mbps}M", "-maxrate", f"{int(mbps * 1.3)}M",
             "-bufsize", f"{int(mbps * 2)}M", "-g", str(round(float(fps) * 2))]
@@ -136,24 +141,28 @@ def build_ffmpeg_command(ffmpeg: str, source: str, dest: str, width: int, height
     if not encoded_video:
         cmd += ["-color_primaries", "bt709", "-color_trc", "bt709", "-colorspace", "bt709"]
     cmd += ["-metadata:s:v:0", "title=VSR Everywhere", "-max_muxing_queue_size", "1024"]
-    if not encoded_video:
+    if not encoded_video and backend == "nvidia":
         cmd += ["-preset", nvenc_preset]
-    if not encoded_video and nvenc_tune == "hq":
+    if not encoded_video and backend == "intel":
+        cmd += ["-preset", "medium", "-look_ahead_depth", "0", "-adaptive_i", "0", "-bf", "0"]
+    if not encoded_video and backend == "nvidia" and nvenc_tune == "hq":
         cmd += ["-tune", "hq"]
-    if not encoded_video and nvenc_lookahead:
+    if not encoded_video and backend == "nvidia" and nvenc_lookahead:
         cmd += ["-rc-lookahead", str(nvenc_lookahead)]
-    if not encoded_video and nvenc_spatial_aq:
+    if not encoded_video and backend == "nvidia" and nvenc_spatial_aq:
         cmd += ["-spatial-aq", "1"]
-    if not encoded_video and nvenc_temporal_aq:
+    if not encoded_video and backend == "nvidia" and nvenc_temporal_aq:
         cmd += ["-temporal-aq", "1"]
-    if not encoded_video and nvenc_cq:
+    if not encoded_video and backend == "nvidia" and nvenc_cq:
         cmd += ["-rc", "vbr", "-cq", str(nvenc_cq)]
     if start_segment is not None:
         if not 0 <= start_segment <= 999999:
             raise ValueError("Invalid starting segment")
         cmd += ["-avoid_negative_ts", "make_non_negative", "-muxdelay", "0", "-muxpreload", "0"]
         if not encoded_video:
-            cmd += ["-forced-idr", "1", "-no-scenecut", "1", "-bf", "0"]
+            cmd += ["-forced_idr" if backend == "intel" else "-forced-idr", "1", "-bf", "0"]
+            if backend == "nvidia":
+                cmd += ["-no-scenecut", "1"]
     if hls:
         segment_path = (dest.rsplit("/", 1)[0] + "/seg_%06d" if memory_output
                         else str(Path(dest).parent / "seg_%06d"))
@@ -186,13 +195,14 @@ def build_ffmpeg_command(ffmpeg: str, source: str, dest: str, width: int, height
 
 
 def parse_args() -> argparse.Namespace:
-    p = argparse.ArgumentParser(description="VSR Everywhere NVIDIA VSR on-demand HLS worker")
+    p = argparse.ArgumentParser(description="VSR Everywhere GPU super-resolution HLS worker")
     p.add_argument("source", help="Read-only source media path")
     p.add_argument("--output", required=True)
     p.add_argument("--hls", action="store_true")
     p.add_argument("--memory-output", action="store_true", help="Upload HLS to the plugin's loopback memory store")
     p.add_argument("--serve", action="store_true", help="Keep VSR loaded and accept seek commands on stdin")
-    p.add_argument("--backend", default="nvidia", choices=["nvidia", "vsr"])
+    p.add_argument("--backend", default="auto", choices=["auto", "nvidia", "intel", "vsr"])
+    p.add_argument("--intel-model", help=argparse.SUPPRESS)
     p.add_argument("--ffmpeg", default="ffmpeg")
     p.add_argument("--ffprobe", default="ffprobe")
     p.add_argument("--video-mbps", type=int, default=18)
@@ -220,6 +230,29 @@ def parse_args() -> argparse.Namespace:
 
 
 def run(args: argparse.Namespace, retained=None, initialize_only=False, control=None, run_id=0, start_segment=None) -> None:
+    validate_args(args)
+    if args.backend != 'auto' or (retained is not None and retained.get('backend')):
+        return run_backend(args, retained, initialize_only, control, run_id, start_segment)
+    from vsr_backends import probe, select_backend
+    candidates = probe(args.ffmpeg)
+    select_backend('auto', candidates)
+    for backend in ('nvidia', 'intel'):
+        if not any(item['backend'] == backend and item['available'] for item in candidates):
+            continue
+        current = argparse.Namespace(**vars(args))
+        current.backend = backend
+        try:
+            return run_backend(current, retained, initialize_only, control, run_id, start_segment)
+        except Exception as exc:
+            # Only initialization is safe to retry: no segments have reached the player yet.
+            if not initialize_only:
+                raise
+            retained.pop('backend', None)
+            print(json.dumps({'event': 'backend_unavailable', 'backend': backend, 'reason': str(exc)}), flush=True)
+    raise RuntimeError('No GPU backend could initialize; inspect the backend_unavailable messages above.')
+
+
+def validate_args(args):
     ingest_key = os.environ.get("VSR_INGEST_KEY", "") if args.memory_output else ""
     if args.memory_output:
         if not args.hls:
@@ -235,14 +268,38 @@ def run(args: argparse.Namespace, retained=None, initialize_only=False, control=
                                            args.stream_width, args.stream_height))
             and 0 <= args.rolling_rewind_minutes <= 60):
         raise ValueError("invalid processing/delivery resolution or rewind window")
+
+
+def run_backend(args: argparse.Namespace, retained=None, initialize_only=False, control=None, run_id=0, start_segment=None) -> None:
+    ingest_key = os.environ.get("VSR_INGEST_KEY", "") if args.memory_output else ""
     # Import heavyweight SDK packages only after syntax/argument validation.
     import av
     import numpy as np
-    import torch
-    from nvvfx import VideoSuperRes
-    if not torch.cuda.is_available():
-        raise RuntimeError("CUDA unavailable in PyTorch; NVIDIA driver/torch install required")
+    backend = retained.get('backend') if retained is not None else None
+    if backend is None:
+        from vsr_backends import probe, select_backend
+        backend = select_backend(args.backend, probe(args.ffmpeg)) if args.backend == 'auto' else args.backend
+        backend = 'nvidia' if backend == 'vsr' else backend
+        if backend not in ('nvidia', 'intel'):
+            raise ValueError('Unknown GPU backend')
+        if retained is not None:
+            retained['backend'] = backend
+    intel = backend == 'intel'
+    torch = None
+    if intel:
+        from vsr_intel import IntelSuperResolution
+    else:
+        import torch
+        from nvvfx import VideoSuperRes
+        if not torch.cuda.is_available():
+            raise RuntimeError("CUDA unavailable in PyTorch; NVIDIA driver/torch install required")
     if args.probe:
+        if intel:
+            from vsr_backends import probe, select_backend
+            candidates = probe(args.ffmpeg)
+            select_backend('intel', candidates)
+            print(json.dumps({'backend': 'intel', 'candidates': candidates}))
+            return
         print(json.dumps({"cuda": True, "gpu": torch.cuda.get_device_name(0),
                           "vfx": "importable", "quality": args.quality,
                           "pynvvideocodec": probe_codec()}))
@@ -291,9 +348,8 @@ def run(args: argparse.Namespace, retained=None, initialize_only=False, control=
             retained['ready'] = {"event": "ready", "fps_num": fps.numerator, "fps_den": fps.denominator,
                                  "gop_frames": round(2 * fps), "duration_s": duration,
                                  "source_start_time": float(container.start_time or 0) / 1_000_000}
-            print(json.dumps(retained['ready']), flush=True)
         pipeline = "legacy"
-        if args.pipeline == "gpu":
+        if args.pipeline == "gpu" and not intel:
             try:
                 from vsr_gpu import GpuEncoder
                 encoder = GpuEncoder(args, g, fps, sar)
@@ -301,8 +357,11 @@ def run(args: argparse.Namespace, retained=None, initialize_only=False, control=
             except Exception as exc:
                 print(json.dumps({"event": "fallback", "reason": f"{type(exc).__name__}: {exc}",
                                   "pipeline": "legacy"}), flush=True)
-        threaded = retained is None and encoder is None and args.legacy_schedule == "threaded"
+        threaded = not intel and retained is None and encoder is None and args.legacy_schedule == "threaded"
         def create_effect(stream_ptr=0):
+            if intel:
+                return IntelSuperResolution(width, height, g.vsr_width, g.vsr_height,
+                                            args.strength, args.intel_model)
             created = VideoSuperRes(quality=VideoSuperRes.QualityLevel[args.quality],
                                    strength=args.strength, device=0,
                                    image_encoding=VideoSuperRes.ImageEncoding.RGB8)
@@ -318,12 +377,14 @@ def run(args: argparse.Namespace, retained=None, initialize_only=False, control=
                 created.close()
                 raise
         if not threaded:
-            effect = retained.get('effect') if retained is not None else None
+            effect_key = 'intel_effect' if intel else 'effect'
+            effect = retained.get(effect_key) if retained is not None else None
             if effect is None:
                 effect = create_effect()
                 if retained is not None:
-                    retained['effect'] = effect
+                    retained[effect_key] = effect
         if initialize_only:
+            print(json.dumps(retained['ready']), flush=True)
             return
         if args.start_time:
             container.seek(int(args.start_time / stream.time_base) + (getattr(stream, 'start_time', None) or 0),
@@ -339,17 +400,18 @@ def run(args: argparse.Namespace, retained=None, initialize_only=False, control=
                                    encoded_video=encoder is not None,
                                    raw_pixel_format="nv12" if threaded else "rgb24",
                                    memory_output=args.memory_output, ingest_key=ingest_key, start_segment=start_segment,
-                                   source_start_time=retained['ready'].get('source_start_time', 0) if retained is not None else 0)
+                                   source_start_time=retained['ready'].get('source_start_time', 0) if retained is not None else 0,
+                                   backend=backend)
         print(json.dumps({"event": "start", "source_size": [width, height],
                           "vsr_size": [g.vsr_width, g.vsr_height],
                           "output_size": [args.stream_width, args.stream_height],
-                          "quality": args.quality, "strength": args.strength,
-                          "nvenc": {"preset": args.nvenc_preset, "tune": args.nvenc_tune,
+                          "quality": 'SR-1033' if intel else args.quality, "strength": args.strength,
+                          "nvenc": None if intel else {"preset": args.nvenc_preset, "tune": args.nvenc_tune,
                                     "lookahead": args.nvenc_lookahead, "cq": args.nvenc_cq,
                                     "spatial_aq": args.nvenc_spatial_aq,
                                     "temporal_aq": args.nvenc_temporal_aq},
                           "fps": float(fps),
-                          "pipeline": pipeline,
+                          "pipeline": 'openvino-qsv' if intel else pipeline, "backend": backend,
                           "legacy_schedule": "threaded" if threaded else "serial",
                           "audio": bool(container.streams.audio)}), flush=True)
         proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.DEVNULL,
@@ -359,9 +421,10 @@ def run(args: argparse.Namespace, retained=None, initialize_only=False, control=
             control.attach(proc, run_id)
         start_wall = time.monotonic()
         cpu_start = time.process_time()
-        torch.cuda.reset_peak_memory_stats()
+        if torch is not None:
+            torch.cuda.reset_peak_memory_stats()
         max_frames = int(args.seconds * float(fps)) if args.seconds else 0
-        stream_ptr = torch.cuda.current_stream().cuda_stream
+        stream_ptr = torch.cuda.current_stream().cuda_stream if torch is not None else 0
         if threaded:
             from vsr_threaded import run_threaded
             def progress(count, size):
@@ -395,13 +458,19 @@ def run(args: argparse.Namespace, retained=None, initialize_only=False, control=
                     continue
                 rgb = np.ascontiguousarray(frame.to_ndarray(format="rgb24"))
                 stats.add("decode", (time.perf_counter() - decode_start) * 1000)
-                with stats.gpu("upload", torch):
-                    tensor = torch.from_numpy(rgb).to("cuda:0").permute(2, 0, 1).float().div(255).contiguous()
-                with stats.gpu("vsr", torch):
-                    result = effect.run(tensor, stream_ptr=stream_ptr)
-                    # clone because the VFX SDK retains ownership of the DLPack memory.
-                    enhanced = torch.from_dlpack(result.image).clone()
-                if encoder is None:
+                if intel:
+                    with stats.cpu("vsr"):
+                        payload = effect.run(rgb)
+                    with stats.cpu("write"):
+                        write_all(proc.stdin, payload)
+                else:
+                    with stats.gpu("upload", torch):
+                        tensor = torch.from_numpy(rgb).to("cuda:0").permute(2, 0, 1).float().div(255).contiguous()
+                    with stats.gpu("vsr", torch):
+                        result = effect.run(tensor, stream_ptr=stream_ptr)
+                        # clone because the VFX SDK retains ownership of the DLPack memory.
+                        enhanced = torch.from_dlpack(result.image).clone()
+                if not intel and encoder is None:
                     with stats.gpu("convert_download", torch):
                         out = (enhanced.clamp(0, 1).mul(255).round().byte()
                                .permute(1, 2, 0).contiguous().cpu().numpy())
@@ -411,7 +480,7 @@ def run(args: argparse.Namespace, retained=None, initialize_only=False, control=
                         written = proc.stdin.write(payload)
                         if written != len(payload):
                             raise RuntimeError(f"Incomplete raw-frame pipe write: {written}/{len(payload)} bytes")
-                else:
+                elif not intel:
                     with stats.cpu("encode"):
                         payload = encoder.encode(enhanced)
                     with stats.cpu("write"):
@@ -427,7 +496,7 @@ def run(args: argparse.Namespace, retained=None, initialize_only=False, control=
                                       "effective_fps": round(processed / max(elapsed, .001), 2),
                                       "stages_ms": stats.means(), "pipe_bytes": pipe_bytes,
                                       "pipe_mbps": round(pipe_bytes * 8 / max(elapsed, .001) / 1e6, 3),
-                                      "cuda_memory_allocated": torch.cuda.memory_allocated(),
+                                      "cuda_memory_allocated": torch.cuda.memory_allocated() if torch is not None else 0,
                                       "host_memory": process_resources()}), flush=True)
                 if max_frames and processed >= max_frames:
                     break
@@ -448,11 +517,12 @@ def run(args: argparse.Namespace, retained=None, initialize_only=False, control=
                   "elapsed": round(elapsed, 2),
                   "fps": round(processed / max(elapsed, .001), 2),
                   "source": str(source), "output": str(dest),
-                  "vsr": args.quality, "nvenc_requested": True, "pipeline": pipeline,
+                  "vsr": 'SR-1033' if intel else args.quality, "backend": backend,
+                  "nvenc_requested": not intel, "pipeline": 'openvino-qsv' if intel else pipeline,
                   "legacy_schedule": "threaded" if threaded else "serial",
                   "stages_ms": stats.means(), "pipe_bytes": pipe_bytes,
                   "pipe_mb_per_second": round(pipe_bytes / max(elapsed, .001) / 1e6, 3),
-                  "cuda_peak_allocated_bytes": torch.cuda.max_memory_allocated(),
+                  "cuda_peak_allocated_bytes": torch.cuda.max_memory_allocated() if torch is not None else 0,
                   "worker_cpu_seconds": time.process_time() - cpu_start,
                   "ffmpeg_resources": process_resources(proc), "worker_resources": process_resources()}
         if not args.memory_output:

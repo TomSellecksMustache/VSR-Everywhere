@@ -76,11 +76,12 @@ for ($i = 0; $i -lt 5; $i++) {
     $form.Controls.Add($panel); $pages += $panel
 }
 $null = Add-Label $pages[0] 'Better video, with setup taken care of.' 0 0 700 34 16 -Bold
-$null = Add-Label $pages[0] "Setup finds your Jellyfin server, downloads the required components, and checks that NVIDIA VSR and video encoding work.`r`n`r`nIt then configures the plugin and briefly restarts Jellyfin. Your media library stays in place." 0 48 680 126
+$null = Add-Label $pages[0] "Setup finds Jellyfin and your GPU, downloads the required runtime and models, and tests super resolution and video encoding.`r`n`r`nIt then configures the plugin and briefly restarts Jellyfin. Your media library stays in place." 0 48 680 126
 $null = Add-Label $pages[0] 'You will need' 0 185 650 26 11 -Bold
-$null = Add-Label $pages[0] "Jellyfin 12.1 on this PC, Windows 10/11 x64, and a supported NVIDIA GPU with driver 570.65 or newer.`r`n`r`nAn internet connection and at least 25 GB free on your chosen drive. GPU library downloads can total several gigabytes." 0 216 680 98
-$null = Add-Link $pages[0] 'NVIDIA component license terms' 'https://www.nvidia.com/en-us/agreements/enterprise-software/nvidia-software-license-agreement/' 0 333 290
-$null = Add-Link $pages[0] 'Jellyfin downloads' 'https://jellyfin.org/downloads/windows/' 348 333 200
+$null = Add-Label $pages[0] "Jellyfin 12.1, Windows 10/11 x64, and an NVIDIA RTX GPU (driver 570.65+) or Intel GPU with HEVC Main 10 Quick Sync and an Intel graphics driver.`r`n`r`nInternet access and 25 GB free on your chosen drive." 0 216 680 98
+$null = Add-Link $pages[0] 'NVIDIA component license terms' 'https://www.nvidia.com/en-us/agreements/enterprise-software/nvidia-software-license-agreement/' 0 333 210
+$null = Add-Link $pages[0] 'Intel/OpenVINO model license' 'https://www.apache.org/licenses/LICENSE-2.0' 230 333 210
+$null = Add-Link $pages[0] 'Jellyfin downloads' 'https://jellyfin.org/downloads/windows/' 470 333 190
 
 $null = Add-Label $pages[1] 'Your Jellyfin server' 0 0 700 34 16 -Bold
 $null = Add-Label $pages[1] 'Setup selected the detected server. For most installations, select Next.' 0 44 700 38
@@ -241,7 +242,7 @@ $timer.add_Tick({
         else { $script:result = [pscustomobject]@{ Success = $false; Message = 'Setup stopped unexpectedly. See the log for details.'; BackupPath = ''; Url = '' } }
         if ($script:result.Success) {
             $script:exitCode = 0
-            $finishText.Text = "VSR Everywhere 1.0.0 is installed and loaded by Jellyfin.`r`n`r`nNVIDIA VSR, HEVC video, AAC audio, and HLS checks passed.`r`n`r`nYour device and resolution settings are ready to review in Jellyfin."
+            $finishText.Text = "VSR Everywhere 1.0.0 is installed and loaded by Jellyfin.`r`n`r`nGPU super resolution, HEVC video, AAC audio, and HLS checks passed.`r`n`r`nYour device, GPU override, and resolution settings are ready to review in Jellyfin."
         } else {
             $finishTitle.Text = 'Setup could not finish'
             $finishText.Text = $script:result.Message
@@ -257,7 +258,7 @@ $next.add_Click({
             0 { Show-SetupPage 1 }
             1 {
                 if ($Preview) { $script:target = $script:targets[0]; $gpu = 'NVIDIA RTX GPU - compatibility check passed'; $allDevices.Checked = $true }
-                else { $script:target = Get-JellyfinTarget $dataBox.Text $serverBox.Text; $gpu = Get-NvidiaStatus; $allDevices.Checked = Get-DefaultAllDevices $script:target }
+                else { $script:target = Get-JellyfinTarget $dataBox.Text $serverBox.Text; $gpu = (Get-GpuStatus).Display; $allDevices.Checked = Get-DefaultAllDevices $script:target }
                 $summary.Text = "Jellyfin " + $script:target.Version + "`r`n" + $script:target.DataPath + "`r`n`r`n" + $gpu
                 $detectionError.Text = ''; Show-SetupPage 2
             }

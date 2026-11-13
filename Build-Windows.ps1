@@ -37,8 +37,8 @@ $metadata = [ordered]@{
     version = ($version + $(if ($version.Split('.').Count -eq 3) { '.0' } else { '' }))
     status = 'Active'
     targetAbi = '12.1.0.0'
-    description = 'NVIDIA Video Super Resolution with selectable 1080p to 8K processing and HEVC streaming for selected Jellyfin devices.'
-    changelog = 'VSR Everywhere 1.0.0: GPU-resident encoding, automatic memory cache, seek-on-demand, resolution and device controls, and Windows setup.'
+    description = 'Automatic NVIDIA/Intel GPU super resolution with selectable 1080p to 8K processing and HEVC streaming for selected Jellyfin devices.'
+    changelog = 'Automatic GPU detection, NVIDIA VSR/NVENC, Intel OpenVINO/Quick Sync, RAM caching, and GPU backend override.'
 }
 [IO.File]::WriteAllText((Join-Path $dist 'meta.json'), ($metadata | ConvertTo-Json -Depth 5), (New-Object Text.UTF8Encoding($false)))
 $zip = Join-Path $root "dist\VSR-Everywhere-$version-plugin.zip"

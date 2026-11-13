@@ -2,7 +2,7 @@ name: Linux server checks
 
 on:
   push:
-    branches: [main, linux-server]
+    branches: [main, linux-server, gpu-auto-intel]
   pull_request:
 
 permissions:
@@ -57,6 +57,23 @@ jobs:
           dotnet-version: '10.0.x'
       - name: Installer settings, deployment, and rollback fixtures
         run: python3 -m unittest discover -s tests -p 'test_linux_*.py' -v
+      - name: Public Intel model CPU reference and backend checks
+        run: |
+          python3 -m pip install --disable-pip-version-check --require-hashes --only-binary=:all: -r installer/linux/requirements-intel.lock.txt
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          import subprocess
+          import sys
+          sys.path.insert(0, 'installer/linux')
+          from install import install_models
+          target = Path('installer/build/intel-reference').resolve()
+          install_models(target, json.loads(Path('installer/linux/runtime.json').read_text())['intelModels'])
+          os.environ['VSR_INTEL_TEST_MODEL'] = str(target / 'models/intel/single-image-super-resolution-1033.xml')
+          subprocess.run([sys.executable, '-m', 'unittest', 'discover', '-s', 'tests', '-p', 'test_intel.py', '-v'], check=True)
+          subprocess.run([sys.executable, '-m', 'unittest', 'discover', '-s', 'tests', '-p', 'test_backends.py', '-v'], check=True)
+          PY
       - name: Plugin, RAM cache, process control, and Linux cgroup checks
         run: dotnet run --project tests/PluginChecks/PluginChecks.csproj -c Release -- python3
       - name: Build and verify the Linux distribution

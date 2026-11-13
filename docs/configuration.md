@@ -23,6 +23,8 @@ Choose delivery settings the player can decode. 6K/8K output also depends on the
 
 ## Enhancement and encoding
 
+**GPU backend override** selects Automatic, NVIDIA, or Intel. Fresh installs use Automatic, preferring ready NVIDIA then Intel. Existing overrides are retained. [Backend behaviour and Intel requirements](gpu-backends.md).
+
 | Setting | Starting point | What it changes |
 | --- | --- | --- |
 | VSR quality | Streaming Medium | Enhancement model/profile. Use the examples to judge stronger modes. |
@@ -42,6 +44,8 @@ The screenshots use ULTRA/strength 1 and stronger encoder settings. Those settin
 On the direct GPU path, decoded video is converted/uploaded, then enhanced frames remain on the NVIDIA GPU through resize, P010 conversion, and HEVC encoding. Encoded video is muxed into HLS with AAC audio.
 
 With NVENC lookahead above 0, the worker uses its compatible FFmpeg encoding path. VSR and NVENC still use the GPU, but enhanced frames are copied through system memory. A worker log entry identifies this fallback and its reason.
+
+Intel runs public SR-1033 enhancement and processing resize on the GPU, then transfers RGB frames through RAM to Quick Sync. It retains its model across seeks and shares the same segment cache. NVIDIA quality and NVENC settings do not affect Intel; strength, resolutions, and bitrate still apply.
 
 ## RAM segment caching and seeking
 

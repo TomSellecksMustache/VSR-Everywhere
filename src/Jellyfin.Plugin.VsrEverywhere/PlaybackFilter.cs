@@ -148,6 +148,7 @@ public sealed class PlaybackFilter : IAsyncActionFilter
                 _logger.LogWarning("VsrEverywhere TRACE source rejected: >8-bit video excluded");
                 continue;
             }
+            if (!await _sessions.BackendAvailable(cfg, context.HttpContext.RequestAborted).ConfigureAwait(false)) return;
             var token = _sessions.Register(source.Path, cfg);
             if (token is null)
             {

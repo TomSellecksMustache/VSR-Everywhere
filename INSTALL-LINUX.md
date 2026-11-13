@@ -7,6 +7,7 @@ The Linux installer targets native **systemd Jellyfin services** across Debian/U
 - An initialized, running **Jellyfin 12.1.x** systemd service under a non-root account.
 - **x86-64 Linux with glibc 2.28 or newer.** NVIDIA lists Ubuntu 20.04/22.04/24.04, Debian 12, and RHEL 8/9 for its Python runtime. Other compatible glibc distributions, including Fedora and Rocky, use the same installer but require local validation. ARM, musl/Alpine, Docker, and non-systemd services are outside this package.
 - An NVIDIA GPU with VSR and HEVC Main 10 support. NVIDIA specifies Linux drivers **570.190+, 580.82+, or 590.44+**; a newer driver branch is also accepted. Streaming modes require Ampere or newer.
+- Alternatively, an Intel GPU with OpenVINO GPU access and HEVC Main 10 Quick Sync. Install distribution-appropriate Intel compute/media drivers and grant the Jellyfin service access to its Intel render device. [GPU override and Intel validation status](docs/gpu-backends.md).
 - The server's Jellyfin FFmpeg and FFprobe, internet access, and **25 GiB free** for a fresh runtime.
 - `bash`, `curl` or `wget`, `tar`, `base64`, `sha256sum`, `realpath`, `stat`, and `flock`. These are normally supplied by the distribution's coreutils/util-linux packages.
 
@@ -23,6 +24,8 @@ sudo bash ./Install-VSREverywhere-1.0.0-Linux.sh
 Press Enter to accept the runtime location and detected service settings. The script contains the plugin and setup code; it downloads the larger dependencies over HTTPS and checks their hashes. It uses a private Python 3.12 runtime, so the system Python version does not determine which GPU wheels are installed.
 
 Fresh Linux installs use 4K processing/delivery, HIGH quality, strength 0.75, 20 Mbps, p4, lookahead 0, MPEG-TS/AAC, automatic memory caching, and one session. HIGH also supports Turing GPUs; streaming modes require Ampere or later. Existing quality, resolution, encoder, and device selections are retained.
+
+New installs select the GPU automatically; the plugin settings offer NVIDIA and Intel overrides. Setup installs only the runtimes needed by detected GPU vendors, including the public, hash-verified Intel model. Intel-only servers do not download CUDA/PyTorch. NVIDIA quality modes and NVENC controls apply only to NVIDIA.
 
 To use another drive or mount:
 
@@ -44,7 +47,7 @@ For a custom service or layout, use `--service jellyfin.service`, `--data-dir`, 
 
 ## Installation and recovery
 
-VSR, HEVC Main 10, AAC, and HLS must pass synthetic-media tests **as the Jellyfin account**, using its environment, before deployment. Both direct GPU encoding and the FFmpeg/NVENC path for nonzero lookahead are checked. Setup then stops Jellyfin, backs up this plugin and its XML configuration, installs the files, restarts the service, and confirms a fresh plugin-loaded message in the journal or Jellyfin log. A deployment or startup failure restores the previous files and starts the service again. An interruption during deployment is also handled; a power loss or forced process kill can require manual recovery.
+VSR, HEVC Main 10, AAC, and HLS must pass synthetic-media tests **as the Jellyfin account**, using its environment, before deployment. NVIDIA also checks the FFmpeg/NVENC path for nonzero lookahead. Intel uses OpenVINO and Quick Sync. Setup then stops Jellyfin, backs up this plugin and its XML configuration, installs the files, restarts the service, and confirms a fresh plugin-loaded message in the journal or Jellyfin log. A deployment or startup failure restores the previous files and starts the service again. An interruption during deployment is also handled; a power loss or forced process kill can require manual recovery.
 
 Logs remain in `<install-dir>/jobs/setup-*/setup.log`. Backups are in `<install-dir>/backups/`, with the original plugin directories, configuration XML, and `restore.json`. To recover manually, stop the service, restore only the recorded VSR Everywhere directories and XML from that backup, preserve their ownership, then start Jellyfin. Other plugins and media files are outside the deployment target.
 
@@ -63,4 +66,4 @@ python3 -m unittest discover -s tests -p 'test_linux_*.py'
 
 The build produces the standalone `.sh`, a `.tar.gz` containing the same installer and guides, and SHA-256 checksums in `dist/`. No Windows executable is required on the Linux server. The project code is [MIT licensed](LICENSE); dependencies retain their own licenses in [the notices](THIRD_PARTY_NOTICES.md).
 
-Automated installer, ownership, plugin/cache, and package checks pass on Ubuntu 24.04 and Rocky Linux 9. Native Linux GPU playback remains unverified.
+Baseline installer, ownership, plugin/cache, and package checks passed on Ubuntu 24.04 and Rocky Linux 9. Updated automatic-GPU and Intel reference checks are included in CI but have not yet run on native Linux. Intel GPU inference/Quick Sync and native Linux GPU playback remain unverified.

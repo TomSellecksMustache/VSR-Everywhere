@@ -11,7 +11,7 @@
 <div id="VsrDevicesList" style="margin:1em 0;"></div>
 <button id="RefreshVsrDevices" type="button" is="emby-button" class="raised emby-button">Refresh devices</button>
 <hr>
-<div class="selectContainer"><label class="selectLabel" for="Backend">VSR backend</label><select id="Backend" is="emby-select"><option value="nvidia">NVIDIA Video Super Resolution + NVENC</option></select></div>
+<div class="selectContainer"><label class="selectLabel" for="Backend">GPU backend override</label><select id="Backend" is="emby-select"><option value="auto">Automatic (recommended)</option><option value="nvidia">NVIDIA Video Super Resolution + NVENC</option><option value="intel">Intel Super Resolution (OpenVINO) + Quick Sync</option></select></div>
 <div class="inputContainer"><label class="inputLabel" for="PythonPath">Python executable</label><input id="PythonPath" type="text" is="emby-input"></div>
 <div class="inputContainer"><label class="inputLabel" for="FfmpegPath">FFmpeg executable</label><input id="FfmpegPath" type="text" is="emby-input"></div>
 <div class="inputContainer"><label class="inputLabel" for="FfprobePath">FFprobe executable</label><input id="FfprobePath" type="text" is="emby-input"></div>
@@ -62,9 +62,10 @@
 <option value="LOW">Standard Low (fastest AI mode)</option>
 </select><div class="fieldDescription">Standard modes remove compression artifacts; high-bitrate modes preserve more texture in cleaner sources. Modes depend on your installed NVIDIA VFX SDK.</div></div>
 <div class="inputContainer"><label class="inputLabel" for="VsrStrength">VSR enhancement strength (0–1)</label><input id="VsrStrength" type="number" min="0" max="1" step="0.05" is="emby-input"><div class="fieldDescription">Default 0.75. Try 0.5–0.75 to avoid waxy textures.</div></div>
-<h3>HEVC NVENC encoding</h3>
+<h3>HEVC encoding</h3>
 <div class="inputContainer"><label class="inputLabel" for="VideoMbps">HEVC bitrate (Mbps)</label><input id="VideoMbps" type="number" min="4" max="60" is="emby-input"></div>
 
+<p class="fieldDescription">Intel uses the public SR-1033 model and Quick Sync. NVIDIA mode and NVENC controls apply only to NVIDIA.</p>
 <div class="selectContainer"><label class="selectLabel" for="NvencPreset">NVENC encoding preset</label><select id="NvencPreset" is="emby-select">
 <option value="p4">p4 – Balanced</option><option value="p5">p5 – good quality</option><option value="p6">p6 – higher quality</option><option value="p7">p7 – highest quality (slowest)</option></select></div>
 <div class="selectContainer"><label class="selectLabel" for="NvencTune">NVENC tuning</label><select id="NvencTune" is="emby-select"><option value="default">Default</option><option value="hq">High quality</option></select></div>
@@ -200,7 +201,7 @@
                 const control = page.querySelector('#' + key);
                 if (!control) continue;
                 if (control.type === 'checkbox') control.checked = !!cfg[key];
-                else control.value = cfg[key] ?? ({ CacheMode: 'memory', MemoryBudgetMb: 0 }[key] ?? '');
+                else control.value = cfg[key] ?? ({ Backend: 'auto', CacheMode: 'memory', MemoryBudgetMb: 0 }[key] ?? '');
             }
             loadResolutions(cfg);
             effectiveMemoryBudgetMb = Number(cfg.EffectiveMemoryBudgetMb) || 0;

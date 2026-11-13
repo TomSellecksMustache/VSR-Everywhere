@@ -27,6 +27,7 @@ with tarfile.open(fileobj=io.BytesIO(payload), mode='r:gz') as archive:
         assert sha256(read(name)).hexdigest() == digest, name
     for name, source in {'install.py': root / 'installer/linux/install.py',
                          'requirements.lock.txt': root / 'installer/linux/requirements.lock.txt',
+                         'requirements-intel.lock.txt': root / 'installer/linux/requirements-intel.lock.txt',
                          'runtime.json': root / 'installer/linux/runtime.json',
                          'Test-Runtime.py': root / 'installer/Test-Runtime.py',
                          'INSTALL-LINUX.md': root / 'INSTALL-LINUX.md',

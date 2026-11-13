@@ -36,6 +36,10 @@ with zipfile.ZipFile(dist / 'VSR-Everywhere-1.0.0-Windows.zip') as archive:
     for name in ['Installer.Core.psm1', 'Install-Engine.ps1', 'SetupWizard.ps1']:
         assert read(name).decode('utf-8-sig').replace('\r\n', '\n') == (root / 'installer' / name).read_text(encoding='utf-8-sig'), 'Stale installer: ' + name
     assert any(item['file'] == 'pynvvideocodec-2.2.3-cp314-cp314-win_amd64.whl' for item in locked['downloads'])
+    assert any(item['file'].startswith('openvino-2026.1.0-') and item['backends'] == ['intel'] for item in locked['downloads'])
+    linux_models = json.loads((root / 'installer/linux/runtime.json').read_text())['intelModels']
+    windows_models = [{key: item[key] for key in ('file', 'url', 'sha256')} for item in locked['downloads'] if item['kind'] == 'model']
+    assert windows_models == linux_models, 'Windows/Linux public model or license differs'
     for name, expected in json.loads(read('payload.sha256.json').decode('utf-8-sig')).items():
         assert sha256(read('plugin/' + name.replace('\\', '/'))).hexdigest() == expected, 'Payload hash: ' + name
     for source in (root / 'worker').glob('*.py'):

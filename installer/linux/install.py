@@ -18,12 +18,13 @@ import subprocess
 import sys
 import time
 import uuid
+import urllib.request
 import xml.etree.ElementTree as ET
 
 GUID = '7ca129d0-7454-41c7-aad6-55250b1a7b5b'
 CONFIG = 'Jellyfin.Plugin.VsrEverywhere.xml'
 LOG = logging.getLogger('VSR Everywhere')
-DEFAULTS = dict(Backend='nvidia', Enabled='true', EnableAllDevices='true', VideoMbps='20',
+DEFAULTS = dict(Backend='auto', Enabled='true', EnableAllDevices='true', VideoMbps='20',
     VsrQuality='HIGH', VsrStrength='0.75', NvencPreset='p4', NvencTune='default',
     NvencLookahead='0', NvencSpatialAq='false', NvencTemporalAq='false', NvencCq='0',
     SegmentType='mpegts', MaxSessions='1', SessionMinutes='180', CacheMode='memory',
@@ -49,6 +50,34 @@ def driver_supported(text):
     major, minor = map(int, parts[:2])
     return major > 590 or (major == 570 and minor >= 190) or \
         (major == 580 and minor >= 82) or (major == 590 and minor >= 44)
+
+
+def runtime_requirements(devices, requested):
+    backends = {item['backend'] for item in devices if item['backend'] == 'intel' or
+                (item['backend'] == 'nvidia' and driver_supported(item.get('driver', '')))}
+    requested = 'nvidia' if requested == 'vsr' else requested
+    if requested not in ('auto', 'nvidia', 'intel'):
+        raise RuntimeError('GPU backend override must be auto, nvidia, or intel.')
+    if not backends or (requested != 'auto' and requested not in backends):
+        raise RuntimeError('The selected GPU is unavailable. NVIDIA needs driver 570.190+/580.82+/590.44+; Intel needs an Intel GPU, compute driver, and Quick Sync. Use Automatic in the GPU backend override to allow detection.')
+    return [name for backend, name in [('nvidia', 'requirements.lock.txt'), ('intel', 'requirements-intel.lock.txt')]
+            if backend in backends]
+
+
+def install_models(runtime, items):
+    destination = beneath(runtime, runtime / 'models/intel')
+    destination.mkdir(parents=True, exist_ok=True, mode=0o755)
+    for item in items:
+        path = beneath(destination, destination / item['file'])
+        if path.parent != destination or not item['url'].startswith('https://'):
+            raise ValueError('Invalid Intel model download')
+        LOG.info('Downloading %s', item['file'])
+        with urllib.request.urlopen(item['url'], timeout=120) as response:
+            data = response.read(2 * 1024**2)
+        if sha256(data).hexdigest() != item['sha256']:
+            raise RuntimeError('Intel model checksum mismatch: ' + item['file'])
+        path.write_bytes(data)
+        path.chmod(0o644)
 
 
 def option(arguments, name, fallback):
@@ -332,7 +361,7 @@ def main():
         parser.error('Run the Linux x86-64 installer as root.')
     libc, version = platform.libc_ver()
     if libc != 'glibc' or tuple(map(int, version.split('.')[:2])) < (2, 28):
-        parser.error('The NVIDIA runtime requires glibc 2.28 or newer; musl/Alpine and ARM are unsupported.')
+        parser.error('The GPU runtime requires glibc 2.28 or newer; musl/Alpine and ARM are unsupported.')
     def interrupted(number, frame):
         raise KeyboardInterrupt(f'Interrupted by signal {number}')
     for number in (signal.SIGTERM, signal.SIGHUP):
@@ -355,14 +384,14 @@ def main():
         test_dir = payload / 'test'
         test_dir.mkdir(mode=0o700)
         os.chown(test_dir, user.pw_uid, user.pw_gid)
-        gpu = as_user(user, ['nvidia-smi', '--query-gpu=name,driver_version', '--format=csv,noheader'], test_dir, target['environment'])
-        driver = gpu.splitlines()[0].rsplit(',', 1)[-1].strip()
-        if not driver_supported(driver):
-            raise RuntimeError('Linux VSR requires NVIDIA 570.190+, 580.82+, 590.44+, or a newer driver branch.')
+        devices = json.loads(as_user(user, [sys.executable, payload / 'plugin/worker/vsr_backends.py', '--hardware-only'], test_dir, target['environment']))
         plugins = installed_plugins(target['data'])
         config_path = target['data'] / 'plugins/configurations' / CONFIG
         existing = config_path.read_bytes() if config_path.is_file() else None
-        runtime_id = sha256((payload / 'requirements.lock.txt').read_bytes() + (payload / 'runtime.json').read_bytes()).hexdigest()
+        requested = ET.fromstring(existing).findtext('Backend', 'auto') if existing else 'auto'
+        requirements = runtime_requirements(devices, requested)
+        runtime_spec = json.loads((payload / 'runtime.json').read_text())
+        runtime_id = sha256(b''.join((payload / name).read_bytes() for name in requirements) + (payload / 'runtime.json').read_bytes()).hexdigest()
         runtime = beneath(prefix, prefix / 'runtimes' / runtime_id[:16])
         python = runtime / 'bin/python3'
         marker = runtime / '.verified'
@@ -377,16 +406,19 @@ def main():
         if not args.yes and input('Install with these settings? [Y/n] ').strip().lower() not in ('', 'y', 'yes'):
             return
         if not reuse:
-            LOG.info('Installing the private CUDA/VFX runtime; Jellyfin is still running...')
+            LOG.info('Installing private GPU runtimes and models; Jellyfin is still running...')
             runtime.parent.mkdir(parents=True, exist_ok=True)
             if runtime.exists():
                 raise RuntimeError(f'Incomplete runtime at {runtime}; move it aside and retry.')
             run([sys.executable, '-m', 'venv', '--copies', runtime])
             try:
-                run([python, '-m', 'pip', '--isolated', 'install', '--disable-pip-version-check', '--progress-bar', 'off',
-                    '--cache-dir', prefix / 'downloads/pip', '--require-hashes', '--only-binary=:all:',
-                    '-r', payload / 'requirements.lock.txt'], timeout=3600)
+                for name in requirements:
+                    run([python, '-m', 'pip', '--isolated', 'install', '--disable-pip-version-check', '--progress-bar', 'off',
+                        '--cache-dir', prefix / 'downloads/pip', '--require-hashes', '--only-binary=:all:',
+                        '-r', payload / name], timeout=3600)
                 run([python, '-m', 'pip', 'check'])
+                if 'requirements-intel.lock.txt' in requirements:
+                    install_models(runtime, runtime_spec['intelModels'])
                 marker.write_text(runtime_id)
             except BaseException:
                 shutil.rmtree(beneath(prefix, runtime))
@@ -396,14 +428,16 @@ def main():
         command = [python, payload / 'Test-Runtime.py', '--worker', payload / 'plugin/worker/vsr_everywhere.py',
                    '--ffmpeg', target['ffmpeg'], '--ffprobe', target['ffprobe'], '--report', test_dir / 'runtime-gpu.json']
         for key, flag in [('ProcessingWidth', 'processing-width'), ('ProcessingHeight', 'processing-height'),
-                          ('StreamWidth', 'stream-width'), ('StreamHeight', 'stream-height'), ('VsrQuality', 'quality')]:
+                          ('StreamWidth', 'stream-width'), ('StreamHeight', 'stream-height'), ('VsrQuality', 'quality'),
+                          ('Backend', 'backend')]:
             command += ['--' + flag, profile.findtext(key)]
         as_user(user, command, test_dir, target['environment'])
-        LOG.info('Testing the compatible FFmpeg/NVENC lookahead path...')
-        legacy = command.copy()
-        legacy[legacy.index('--report') + 1] = test_dir / 'runtime-ffmpeg.json'
-        legacy += ['--nvenc-lookahead', str(min(32, max(1, int(profile.findtext('NvencLookahead') or '0'))))]
-        as_user(user, legacy, test_dir, target['environment'])
+        if json.loads((test_dir / 'runtime-gpu.json').read_text())['backend'] == 'nvidia':
+            LOG.info('Testing the compatible FFmpeg/NVENC lookahead path...')
+            legacy = command.copy()
+            legacy[legacy.index('--report') + 1] = test_dir / 'runtime-ffmpeg.json'
+            legacy += ['--nvenc-lookahead', str(min(32, max(1, int(profile.findtext('NvencLookahead') or '0'))))]
+            as_user(user, legacy, test_dir, target['environment'])
         deploy(target, payload, settings, prefix, args.service, existing)
         LOG.info('Setup complete. Review VSR Everywhere settings in Jellyfin. Log: %s', log)
 

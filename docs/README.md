@@ -7,6 +7,7 @@
 | [Windows installation](../INSTALL-WINDOWS.md) | Wizard setup, drive selection, PowerShell, and unattended installs. |
 | [Comparisons](comparisons.md) | Eight matched scenes, close-up crops, and the capture settings. |
 | [Configuration](configuration.md) | Processing/delivery resolutions, quality, devices, and cache behaviour. |
+| [GPU backends](gpu-backends.md) | Automatic detection, NVIDIA/Intel override, runtime provisioning, and Intel validation limits. |
 | [Troubleshooting](troubleshooting.md) | Installation failures, playback issues, logs, recovery, and removal. |
 | [Development](development.md) | Architecture, building, source layout, and validation. |
 | [Releasing](releasing.md) | Local release artifacts and the remaining publication steps. |

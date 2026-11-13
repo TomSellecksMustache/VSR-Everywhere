@@ -45,13 +45,13 @@ else:
     output.with_name('arguments.json').write_text(json.dumps(sys.argv[1:]))
 """);
 var cases = new[] {
-    (5120, 2880, 3840, 2160), (7680, 4320, 7680, 4320),
-    (1920, 1080, 7680, 4320), (7680, 4320, 1920, 1080)
+    (5120, 2880, 3840, 2160, "auto"), (7680, 4320, 7680, 4320, "intel"),
+    (1920, 1080, 7680, 4320, "nvidia"), (7680, 4320, 1920, 1080, "intel")
 };
-foreach (var (pw, ph, sw, sh) in cases)
+foreach (var (pw, ph, sw, sh, backend) in cases)
 {
     var cfg = new PluginConfiguration {
-        CacheMode = "disk",
+        CacheMode = "disk", Backend = backend,
         PythonPath = args.FirstOrDefault() ?? "python", ProcessingWidth = pw, ProcessingHeight = ph,
         StreamWidth = sw, StreamHeight = sh, SegmentType = "mpegts",
         EnabledDeviceIds = ["retained-device"]
@@ -68,8 +68,10 @@ foreach (var (pw, ph, sw, sh) in cases)
     Check(Value("--processing-width") == pw.ToString() && Value("--processing-height") == ph.ToString(), "Processing size changed during launch");
     Check(Value("--stream-width") == sw.ToString() && Value("--stream-height") == sh.ToString(), "Stream size was clamped or changed during launch");
     Check(Value("--segment-type") == "mpegts", "Audio/segment mode changed");
+    Check(Value("--backend") == backend, "GPU override changed during worker launch");
     Check(cfg.EnabledDeviceIds.SequenceEqual(new[] { "retained-device" }), "Device approvals changed");
 }
 Console.WriteLine("PASS: compiled plugin identity/version, embedded settings, and actual worker arguments (5K/4K, 8K/8K, 1080p/8K, 8K/1080p).");
 await MemoryChecks.Run(args.FirstOrDefault() ?? "python");
+await BackendChecks.Run(args.FirstOrDefault() ?? "python");
 if (args.Length > 1) await TransportChecks.Run(args[0], Path.GetFullPath(args[1]));

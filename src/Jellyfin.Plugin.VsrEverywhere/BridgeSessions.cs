@@ -14,6 +14,9 @@ public sealed class BridgeSessions : IDisposable
     private readonly System.Threading.Timer _sweepTimer;
     private readonly ConcurrentDictionary<string, byte> _cacheRoots = new(StringComparer.OrdinalIgnoreCase);
     private readonly MemoryHlsStore _memory = new();
+    private readonly GpuBackendProbe _backendProbe = new();
+    internal Task<bool> BackendAvailable(PluginConfiguration cfg, CancellationToken cancellationToken)
+        => _backendProbe.IsAvailable(cfg, _logger, cancellationToken);
     private int _sweeping;
     public BridgeSessions(ILogger<BridgeSessions> logger)
     {
@@ -224,7 +227,7 @@ public sealed partial class BridgeSession : IDisposable
                 CreateNoWindow = true, RedirectStandardError = true, RedirectStandardOutput = true, RedirectStandardInput = IsMemory,
                 WorkingDirectory = pluginDir };
             foreach (var a in new [] { workerPath, Source, "--output", IsMemory ? _memoryOutput! : Path.Combine(Root, "index.m3u8"),
-                "--hls", "--seconds", "0", "--backend", "nvidia", "--ffmpeg", _cfg.FfmpegPath,
+                "--hls", "--seconds", "0", "--backend", _cfg.Backend, "--ffmpeg", _cfg.FfmpegPath,
                 "--ffprobe", _cfg.FfprobePath, "--video-mbps", Math.Clamp(_cfg.VideoMbps, 4, 60).ToString(),
                 "--segment-type", _cfg.SegmentType == "mpegts" ? "mpegts" : "fmp4" })
                 psi.ArgumentList.Add(a);

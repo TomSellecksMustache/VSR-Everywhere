@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Automatic GPU detection with NVIDIA and Intel overrides in plugin settings.
+- Intel OpenVINO SR-1033 enhancement and Quick Sync HEVC Main 10 encoding, sharing the existing RAM cache and frame scheduler.
+- Hardware-specific runtime downloads, pinned public model/license downloads, and pre-installation GPU/video checks on Windows and Linux.
+- Intel-only installations avoid CUDA/PyTorch. Existing backend/profile/device settings are preserved.
+- Intel model and muxing have CPU/software reference coverage; Intel GPU playback remains unverified.
+
 ## VSR Everywhere 1.0.0
 
 - Project code licensed under MIT, with the license included in release packages.

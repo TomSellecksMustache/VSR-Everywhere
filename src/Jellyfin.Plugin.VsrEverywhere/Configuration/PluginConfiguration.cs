@@ -22,7 +22,7 @@ public sealed class PluginConfiguration : BasePluginConfiguration
 
     public bool Enabled { get; set; } = false;
     public bool EnableAllDevices { get; set; } = false;
-    public string Backend { get; set; } = "nvidia";
+    public string Backend { get; set; } = "auto";
     public string ClientFilter { get; set; } = "Roku";
     // Explicit device selection applies when EnableAllDevices is false.
     public string[] EnabledDeviceIds { get; set; } = Array.Empty<string>();

@@ -21,7 +21,7 @@ Usage: sudo bash Install-VSREverywhere-Linux.sh [options]
   --ffprobe PATH      Override FFprobe
   --check             Check platform, service, GPU, and package without installing
   --yes               Accept the detected settings without prompts
-Requires x86-64 Linux with glibc 2.28+, systemd, NVIDIA VSR/HEVC support,
+Requires x86-64 Linux with glibc 2.28+, systemd, NVIDIA VSR or Intel OpenVINO/Quick Sync,
 Jellyfin 12.1, internet, and 25 GiB free for a fresh runtime.
 HELP
             exit 0 ;;
@@ -31,7 +31,7 @@ done
 [[ $(uname -s) == Linux && $(uname -m) == x86_64 ]] || { echo 'This package requires x86-64 Linux.' >&2; exit 1; }
 [[ ${EUID} -eq 0 ]] || exec sudo -- bash "$0" "${args[@]}"
 libc=$(getconf GNU_LIBC_VERSION 2>/dev/null || true)
-[[ $libc == 'glibc '* ]] || { echo 'The NVIDIA runtime needs glibc; musl/Alpine is unsupported.' >&2; exit 1; }
+[[ $libc == 'glibc '* ]] || { echo 'The GPU runtime needs glibc; musl/Alpine is unsupported.' >&2; exit 1; }
 IFS=. read -r libc_major libc_minor <<< "${libc#glibc }"
 (( libc_major > 2 || libc_major == 2 && libc_minor >= 28 )) || { echo 'glibc 2.28 or newer is required.' >&2; exit 1; }
 for command in tar base64 sha256sum realpath stat flock; do

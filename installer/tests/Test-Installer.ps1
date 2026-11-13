@@ -41,8 +41,11 @@ Check ((Get-XmlValue $configuration 'PythonPath') -eq 'C:\Runtime\python.exe') '
 Check ((Get-FileHash -LiteralPath $fixture.Config).Hash -eq $fixture.ConfigHash) 'Preparation changed the original configuration.'
 $fresh = New-PluginConfiguration $null 'python' 'ffmpeg' 'ffprobe' 'cache' $true
 Check ((Get-XmlValue $fresh 'EnableAllDevices') -eq 'true') 'New setup must enable all devices by default.'
+Check ((Get-XmlValue $fresh 'Backend') -eq 'auto') 'New setup must detect the GPU automatically.'
 Check ((Get-XmlValue $fresh 'ProcessingWidth') -eq '3840' -and (Get-XmlValue $fresh 'StreamWidth') -eq '3840') 'New setup defaults must be 4K.'
 Check ((Get-XmlValue $fresh 'SegmentType') -eq 'mpegts') 'New setup should use MPEG-TS/AAC.'
+$forced = New-PluginConfiguration ([xml]'<PluginConfiguration><Backend>intel</Backend></PluginConfiguration>') 'python' 'ffmpeg' 'ffprobe' 'cache' $true
+Check ((Get-XmlValue $forced 'Backend') -eq 'intel') 'An existing GPU override was changed.'
 
 $payload = Join-Path $work 'payload'
 $null = New-Item -ItemType Directory -Force -Path (Join-Path $payload 'worker')
@@ -165,7 +168,7 @@ Check (-not (Test-SetupRuntimeManifest $runtimeMarker $runtimeManifest)) 'A runt
 @{ product = 'VSR Everywhere'; version = '1.0.0'; manifestSha256 = (Get-FileHash -LiteralPath $runtimeManifest).Hash } | ConvertTo-Json | Set-Content -LiteralPath $runtimeMarker -Encoding UTF8
 Check (Test-SetupRuntimeManifest $runtimeMarker $runtimeManifest) 'An exact runtime manifest was not reused.'
 
-function Test-Engine([string]$Name, [bool]$FailStartup, [bool]$CustomStorage = $false, [bool]$PreviousRuntime = $false) {
+function Test-Engine([string]$Name, [bool]$FailStartup, [bool]$CustomStorage = $false, [bool]$PreviousRuntime = $false, [string]$Backend = 'nvidia') {
     $fixture = New-Fixture ($Name + '\data')
     $case = Join-Path $work $Name
     $engine = Join-Path $case 'engine'
@@ -181,11 +184,12 @@ function Test-Engine([string]$Name, [bool]$FailStartup, [bool]$CustomStorage = $
     Set-Content -LiteralPath (Join-Path $encoderSource 'ffprobe.exe') -Value 'fixture'
     [IO.Compression.ZipFile]::CreateFromDirectory($encoderSource, $encoderZip)
     $manifest = Get-Content -LiteralPath (Join-Path $installer 'downloads.lock.json') -Raw | ConvertFrom-Json
+    $manifest.downloads = @($manifest.downloads | Where-Object { -not $_.PSObject.Properties['backends'] -or $Backend -in $_.backends })
     $manifest.ffmpeg.file = 'encoder.zip'
     $manifest.ffmpeg.sha256 = (Get-FileHash -LiteralPath $encoderZip).Hash.ToLowerInvariant()
     $manifest.ffmpeg.url = 'https://invalid.example/encoder.zip'
     $lockPath = Join-Path $engine 'downloads.lock.json'
-    $manifest | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $lockPath -Encoding UTF8
+    [IO.File]::WriteAllText($lockPath, ($manifest | ConvertTo-Json -Depth 12), (New-Object Text.UTF8Encoding($false)))
     $lockHash = (Get-FileHash -LiteralPath $lockPath).Hash.ToLowerInvariant()
     $storageFolder = if ($CustomStorage) { Join-Path $case 'Custom storage' } else { $programData }
     $storageRoot = Join-Path $storageFolder 'VsrEverywhere'
@@ -217,7 +221,7 @@ function Get-JellyfinTarget([string]$DataPath, [string]$ServerPath) {
     if ($DataPath -ne $env:VSR_TEST_DATA) { throw 'Test attempted to leave its isolated data folder.' }
     return [pscustomobject]@{ DataPath = $DataPath; ServerPath = $ServerPath; Version = '12.1.0'; ServiceName = ''; ServiceIdentity = ''; OwnerSid = 'fixture'; WasRunning = $true; Arguments = ''; Url = 'http://localhost:8096'; ProcessId = 0 }
 }
-function Get-NvidiaStatus { return 'fixture GPU' }
+function Get-GpuStatus { return [pscustomobject]@{ Backends = @($env:VSR_TEST_GPU); Display = 'fixture GPU' } }
 function Install-VsrCppRuntime { }
 function Set-Acl { }
 function Grant-SetupAccess { }
@@ -246,6 +250,7 @@ Export-ModuleMember -Function *
         ('$env:VSR_TEST_DATA = ' + (& $quote $fixture.Data)),
         ('$env:VSR_TEST_EVENTS = ' + (& $quote $events)),
         ('$env:VSR_TEST_FAIL = ' + (& $quote $(if ($FailStartup) { 'yes' } else { 'no' }))),
+        ('$env:VSR_TEST_GPU = ' + (& $quote $Backend)),
         ('& ' + (& $quote (Join-Path $engine 'Install-Engine.ps1')) + ' -JobPath ' + (& $quote $job)),
         'exit $LASTEXITCODE'
     )
@@ -272,4 +277,5 @@ Test-Engine 'engine-success' $false
 Test-Engine 'engine-rollback' $true
 Test-Engine 'engine-custom-storage' $false $true
 Test-Engine 'engine-version-upgrade' $false $true $true
+Test-Engine 'engine-intel' $false $true $false 'intel'
 Write-Output "PASS: $script:checks installer checks (settings, discovery, deployment, rollback, paths, downloads, cancellation, native arguments, and complete engine transactions)."

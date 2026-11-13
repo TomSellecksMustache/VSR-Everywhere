@@ -9,6 +9,8 @@ The VSR Everywhere integration and setup code is licensed under the [MIT License
 - NVIDIA PyNvVideoCodec: https://docs.nvidia.com/video-technologies/pynvvideocodec/ (downloaded separately; its wheel retains NVIDIA's license notices).
 - PyAV: https://github.com/PyAV-Org/PyAV
 - NumPy: https://numpy.org/about/
+- OpenVINO runtime and telemetry: https://github.com/openvinotoolkit/openvino (Apache-2.0; wheel license notices retained).
+- Intel public SR-1033 model: https://github.com/openvinotoolkit/open_model_zoo/tree/master/models/intel/single-image-super-resolution-1033 (Apache-2.0; downloaded XML/BIN and Apache license retained under the private runtime's `models/intel` folder). This project does not distribute Intel's gated iVSR model packages.
 - Jellyfin FFmpeg: https://github.com/jellyfin/jellyfin-ffmpeg (GPL build; corresponding source and build instructions are provided by this publisher).
 - Microsoft Visual C++ runtime: https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist
 

@@ -14,6 +14,13 @@ PACKAGES = {
     "fsspec": "2026.9.0", "jinja2": "3.1.6", "markupsafe": "3.0.4",
     "mpmath": "1.3.0", "networkx": "3.6.1", "sympy": "1.14.0",
     "typing-extensions": "4.16.0", "setuptools": "80.9.0", "pynvvideocodec": "2.2.3",
+    "openvino": "2026.1.0", "openvino-telemetry": "2025.2.0",
+}
+
+MODEL_BASE = 'https://storage.openvinotoolkit.org/repositories/open_model_zoo/2023.0/models_bin/1/single-image-super-resolution-1033/FP16/'
+MODEL_FILES = {
+    'single-image-super-resolution-1033.xml': '9af449041f28495cfbc346899dd2effb6b4de93bed420c01afc0c8e38d31b095',
+    'single-image-super-resolution-1033.bin': '9a9d5a8cbd9520e4c282600feea95b31228d7de9716e8807acb53c572bd9cd31',
 }
 
 def fetch(url):
@@ -75,6 +82,14 @@ def main():
                                    "torch-2.11.0+cu128-cp314-cp314-win_amd64.whl"))
     downloads.append(official_wheel("https://pypi.nvidia.com/nvidia-vfx/",
                                    "nvidia_vfx-0.2.0.0-cp312-abi3-win_amd64.whl"))
+    for item in downloads:
+        if item['kind'] == 'wheel' and not item['file'].startswith(('av-', 'numpy-')):
+            item['backends'] = ['intel' if item['file'].startswith(('openvino-', 'openvino_telemetry-')) else 'nvidia']
+    downloads.extend(dict(file=name, url=MODEL_BASE + name, sha256=digest, kind='model', backends=['intel'])
+                     for name, digest in MODEL_FILES.items())
+    downloads.append(dict(file='LICENSE-OPENVINO-MODEL.txt', url='https://www.apache.org/licenses/LICENSE-2.0.txt',
+                          sha256='cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30',
+                          kind='model', backends=['intel']))
     result = {"product": "VSR Everywhere", "version": "1.0.0", "pythonVersion": PYTHON,
               "minimumDriver": "570.65", "targetAbi": "12.1.0.0", "downloads": downloads,
               "visualCppUrl": "https://aka.ms/vc14/vc_redist.x64.exe",

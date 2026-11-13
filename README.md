@@ -2,6 +2,8 @@
 
 **NVIDIA Video Super Resolution for your Jellyfin server.**
 
+**In development:** automatic GPU detection and an Intel OpenVINO/Quick Sync backend. [GPU selection and validation status](docs/gpu-backends.md). The published 1.0.0 downloads below remain NVIDIA-only.
+
 Enhance lower-resolution video on a Windows or Linux server and deliver an HEVC stream to your Jellyfin clients. Choose how much resolution VSR processes, choose what resolution your player receives, and let setup handle the runtime.
 
 [**Download the Windows installer**](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/download/v1.0.0/VSR-Everywhere-1.0.0-Setup.exe) · [All 1.0.0 downloads](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/tag/v1.0.0)
@@ -32,13 +34,14 @@ These examples use **ULTRA, strength 1, 5K processing, and 4K delivery**. They d
 | --- | --- |
 | Independent resolutions | Processing and delivery presets from 1080p through 8K. |
 | NVIDIA VSR | Enhancement quality and strength. |
+| GPU backend override | Automatic detection, NVIDIA, or Intel OpenVINO + Quick Sync. |
 | HEVC Main 10 + AAC | Hardware encoding, bitrate, and HLS format. |
-| GPU processing path | Enhanced frames stay on the GPU through resize, colour conversion, and encoding when NVENC lookahead is 0. |
+| NVIDIA GPU processing path | Enhanced frames stay on the GPU through resize, colour conversion, and encoding when NVENC lookahead is 0. |
 | Shared RAM cache | Completed HLS segments stay in a bounded memory store and regenerate when needed. |
 | Device selection | Enable VSR for all devices or select registered Jellyfin devices. |
 | Setup | Windows wizard and Linux terminal installer detect Jellyfin, download dependencies, test the GPU pipeline, and verify plugin loading. |
 
-**Working frames in VRAM. Finished stream segments in RAM.** NVENC lookahead above 0 selects the compatible FFmpeg encoding path, which transfers enhanced frames through system memory. [Read how the pipeline and cache work.](docs/configuration.md)
+**Working frames in VRAM. Finished stream segments in RAM.** NVENC lookahead above 0 and the Intel OpenVINO/Quick Sync path transfer enhanced frames through system memory. [Read how the pipeline and cache work.](docs/configuration.md)
 
 ## Install on Windows
 
@@ -70,6 +73,8 @@ powershell.exe -NoProfile -Sta -ExecutionPolicy Bypass -File .\Install-VSREveryw
 | Installation space | 25 GiB free for a fresh runtime. Windows uses a selected NTFS/ReFS drive; Linux uses a root-owned installation folder. Small Windows bootstrap/system components still use system-drive space. |
 | Source video | 8-bit SDR, up to 1920 × 1080. |
 | Player | Support for the selected HEVC Main 10, AAC, resolution, and HLS format. |
+
+The development Intel backend requires OpenVINO GPU access and HEVC Main 10 Quick Sync support. Its runtime/model downloads are automatic; Intel graphics/compute/media drivers remain prerequisites. [Intel requirements](docs/gpu-backends.md).
 
 ## Pick a starting profile
 

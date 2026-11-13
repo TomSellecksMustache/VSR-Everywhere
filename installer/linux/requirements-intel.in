@@ -1,0 +1,5 @@
+--index-url https://pypi.org/simple
+av==18.1.0
+numpy==2.4.6
+openvino==2026.1.0
+openvino-telemetry==2025.2.0

@@ -1,6 +1,7 @@
 """Linux installer helpers and service transactions, without GPU or service changes."""
 import importlib.util
 from contextlib import nullcontext
+import io
 import json
 import os
 from pathlib import Path
@@ -17,6 +18,35 @@ SPEC.loader.exec_module(setup)
 
 
 class LinuxSetupChecks(unittest.TestCase):
+    def test_hardware_specific_requirements(self):
+        nvidia = dict(backend='nvidia', driver='590.44')
+        intel = dict(backend='intel')
+        self.assertEqual(setup.runtime_requirements([intel], 'auto'), ['requirements-intel.lock.txt'])
+        self.assertEqual(setup.runtime_requirements([nvidia], 'nvidia'), ['requirements.lock.txt'])
+        self.assertEqual(setup.runtime_requirements([intel, nvidia], 'auto'),
+                         ['requirements.lock.txt', 'requirements-intel.lock.txt'])
+        for devices, requested in [([], 'auto'), ([intel], 'nvidia'), ([nvidia], 'intel'),
+                                   ([dict(backend='nvidia', driver='550.1')], 'auto'), ([intel], 'amd')]:
+            with self.subTest(devices=devices, requested=requested), self.assertRaises(RuntimeError):
+                setup.runtime_requirements(devices, requested)
+
+    def test_model_download_checksums_and_managed_paths(self):
+        data = b'verified model'
+        item = dict(file='model.xml', url='https://example.test/model.xml', sha256=setup.sha256(data).hexdigest())
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            with mock.patch.object(setup.urllib.request, 'urlopen', return_value=io.BytesIO(data)):
+                setup.install_models(root, [item])
+            self.assertEqual((root / 'models/intel/model.xml').read_bytes(), data)
+            with mock.patch.object(setup.urllib.request, 'urlopen', return_value=io.BytesIO(b'corrupt')):
+                with self.assertRaisesRegex(RuntimeError, 'checksum mismatch'):
+                    setup.install_models(root, [item])
+            self.assertEqual((root / 'models/intel/model.xml').read_bytes(), data)
+            with self.assertRaises(ValueError):
+                setup.install_models(root, [dict(item, file='../outside')])
+            with self.assertRaises(ValueError):
+                setup.install_models(root, [dict(item, url='http://example.test/model.xml')])
+
     def test_driver_boundaries(self):
         for value in ('570.190', '570.200.1', '580.82', '590.44', '600.00'):
             with self.subTest(value=value):
@@ -66,18 +96,19 @@ class LinuxSetupChecks(unittest.TestCase):
     def test_new_configuration(self):
         root = ET.fromstring(setup.configuration(None, '/runtime/python', '/bin/ffmpeg', '/bin/ffprobe', '/cache'))
         for key, expected in dict(Enabled='true', EnableAllDevices='true', CacheMode='memory',
+            Backend='auto',
             ProcessingWidth='3840', ProcessingHeight='2160', StreamWidth='3840', StreamHeight='2160',
             VsrQuality='HIGH', NvencLookahead='0', PythonPath='/runtime/python').items():
             self.assertEqual(root.findtext(key), expected)
 
     def test_preserve_profile(self):
-        existing = b'''<PluginConfiguration><Enabled>false</Enabled><EnableAllDevices>false</EnableAllDevices>
+        existing = b'''<PluginConfiguration><Backend>intel</Backend><Enabled>false</Enabled><EnableAllDevices>false</EnableAllDevices>
         <EnabledDeviceIds><string>living-room</string></EnabledDeviceIds><VsrQuality>ULTRA</VsrQuality>
         <ProcessingWidth>5120</ProcessingWidth><ProcessingHeight>2880</ProcessingHeight>
         <StreamWidth>3840</StreamWidth><StreamHeight>2160</StreamHeight><NvencLookahead>12</NvencLookahead>
         <UnknownSetting>keep</UnknownSetting><PythonPath>old</PythonPath></PluginConfiguration>'''
         root = ET.fromstring(setup.configuration(existing, '/new/python', '/bin/ffmpeg', '/bin/ffprobe', '/cache'))
-        for key, expected in dict(Enabled='true', EnableAllDevices='false', VsrQuality='ULTRA',
+        for key, expected in dict(Backend='intel', Enabled='true', EnableAllDevices='false', VsrQuality='ULTRA',
             ProcessingWidth='5120', ProcessingHeight='2880', StreamWidth='3840', StreamHeight='2160',
             NvencLookahead='12', UnknownSetting='keep', PythonPath='/new/python').items():
             self.assertEqual(root.findtext(key), expected)
