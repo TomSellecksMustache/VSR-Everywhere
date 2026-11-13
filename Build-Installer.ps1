@@ -13,7 +13,7 @@ $null = New-Item -ItemType Directory -Force -Path $payload
 foreach ($name in @('Installer.Core.psm1', 'Install-Engine.ps1', 'SetupWizard.ps1', 'vendor_runtime.py', 'Test-Runtime.py', 'downloads.lock.json')) {
     Copy-Item -LiteralPath (Join-Path $source $name) -Destination (Join-Path $payload $name)
 }
-foreach ($name in @('INSTALL-WINDOWS.md', 'THIRD_PARTY_NOTICES.md')) { Copy-Item -LiteralPath (Join-Path $root $name) -Destination (Join-Path $payload $name) }
+foreach ($name in @('INSTALL-WINDOWS.md', 'THIRD_PARTY_NOTICES.md', 'LICENSE')) { Copy-Item -LiteralPath (Join-Path $root $name) -Destination (Join-Path $payload $name) }
 $pluginSource = Join-Path $root 'dist\VSR-Everywhere'
 Copy-Item -LiteralPath $pluginSource -Destination (Join-Path $payload 'plugin') -Recurse
 $hashes = [ordered]@{}
@@ -27,6 +27,7 @@ foreach ($file in Get-ChildItem -LiteralPath $payload -File | Where-Object { $_.
     [IO.File]::WriteAllText($file.FullName, [IO.File]::ReadAllText($file.FullName), (New-Object Text.UTF8Encoding($true)))
 }
 $dist = Join-Path $root 'dist'
+Copy-Item -LiteralPath (Join-Path $root 'LICENSE') -Destination (Join-Path $dist 'LICENSE') -Force
 $bundleName = "VSR-Everywhere-$version-Windows.zip"
 $bundle = Join-Path $dist $bundleName
 Add-Type -AssemblyName System.IO.Compression.FileSystem
@@ -48,7 +49,7 @@ if (Test-Path -LiteralPath $sourceZip) { Remove-Item -LiteralPath $sourceZip -Fo
 $stream = [IO.File]::Create($sourceZip)
 $archive = New-Object IO.Compression.ZipArchive($stream, [IO.Compression.ZipArchiveMode]::Create)
 try {
-    $files = @(Get-ChildItem -LiteralPath $root -File | Where-Object { $_.Name -notlike 'HANDOFF-*' -and ($_.Extension -in @('.ps1', '.md') -or $_.Name -in @('NuGet.Config', '.gitignore')) })
+    $files = @(Get-ChildItem -LiteralPath $root -File | Where-Object { $_.Name -notlike 'HANDOFF-*' -and ($_.Extension -in @('.ps1', '.md') -or $_.Name -in @('NuGet.Config', '.gitignore', 'LICENSE')) })
     foreach ($folder in @('src', 'worker', 'tests', 'installer', 'tools', 'docs')) {
         $files += @(Get-ChildItem -LiteralPath (Join-Path $root $folder) -File -Recurse | Where-Object {
             $_.FullName -notmatch '[\\/](bin|obj|build|work|__pycache__|jobs)[\\/]' -and

@@ -18,6 +18,7 @@ def entries(archive):
 
 root = Path(__file__).resolve().parents[2]
 dist = root / 'dist'
+license_text = (root / 'LICENSE').read_bytes()
 bundle = (dist / 'VSR-Everywhere-1.0.0-Windows.zip').read_bytes()
 wrapper = (dist / 'Install-VSREverywhere.ps1').read_bytes()
 executable = (dist / 'VSR-Everywhere-1.0.0-Setup.exe').read_bytes()
@@ -26,6 +27,8 @@ assert bundle in executable and wrapper in executable, 'EXE embeds a different Z
 with zipfile.ZipFile(dist / 'VSR-Everywhere-1.0.0-Windows.zip') as archive:
     files = entries(archive)
     read = lambda name: archive.read(files[name])
+    for name in ['LICENSE', 'plugin/LICENSE']:
+        assert read(name) == license_text, 'Installer MIT license: ' + name
     metadata = json.loads(read('plugin/meta.json').decode('utf-8'))
     assert metadata['name'] == 'VSR Everywhere' and metadata['version'] == '1.0.0.0'
     locked = json.loads(read('downloads.lock.json').decode('utf-8-sig'))
@@ -38,6 +41,10 @@ with zipfile.ZipFile(dist / 'VSR-Everywhere-1.0.0-Windows.zip') as archive:
     for source in (root / 'worker').glob('*.py'):
         assert read('plugin/worker/' + source.name) == source.read_bytes(), 'Stale worker: ' + source.name
     assert read('plugin/Jellyfin.Plugin.VsrEverywhere.dll') == (dist / 'VSR-Everywhere/Jellyfin.Plugin.VsrEverywhere.dll').read_bytes()
+with zipfile.ZipFile(dist / 'VSR-Everywhere-1.0.0-plugin.zip') as archive:
+    files = entries(archive)
+    assert archive.read(files['LICENSE']) == license_text, 'Manual plugin MIT license'
+    assert archive.read(files['THIRD_PARTY_NOTICES.md']) == (root / 'THIRD_PARTY_NOTICES.md').read_bytes(), 'Manual plugin third-party notices'
 with zipfile.ZipFile(dist / 'VSR-Everywhere-1.0.0-Source.zip') as archive:
     files = entries(archive)
     for name in ['worker/vsr_gpu.py', 'worker/vsr_server.py', 'src/Jellyfin.Plugin.VsrEverywhere/BridgeSeek.cs',
@@ -45,7 +52,7 @@ with zipfile.ZipFile(dist / 'VSR-Everywhere-1.0.0-Source.zip') as archive:
                  'installer/Installer.Core.psm1', 'installer/Install-Engine.ps1', 'installer/Install-VSREverywhere.ps1.in']:
         assert archive.read(files[name]) == (root / name).read_bytes(), 'Source package: ' + name
     assert not any(name.startswith('HANDOFF-') for name in files), 'Internal handoff note in source package'
-    for source in [root / 'README.md', root / 'CHANGELOG.md', *sorted((root / 'docs').rglob('*'))]:
+    for source in [root / 'LICENSE', root / 'README.md', root / 'CHANGELOG.md', root / 'THIRD_PARTY_NOTICES.md', *sorted((root / 'docs').rglob('*'))]:
         if source.is_file():
             name = source.relative_to(root).as_posix()
             assert archive.read(files[name]) == source.read_bytes(), 'Missing or stale documentation: ' + name

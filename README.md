@@ -98,4 +98,4 @@ To process at 5K and deliver at 4K, select **5K (5120 × 2880)** for processing 
 
 ## Licensing
 
-The project code does not yet have a selected license. Third-party components retain their publishers' licenses; see [the notices](THIRD_PARTY_NOTICES.md). Sample footage belongs to its respective rights holders.
+The project code is licensed under the [MIT License](LICENSE). Third-party components retain their publishers' licenses; see [the notices](THIRD_PARTY_NOTICES.md). Sample footage belongs to its respective rights holders.

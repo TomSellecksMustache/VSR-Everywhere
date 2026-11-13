@@ -27,6 +27,7 @@ if (Test-Path -LiteralPath $dist) {
 }
 New-Item -ItemType Directory -Force -Path $dist | Out-Null
 Copy-Item -LiteralPath $dll -Destination (Join-Path $dist 'Jellyfin.Plugin.VsrEverywhere.dll') -Force
+foreach ($name in @('LICENSE', 'THIRD_PARTY_NOTICES.md')) { Copy-Item -LiteralPath (Join-Path $root $name) -Destination (Join-Path $dist $name) }
 New-Item -ItemType Directory -Force -Path (Join-Path $dist 'worker') | Out-Null
 Get-ChildItem -LiteralPath (Join-Path $root 'worker') -Filter '*.py' -File | Copy-Item -Destination (Join-Path $dist 'worker') -Force
 $metadata = [ordered]@{

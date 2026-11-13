@@ -2,6 +2,7 @@
 
 ## VSR Everywhere 1.0.0
 
+- Project code licensed under MIT, with the license included in release packages.
 - Windows install wizard with Jellyfin discovery, selectable runtime/download drive, dependency downloads, GPU/video checks, and plugin-load verification.
 - Matching standalone PowerShell/ZIP installation and manual plugin package.
 - Independent 1080p, 1440p, 4K, 5K, 6K, and 8K processing/delivery dropdowns.
