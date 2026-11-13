@@ -66,4 +66,4 @@ python3 -m unittest discover -s tests -p 'test_linux_*.py'
 
 The build produces the standalone `.sh`, a `.tar.gz` containing the same installer and guides, and SHA-256 checksums in `dist/`. No Windows executable is required on the Linux server. The project code is [MIT licensed](LICENSE); dependencies retain their own licenses in [the notices](THIRD_PARTY_NOTICES.md).
 
-Baseline installer, ownership, plugin/cache, and package checks passed on Ubuntu 24.04 and Rocky Linux 9. Updated automatic-GPU and Intel reference checks are included in CI but have not yet run on native Linux. Intel GPU inference/Quick Sync and native Linux GPU playback remain unverified.
+Installer, ownership, plugin/cache, package, automatic-GPU, and public Intel model CPU reference checks pass on Ubuntu 24.04 and Rocky Linux 9. Intel GPU inference/Quick Sync and native Linux GPU playback remain unverified.
