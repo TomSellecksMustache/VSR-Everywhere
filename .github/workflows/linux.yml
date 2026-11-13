@@ -56,7 +56,7 @@ jobs:
         with:
           dotnet-version: '10.0.x'
       - name: Installer settings, deployment, and rollback fixtures
-        run: python3 -m unittest discover -s tests -p test_linux_setup.py -v
+        run: python3 -m unittest discover -s tests -p 'test_linux_*.py' -v
       - name: Plugin, RAM cache, process control, and Linux cgroup checks
         run: dotnet run --project tests/PluginChecks/PluginChecks.csproj -c Release -- python3
       - name: Build and verify the Linux distribution

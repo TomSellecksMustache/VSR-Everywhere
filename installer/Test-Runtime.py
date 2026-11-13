@@ -8,6 +8,14 @@ import sys
 import tempfile
 
 
+def verify_test_pixels(pixels):
+    if pixels and len(pixels) % 3 == 0:
+        ranges = (max(pixels[channel::3]) - min(pixels[channel::3]) for channel in range(3))
+        if max(ranges) >= 8:
+            return
+    raise RuntimeError('VSR returned a blank or constant synthetic test image. Check NVIDIA VFX/driver compatibility. Jellyfin has not been changed.')
+
+
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--worker", required=True)
@@ -61,6 +69,9 @@ def main():
         if (video["codec_name"] != "hevc" or video["width"] != args.stream_width
                 or video["height"] != args.stream_height or audio["codec_name"] != "aac"):
             raise RuntimeError("The encoded test stream did not match the requested format.")
+        with av.open(str(output)) as encoded:
+            frame = next(encoded.decode(video=0))
+            verify_test_pixels(frame.reformat(width=64, height=36, format='rgb24').to_ndarray().tobytes())
         report = {"success": True, "gpu": gpu, "torch": torch.__version__, "python": sys.version,
                   "processing": [args.processing_width, args.processing_height],
                   "stream": [video["width"], video["height"]], "videoCodec": "hevc", "audioCodec": "aac",
