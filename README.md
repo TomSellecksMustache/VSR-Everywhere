@@ -10,6 +10,14 @@ Enhance lower-resolution video on a Windows or Linux server and deliver an HEVC 
 
 [Install](INSTALL-WINDOWS.md) · [Comparisons](docs/comparisons.md) · [Settings](docs/configuration.md) · [Troubleshooting](docs/troubleshooting.md) · [Build from source](docs/development.md)
 
+## Intel/AMD-based upscaling (testing)
+
+[Download the testing prerelease](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/tag/v1.0.0-testing.1) · [View the testing branch](https://github.com/TomSellecksMustache/VSR-Everywhere/tree/testing)
+
+The testing build adds automatic GPU detection, a backend override, and experimental Intel OpenVINO/Quick Sync upscaling. It downloads the required runtime and public model automatically. **Intel GPU playback still needs hardware validation. AMD GPU enhancement is planned and is not included yet.** [Backend details and validation status](https://github.com/TomSellecksMustache/VSR-Everywhere/blob/testing/docs/gpu-backends.md).
+
+The NVIDIA **1.0.0** release remains the latest and recommended default download above.
+
 ## See the difference
 
 **Left: original with Lanczos scaling. Right: actual encoded VSR output.** Each pair uses the same decoded frame. Open an image to inspect the detail.
