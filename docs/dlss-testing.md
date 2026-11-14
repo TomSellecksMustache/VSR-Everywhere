@@ -6,13 +6,17 @@ This Windows preview integrates [Veyra-NRVideo](https://github.com/Likely7/Veyra
 
 ## Install
 
-Run the preview `VSR-Everywhere-1.0.0-dlss.3-Setup.exe`, or download the matching Windows ZIP and `Install-VSREverywhere.ps1` together. Choose a drive with **25 GB free**. Setup downloads and verifies Python, GPU libraries, the video encoder, and Veyra's runtime. No compiler, system Python, Veyra GUI, or model download steps are needed on the server.
+Run the preview [VSR-Everywhere-1.0.0-dlss.3-Setup.exe](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/download/v1.0.0-dlss.3/VSR-Everywhere-1.0.0-dlss.3-Setup.exe), or download the matching Windows ZIP and `Install-VSREverywhere.ps1` from the [preview release](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/tag/v1.0.0-dlss.3) together. Choose a drive with **25 GB free**. Setup downloads and verifies Python, GPU libraries, the video encoder, and Veyra's runtime. No compiler, system Python, Veyra GUI, or model download steps are needed on the server.
 
 Use Windows 11 x64 with an NVIDIA RTX GPU, a compatible NVIDIA driver, and a native Jellyfin 12.1 service or desktop installation. The RTX 4070 Ti SUPER is validated; other GPU models still need testing. These new enhancements use DirectX 12 on Windows. The existing Linux VSR path remains available; Veyra neural rendering is not a Linux implementation.
 
 Setup tests the selected processing and stream resolutions before restarting Jellyfin. It preserves existing device approvals and quality settings, backs up the installation, and restores the previous files if Jellyfin fails to load the plugin. Switching back to the stable installer restores the stable worker while retaining compatible settings.
 
 This installer also upgrades manual installations containing only `Jellyfin.Plugin.VsrEverywhere.dll` in the `VSR-Everywhere` plugin folder. It checks the DLL's assembly identity when `meta.json` is absent. Unknown folders are rejected before downloads or a server restart; existing files and configuration are backed up for rollback.
+
+## Known issue: Roku HDR
+
+HDR activation is not working on the tested Roku client, including a display that plays existing HDR content correctly. Server-side encoding checks produce BT.2020/PQ video, but that does not confirm HDR activation on the player. Auto HDR remains experimental and is off by default; leave it off for SDR playback. This preview does not resolve the Roku HDR issue.
 
 ## Settings
 
@@ -21,7 +25,7 @@ This installer also upgrades manual installations containing only `Jellyfin.Plug
 | Veyra experimental neural rendering | Enabled by default in this preview. Runs before the existing NVIDIA VSR stage. |
 | Content profile: Automatic | Resolves the currently playing Jellyfin title and its movie/series genres and tags. Animation/anime metadata selects Animation. Other known metadata selects Live action. Missing metadata uses a conservative profile. |
 | Content profile override | Animation or Live action forces that profile for every enhanced title. |
-| NVIDIA Auto HDR | Off by default. Converts eligible SDR input using NVIDIA TrueHDR when the player explicitly advertises HEVC HDR10 support, in its playback request or registered Jellyfin capabilities. Unknown/SDR players receive SDR. Existing HDR sources keep normal Jellyfin playback. |
+| NVIDIA Auto HDR | Experimental and off by default. Server-side conversion uses NVIDIA TrueHDR when the player explicitly advertises HEVC HDR10 support, in its playback request or registered Jellyfin capabilities. HDR activation is not working on the tested Roku client. Unknown/SDR players receive SDR. Existing HDR sources keep normal Jellyfin playback. |
 | Use interpolation to maintain the input frame rate | Enabled by default. Adapts how often expensive enhancement runs, then synthesizes the frames between enhanced anchors. Output always retains the input frame rate. Disabling it enhances every source frame. |
 
 Animation uses lower neural-rendering intensity, tone, and structure changes to preserve line art. Live action uses stronger reconstruction. Unknown titles use the conservative animation settings. Automatic classification uses library metadata associated with the title; it makes no external title lookup or AI-service request. Add the Animation genre/tag in Jellyfin or use the override when library metadata is incomplete.

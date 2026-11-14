@@ -1,6 +1,8 @@
 # VSR Everywhere — DLSS testing
 
-**This branch is the Windows DLSS/Veyra preview, based on `main`.** It adds experimental neural rendering, automatic animation/live-action profiles, NVIDIA Auto HDR, and adaptive interpolation that preserves the input frame rate. [Install, settings, requirements, and validation](docs/dlss-testing.md). Stable 1.0.0 remains the recommended default download below.
+**This branch is the Windows DLSS/Veyra preview, based on `main`.** It adds experimental neural rendering, automatic animation/live-action profiles, and adaptive interpolation that preserves the input frame rate. Auto HDR is experimental and is not working on the tested Roku client. [Install, settings, requirements, and validation](docs/dlss-testing.md). Stable 1.0.0 remains the recommended default download below.
+
+[**Download the DLSS preview Windows installer**](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/download/v1.0.0-dlss.3/VSR-Everywhere-1.0.0-dlss.3-Setup.exe) · [Preview release and known issues](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/tag/v1.0.0-dlss.3)
 
 **NVIDIA Video Super Resolution for your Jellyfin server.**
 
