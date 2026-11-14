@@ -8,6 +8,8 @@ These are the same eight source selections, timestamps, and crop positions used 
 
 **HDR and interpolation are disabled in both enhanced columns.** All images are BT.709 SDR, without tone mapping or synthesized intermediate frames. This isolates NR's effect on the same source frame; it does not demonstrate HDR playback or motion quality. [Exact capture settings, frame identity, and hashes](assets/comparisons/dlss/capture.json).
 
+NR output is converted from sRGB back to BT.709 before VSR. Earlier captures omitted that transfer conversion, lifting shadows and reducing saturation. These refreshed images use the corrected renderer. NR is forced on in the third column so it remains visible for comparison; Automatic animation playback uses the plain VSR path.
+
 The overview images show all three whole frames, resized to a combined width of 1600 pixels for the page. Detail images contain three unresized 1280 × 960 crops from the matching 4K canvases. GitHub may shrink an image to fit the page; open it to inspect the original size. The WebP detail assets preserve every column's PNG crop pixels losslessly.
 
 ## Doctor Who — 720p live action

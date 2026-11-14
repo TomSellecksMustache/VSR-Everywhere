@@ -14,7 +14,7 @@
 <div class="selectContainer"><label class="selectLabel" for="Backend">VSR backend</label><select id="Backend" is="emby-select"><option value="nvidia">NVIDIA Video Super Resolution + NVENC</option></select></div>
 <h3>Experimental NVIDIA enhancements (Windows)</h3>
 <div class="checkboxContainer"><label class="emby-checkbox-label"><input id="EnableNeuralRendering" type="checkbox" is="emby-checkbox"><span>Veyra experimental neural rendering</span></label></div>
-<div class="selectContainer"><label class="selectLabel" for="ContentProfile">Content profile</label><select id="ContentProfile" is="emby-select"><option value="auto">Automatic (library title metadata)</option><option value="animation">Animation</option><option value="live_action">Live action</option></select></div>
+<div class="selectContainer"><label class="selectLabel" for="ContentProfile">Content profile</label><select id="ContentProfile" is="emby-select"><option value="auto">Automatic (VSR for animation)</option><option value="animation">Animation (NR profile override)</option><option value="live_action">Live action</option></select></div>
 <div class="checkboxContainer"><label class="emby-checkbox-label"><input id="EnableAutoHdr" type="checkbox" is="emby-checkbox"><span>NVIDIA Auto HDR (HDR10 players)</span></label></div>
 <div class="checkboxContainer"><label class="emby-checkbox-label"><input id="EnableFrameInterpolation" type="checkbox" is="emby-checkbox"><span>Use interpolation to maintain the input frame rate</span></label></div>
 <div class="inputContainer"><label class="inputLabel" for="PythonPath">Python executable</label><input id="PythonPath" type="text" is="emby-input"></div>

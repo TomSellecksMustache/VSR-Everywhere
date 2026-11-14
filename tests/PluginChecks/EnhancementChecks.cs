@@ -11,6 +11,13 @@ internal static class EnhancementChecks
         Check(EnhancementProfiles.Classify("auto", "Unknown title", []) == "unknown");
         Check(EnhancementProfiles.Classify("animation", "Any title", ["Drama"]) == "animation");
         Check(EnhancementProfiles.Classify("live_action", "Any title", ["Anime"]) == "live_action");
+        Check(!EnhancementProfiles.UseNeuralRendering(true, "auto", "animation"));
+        Check(EnhancementProfiles.UseNeuralRendering(true, "auto", "live_action"));
+        Check(EnhancementProfiles.UseNeuralRendering(true, "auto", "unknown"));
+        Check(EnhancementProfiles.UseNeuralRendering(true, "animation", "animation"));
+        Check(EnhancementProfiles.UseNeuralRendering(true, "live_action", "live_action"));
+        Check(!EnhancementProfiles.UseNeuralRendering(false, "live_action", "live_action"));
+        Check(!EnhancementProfiles.UseNeuralRendering(true, "invalid", "animation"));
         Check(!EnhancementProfiles.SupportsHdr10(null));
         Check(EnhancementProfiles.DeliveryMbps(60, "Jellyfin Roku") == 40);
         Check(EnhancementProfiles.DeliveryMbps(18, "Roku") == 18);

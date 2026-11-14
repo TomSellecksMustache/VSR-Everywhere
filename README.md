@@ -2,7 +2,9 @@
 
 **This branch is the Windows DLSS/Veyra preview, based on `main`.** It adds experimental neural rendering, automatic animation/live-action profiles, and adaptive interpolation that preserves the input frame rate. Auto HDR is experimental and is not working on the tested Roku client. [Install, settings, requirements, and validation](docs/dlss-testing.md). Stable 1.0.0 remains the recommended default download below.
 
-[**Download the DLSS preview Windows installer**](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/download/v1.0.0-dlss.3/VSR-Everywhere-1.0.0-dlss.3-Setup.exe) · [Preview release and known issues](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/tag/v1.0.0-dlss.3)
+[**Download the DLSS preview Windows installer**](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/download/v1.0.0-dlss.4/VSR-Everywhere-1.0.0-dlss.4-Setup.exe) · [Preview release and known issues](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/tag/v1.0.0-dlss.4)
+
+**dlss.4:** NR color transfer is corrected, Automatic mode uses VSR alone for animation, and the comparison images use the corrected renderer.
 
 **NVIDIA Video Super Resolution for your Jellyfin server.**
 
@@ -34,7 +36,7 @@ The NVIDIA **1.0.0** release remains the latest and recommended default download
 
 ![Doctor Who — Original (Lanczos), VSR, and NR+VSR on the same frame](docs/assets/comparisons/dlss/doctor-who-scene-2-detail.webp)
 
-These examples use **ULTRA, strength 1, 5K processing, and 4K delivery**, with the animation or live-action NR profile in the third column. **HDR and interpolation are disabled** to isolate the enhancements on the exact original frames. All three columns are SDR. Open an image for the full-size, lossless detail crops; stills do not demonstrate motion quality.
+These examples use **ULTRA, strength 1, 5K processing, and 4K delivery**, with the animation or live-action NR profile in the third column. NR output is corrected from sRGB back to the video's BT.709 transfer, preserving VSR-like contrast and saturation. The third column forces NR for comparison; Automatic playback uses VSR alone for animation. **HDR and interpolation are disabled** to isolate the enhancements on the exact original frames. All three columns are SDR. Open an image for the full-size, lossless detail crops; stills do not demonstrate motion quality.
 
 [View all eight comparisons and the capture method](docs/comparisons.md), including Futurama and Xena.
 

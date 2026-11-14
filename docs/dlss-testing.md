@@ -6,7 +6,9 @@ This Windows preview integrates [Veyra-NRVideo](https://github.com/Likely7/Veyra
 
 ## Install
 
-Run the preview [VSR-Everywhere-1.0.0-dlss.3-Setup.exe](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/download/v1.0.0-dlss.3/VSR-Everywhere-1.0.0-dlss.3-Setup.exe), or download the matching Windows ZIP and `Install-VSREverywhere.ps1` from the [preview release](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/tag/v1.0.0-dlss.3) together. Choose a drive with **25 GB free**. Setup downloads and verifies Python, GPU libraries, the video encoder, and Veyra's runtime. No compiler, system Python, Veyra GUI, or model download steps are needed on the server.
+The dlss.4 preview adds NR color-transfer correction and VSR-only animation in Automatic mode. The comparisons in this branch use the corrected renderer.
+
+Run the preview [VSR-Everywhere-1.0.0-dlss.4-Setup.exe](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/download/v1.0.0-dlss.4/VSR-Everywhere-1.0.0-dlss.4-Setup.exe), or download the matching Windows ZIP and `Install-VSREverywhere.ps1` from the [preview release](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/tag/v1.0.0-dlss.4) together. Choose a drive with **25 GB free**. Setup downloads and verifies Python, GPU libraries, the video encoder, and Veyra's runtime. No compiler, system Python, Veyra GUI, or model download steps are needed on the server.
 
 Use Windows 11 x64 with an NVIDIA RTX GPU, a compatible NVIDIA driver, and a native Jellyfin 12.1 service or desktop installation. The RTX 4070 Ti SUPER is validated; other GPU models still need testing. These new enhancements use DirectX 12 on Windows. The existing Linux VSR path remains available; Veyra neural rendering is not a Linux implementation.
 
@@ -23,16 +25,18 @@ HDR activation is not working on the tested Roku client, including a display tha
 | Setting | Behavior |
 | --- | --- |
 | Veyra experimental neural rendering | Enabled by default in this preview. Runs before the existing NVIDIA VSR stage. |
-| Content profile: Automatic | Resolves the currently playing Jellyfin title and its movie/series genres and tags. Animation/anime metadata selects Animation. Other known metadata selects Live action. Missing metadata uses a conservative profile. |
-| Content profile override | Animation or Live action forces that profile for every enhanced title. |
+| Content profile: Automatic | Resolves the Jellyfin title and its movie/series genres and tags. Animation/anime uses VSR without NR. Live action uses NR+VSR when neural rendering is enabled. Missing metadata retains the conservative NR profile. |
+| Content profile override | Animation or Live action forces that NR profile when neural rendering is enabled, including an explicit animation NR override. |
 | NVIDIA Auto HDR | Experimental and off by default. Server-side conversion uses NVIDIA TrueHDR when the player explicitly advertises HEVC HDR10 support, in its playback request or registered Jellyfin capabilities. HDR activation is not working on the tested Roku client. Unknown/SDR players receive SDR. Existing HDR sources keep normal Jellyfin playback. |
 | Use interpolation to maintain the input frame rate | Enabled by default. Adapts how often expensive enhancement runs, then synthesizes the frames between enhanced anchors. Output always retains the input frame rate. Disabling it enhances every source frame. |
 
-Animation uses lower neural-rendering intensity, tone, and structure changes to preserve line art. Live action uses stronger reconstruction. Unknown titles use the conservative animation settings. Automatic classification uses library metadata associated with the title; it makes no external title lookup or AI-service request. Add the Animation genre/tag in Jellyfin or use the override when library metadata is incomplete.
+Automatic animation playback keeps the plain VSR path to preserve flat fills and outlines. The explicit Animation override uses lower NR intensity, tone, and structure changes; Live action uses stronger reconstruction. Unknown titles retain the conservative NR settings. Classification uses library metadata associated with the title; it makes no external title lookup or AI-service request. Add the Animation genre/tag in Jellyfin when metadata is incomplete.
 
 Output always matches the input rate, including fractional rates such as 23.976 and 29.97. There are no fixed-rate output modes. When enhancement cannot keep up, the worker processes one source anchor every two to four frames and uses NVIDIA fractional-timestep interpolation to fill the original presentation slots. Faster GPUs can return to enhancing every frame. The resolution, VSR quality, NR profile, HDR setting, and encoder quality remain selected by the user. NVIDIA shot-change detection guards interpolation across cuts. Seek resets clear neural-rendering history and the two-frame GPU cache while retaining loaded models and timing estimates.
 
 ## Processing and limits
+
+Veyra's output contract is sRGB RGBA8, while decoded SDR input and HEVC delivery use BT.709 transfer. The worker converts NR output back to BT.709 on the GPU before VSR, keeping zero black and unit white. This removes the lifted shadows and reduced saturation caused by treating sRGB as BT.709. It preserves NR's detail processing without adding a creative saturation or contrast grade. The conversion follows [sRGB's transfer function](https://www.w3.org/Graphics/Color/srgb) and [BT.709's transfer function](https://registry.color.org/rgb-registry/bt709).
 
 Memory-HLS playback starts with a lightweight preview while enhancement models warm in the background. Preview frames retain the input cadence and use the final HEVC Main 10 resolution, audio track, and color format. HDR preview uses a real BT.709/sRGB-to-BT.2020/PQ conversion with 203-nit SDR white. The worker changes to NR/VSR/TrueHDR/interpolation at a keyframe, normally after eight seconds of preview. One encoder and muxer remain active throughout, so codec, audio, timestamps, and HDR mode do not change at the handoff. Short videos can finish during the preview. Seeking retains loaded models.
 

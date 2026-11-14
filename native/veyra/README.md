@@ -10,6 +10,8 @@ Runtime: upstream's hash-verified NVIDIA 2.1.5 package and experimental ShortFus
 
 The filter accepts framed NV12 video over stdin and returns sRGB RGBA8 pixels over stdout. Veyra's NR/optical-flow state stays resident until shutdown. A reset flag clears history on seeks. The caller handles final super resolution, HDR, frame interpolation, encoding, and audio. This process boundary transfers uncompressed frames through host RAM; it does not write them to disk.
 
+The Python caller converts that sRGB output back to the decoded video's BT.709 transfer before VSR. Keep this conversion when changing the transport; reading the sRGB bytes as BT.709 lifts shadows and changes saturation.
+
 The headless CMake patch stops configuration before GUI/media applications; it preserves the upstream processing graph. Runtime, SDK headers/libraries, and model files are fetched separately and stay outside source Git.
 
 Build from the repository root with `powershell -File Build-Veyra.ps1`. Requires Visual Studio 2022 C++ Build Tools, a Windows SDK with DXC, CMake 3.24+, Git, and internet access. The script pins source/SDK commits and verifies download hashes. It writes the executable, GPL license, and complete corresponding-source ZIP into `installer/build/veyra-component`. The source ZIP contains this adapter, the pinned upstream source archive, build script, and upstream notices.

@@ -4,6 +4,9 @@ namespace Jellyfin.Plugin.VsrEverywhere;
 
 internal static class EnhancementProfiles
 {
+    internal static bool UseNeuralRendering(bool enabled, string requested, string classified)
+        => enabled && (classified != "animation" || requested is "animation" or "live_action");
+
     internal static int DeliveryMbps(int requested, string? client)
         => Math.Clamp(requested, 4, client?.Contains("roku", StringComparison.OrdinalIgnoreCase) == true ? 40 : 60);
 

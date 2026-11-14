@@ -166,7 +166,7 @@ def main():
         scenes = list(pool.map(compose, jobs))
     provenance = {'branch': 'testing-dlss', 'columns': list(LABELS),
                   'profile': {**saved['profile'], 'EnableAutoHdr': False, 'EnableFrameInterpolation': False,
-                              'DeliveryColor': 'BT.709 SDR'},
+                              'DeliveryColor': 'BT.709 SDR', 'NrOutputTransfer': 'sRGB to BT.709 before VSR'},
                   'variants': {'vsr': {'EnableNeuralRendering': False}, 'nr_vsr': {'EnableNeuralRendering': True}},
                   'processing_path': 'Shared server renderer; startup preview omitted for offline capture',
                   'worker_sha256': {name: digest(ROOT / 'worker' / name) for name in

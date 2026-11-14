@@ -21,7 +21,8 @@
     "NvencTemporalAq": "false",
     "EnableAutoHdr": false,
     "EnableFrameInterpolation": false,
-    "DeliveryColor": "BT.709 SDR"
+    "DeliveryColor": "BT.709 SDR",
+    "NrOutputTransfer": "sRGB to BT.709 before VSR"
   },
   "variants": {
     "vsr": {
@@ -34,10 +35,10 @@
   "processing_path": "Shared server renderer; startup preview omitted for offline capture",
   "worker_sha256": {
     "vsr_everywhere.py": "c566f7a8af37772d7aff38409dbf1c93adb0bfb1b02be274215be4815f3360a5",
-    "vsr_enhancements.py": "df1ea9022538fa1e3b881885b2b02b602e1ac643bc0d897a2ff5864772ceaf0a",
+    "vsr_enhancements.py": "7094f039e3c258b94a85d030f348e3aa4359339e885e4dfca867ec021d09ab75",
     "vsr_temporal.py": "f7f3ba4e7d5b950b282519eb97cbbd7ec49e4d7c9c07a8d2bba2da1208a0f2a7",
     "vsr_gpu.py": "c233b23de3db790bdfb987cf6e3e3e8136ff85228e91b5d8c317d2234e35da8f",
-    "vsr_colour.py": "b012adb650f9372bbe4515ed9e10023650e2cfaf7889f2de8bfd443249ca96fe"
+    "vsr_colour.py": "d4013d93b152762dd926925d515535b554eb7fe103c111a4a3619c00247ec2ee"
   },
   "scenes": [
     {
@@ -63,18 +64,18 @@
           "frame_rgb_sha256": "3befd20ccbc09f8f356486e04207e1af681f7629a49df5f9aea4f4f854da92b3"
         },
         "nr_vsr": {
-          "encoded_sha256": "8e368797557039afc685f1299841ce86065c902ccdca2c33dab0f9caa5f35b6f",
-          "frame_rgb_sha256": "b70b0694147f691812ead1387651265d389315d70ae824ae2b45ff5aecb9dc2b"
+          "encoded_sha256": "bc12419534b3d8134100ae577269b7a8e8b14e5a462c828ddcbf910f0c319b7a",
+          "frame_rgb_sha256": "1d0d766c4c58f9baf30c40bc0d76de741cf532c4108d04ef2a8ff6641e849d4c"
         }
       },
       "assets": {
         "overview": {
           "file": "doctor-who-scene-1-overview.webp",
-          "sha256": "49869c4edcbf9b47c97c9051ceb055aaf3f414febfd404f505d3b12395e0b535"
+          "sha256": "826cde1485d8b9636e99d4a019df00f9ebc8cb0da9b49a9fd6fdc5c2c2ee82ad"
         },
         "detail": {
           "file": "doctor-who-scene-1-detail.webp",
-          "sha256": "725e27027b8dc0e63b332baa548f331db48e6dad5c7a671ccc848a9c7029445a"
+          "sha256": "8d32d56f55b9d7183a256be151d00e417e35b356699f8955f483424a7e089161"
         }
       }
     },
@@ -101,18 +102,18 @@
           "frame_rgb_sha256": "246b670b9dca4cab11ba336d723272fe5c88e02af05b406bfea847c44454d212"
         },
         "nr_vsr": {
-          "encoded_sha256": "8e368797557039afc685f1299841ce86065c902ccdca2c33dab0f9caa5f35b6f",
-          "frame_rgb_sha256": "3dbd5120f097bc58a713dd0734e9ecc642f8d6fc87f83b87dc4184e610a79366"
+          "encoded_sha256": "bc12419534b3d8134100ae577269b7a8e8b14e5a462c828ddcbf910f0c319b7a",
+          "frame_rgb_sha256": "dd19b721e8ae99a7c222ce2137bcdedbba5b9dc4603b71a62651b82d9dd8b999"
         }
       },
       "assets": {
         "overview": {
           "file": "doctor-who-scene-2-overview.webp",
-          "sha256": "27750a814a431faa00b88bed27bf8b1595559a9de5c929c9c94d6106499a9e84"
+          "sha256": "23bfdcd6797812a8967ef765472b395cd98c0eff6ff72208c830cbc32f39acf1"
         },
         "detail": {
           "file": "doctor-who-scene-2-detail.webp",
-          "sha256": "13ba7beb557b3444a279b267635148d86f9ec9b9e91189ee9c6883746ca118dd"
+          "sha256": "4d2bb6ad29ba7db8040cd524eee41d30aba4323e75565ea9ca5c4a9d53c83859"
         }
       }
     },
@@ -139,18 +140,18 @@
           "frame_rgb_sha256": "69343540146ba4640651f1ce75ec8452e29983aa8397de458d498279ff4d4769"
         },
         "nr_vsr": {
-          "encoded_sha256": "7bd562c89067bf6b8135565e84b2c1ce449fea332882f95bbf78cbcda1138757",
-          "frame_rgb_sha256": "7df626f4d150839b0ae15076f4a589d0df13e872a06f4827882f00c0e03b82e3"
+          "encoded_sha256": "e111e8b018b27bb18634bd589fa3a650be18f808d1462b2fc4f09c5ad0f465e4",
+          "frame_rgb_sha256": "33c8510ba00a00a7c1cb0051bd8af94875430cdd67fa6277f183bdbf2543a1f7"
         }
       },
       "assets": {
         "overview": {
           "file": "futurama-scene-1-overview.webp",
-          "sha256": "4f33ff73f2bb0ad1489c79432666e7454eaa35156e9a705978ee49771d9743d3"
+          "sha256": "9a05b1762bd8801440e1a8249097c9da133bb9e673796f56a48b619033642211"
         },
         "detail": {
           "file": "futurama-scene-1-detail.webp",
-          "sha256": "800aaecad20ab49d22ab156ac4b0e365f586b4ee529e7542afe321eb705ceec1"
+          "sha256": "5dad9350aee12619ab63a065391a4b8b0af8babbb52cbc9a7398d0ea7e91098b"
         }
       }
     },
@@ -177,18 +178,18 @@
           "frame_rgb_sha256": "5c08e84f2af901777422b25bd9fc7983a4913261afbd180e51535f4db0f3dd4c"
         },
         "nr_vsr": {
-          "encoded_sha256": "7bd562c89067bf6b8135565e84b2c1ce449fea332882f95bbf78cbcda1138757",
-          "frame_rgb_sha256": "eb0111d53c098161fcd3aeefbf1661d34e827f81c0abd33ce90a7c6a82f29ed8"
+          "encoded_sha256": "e111e8b018b27bb18634bd589fa3a650be18f808d1462b2fc4f09c5ad0f465e4",
+          "frame_rgb_sha256": "4ab86a534b2076ce5bcdbc05a0e74adc249b120d641aed6288253a093a2a13da"
         }
       },
       "assets": {
         "overview": {
           "file": "futurama-scene-2-overview.webp",
-          "sha256": "a6aaae0cdc8fc8eff9c4871c7541877bbc1a98456082ec56a5ea245d4fbe79ad"
+          "sha256": "6a523e0784ce2dd2182f24e5dab34846503ea4944ac4da2682e65d4756e44b46"
         },
         "detail": {
           "file": "futurama-scene-2-detail.webp",
-          "sha256": "2724e827ef54d0a36d6e7d43b2a0650ecef989f787df9d7ff2c1c3f4e2e37547"
+          "sha256": "235f9f6acfa5c6a17b1abd7c05f9bdb5296813c06fcf8ffc4c4492889ad32fe3"
         }
       }
     },
@@ -215,18 +216,18 @@
           "frame_rgb_sha256": "bbf4432b4a14bb37895c327ede98883a789835299ab6efa916004a95d6b075ec"
         },
         "nr_vsr": {
-          "encoded_sha256": "3a8b596ef764cded4c54f3157fca6f44ef80673d9c650f19abd90f52bdbf6453",
-          "frame_rgb_sha256": "5733a16f16d2ab58de8ea0332a9fb95c8d09cbfacc1779db519f867c86b4d89a"
+          "encoded_sha256": "fb9fde23a7ac28467887990ed93922b1ecaadfa1d2a1e6b7eadf3bba079a96d3",
+          "frame_rgb_sha256": "b7a01deff0edeab0c18d9b7fee0a75be7ad6f1452401a9793d0e76baa54ea136"
         }
       },
       "assets": {
         "overview": {
           "file": "venture-bros-scene-1-overview.webp",
-          "sha256": "0a86573f2d67cf324b8a15d517a767dc637d875cbb5e06c9c3c52bcad94287ca"
+          "sha256": "5db9387db849cd7a58f129bb70edb11265b5883409cc6a052ec35b2ecb5b5394"
         },
         "detail": {
           "file": "venture-bros-scene-1-detail.webp",
-          "sha256": "da0a4ec40bdcd405d5634fac751be03a0b31129c53fd813f7b72484cab858139"
+          "sha256": "761d1637f0e4fccebf40b1116c2053ea6c495d750f76a93cc4d5eb8577eb13e5"
         }
       }
     },
@@ -253,18 +254,18 @@
           "frame_rgb_sha256": "672c601d37102d37b72dfa35c8433f79d6e2380c6af45a609afee2ff4b0efe0b"
         },
         "nr_vsr": {
-          "encoded_sha256": "3a8b596ef764cded4c54f3157fca6f44ef80673d9c650f19abd90f52bdbf6453",
-          "frame_rgb_sha256": "be4345e61cab57156be6d7ca22588ef2bb217d25ec69b29b3aa4077476a01440"
+          "encoded_sha256": "fb9fde23a7ac28467887990ed93922b1ecaadfa1d2a1e6b7eadf3bba079a96d3",
+          "frame_rgb_sha256": "b7a98c2f5189ab251151330222740cecc6ab72c5cc011f652dd83e37881e0851"
         }
       },
       "assets": {
         "overview": {
           "file": "venture-bros-scene-2-overview.webp",
-          "sha256": "2c041b7c8063497b4b41a8583cafa910e6939f27fea4ae53698c6987cc74e6a8"
+          "sha256": "9e19e9ffada2ca1207e27856362df3d3329fbccefa4a0f0b2beb8ccc1d1a1bb6"
         },
         "detail": {
           "file": "venture-bros-scene-2-detail.webp",
-          "sha256": "86d472205e71d5bd099761327d9ea8093b5260b38f7736bd3cad14e94a7b5625"
+          "sha256": "a0c66ae4dcbfff308ed6549fd5960da7117cbc929dc6e314beb16ae2ef289de7"
         }
       }
     },
@@ -291,18 +292,18 @@
           "frame_rgb_sha256": "f821ca6a7e8da9d0e98cb11c74dc8ed3d2c731674a9b10cab4458b969b8c6d47"
         },
         "nr_vsr": {
-          "encoded_sha256": "6f0d2103ca58ae5c86aa85e2868417408167eeea2472557d9afdb67613378aa2",
-          "frame_rgb_sha256": "fdfaf0dbb9a7320a4c08df1db2f749d3bc917d718e825ff8c3ab073ce013f4a7"
+          "encoded_sha256": "b4d1ff0faa3e3be8598b93fb53cf19c6d34d0c21672042857766cfcdf4b44088",
+          "frame_rgb_sha256": "ca7b475705c1d5bcd95667c749e049a43c1a9e5db82023b29da7f4e6543d4e40"
         }
       },
       "assets": {
         "overview": {
           "file": "xena-scene-1-overview.webp",
-          "sha256": "ad418873ff60e2b9a10faee30d28f0098405c5ba96306d510ed539e3bd6330c0"
+          "sha256": "55436a59ad6002417735137ead693e3212d6aee7fcc4bcee5463616e392bc5b2"
         },
         "detail": {
           "file": "xena-scene-1-detail.webp",
-          "sha256": "1d1a44c652896bb6e7ead62c6a9ce825001c8f7d6ef136b7f77fc5991bc68551"
+          "sha256": "c56efc8d26c85edfb9f73707ea794d68e1bd2748fc02b02c5a1b1979951082de"
         }
       }
     },
@@ -329,18 +330,18 @@
           "frame_rgb_sha256": "f7ac9c6a644b3d56e14e739788e007c729fb90241942b6770e3d78e83d279f93"
         },
         "nr_vsr": {
-          "encoded_sha256": "6f0d2103ca58ae5c86aa85e2868417408167eeea2472557d9afdb67613378aa2",
-          "frame_rgb_sha256": "39535e98107abe08ce8724ca07e2caf2c8f685c0cd1d34b9128eea5a7e80dd84"
+          "encoded_sha256": "b4d1ff0faa3e3be8598b93fb53cf19c6d34d0c21672042857766cfcdf4b44088",
+          "frame_rgb_sha256": "5cca1fe4ba1cc016acb7098d6d3dc6491525c7368a85ed581011fc6beffbb4bc"
         }
       },
       "assets": {
         "overview": {
           "file": "xena-scene-2-overview.webp",
-          "sha256": "23a809c1f24331164df1940babd9f5db44920b3cde79f620d700548712baa007"
+          "sha256": "eb3e2335f43da7f2459d684561ace5e57758c6fe15b2223852215ad7a4b860b1"
         },
         "detail": {
           "file": "xena-scene-2-detail.webp",
-          "sha256": "9609b1f3c2544550b633e7502ea98fffa109906c83062eccd3be150f4158c30c"
+          "sha256": "01dae20184e0042fc421872cc5c575fba1b18b26e64ec4cf31eb5334246dd6e4"
         }
       }
     }

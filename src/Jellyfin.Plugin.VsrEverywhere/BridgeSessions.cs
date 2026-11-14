@@ -150,6 +150,7 @@ public sealed partial class BridgeSession : IDisposable
     private readonly PluginConfiguration _cfg;
     private readonly string _contentProfile;
     private readonly bool _hdr;
+    private readonly bool _neuralRendering;
     private readonly int _videoMbps;
     private readonly ILogger _logger;
     private readonly SemaphoreSlim _startLock = new(1, 1);
@@ -181,6 +182,7 @@ public sealed partial class BridgeSession : IDisposable
         Root = root;
         _cfg = cfg;
         _contentProfile = contentProfile is "animation" or "live_action" ? contentProfile : "unknown";
+        _neuralRendering = OperatingSystem.IsWindows() && EnhancementProfiles.UseNeuralRendering(cfg.EnableNeuralRendering, cfg.ContentProfile, _contentProfile);
         _hdr = hdr && cfg.EnableAutoHdr;
         _videoMbps = Math.Min(Math.Clamp(cfg.VideoMbps, 4, 60), Math.Clamp(maxVideoMbps ?? 60, 4, 60));
         _logger = logger;
@@ -274,15 +276,15 @@ public sealed partial class BridgeSession : IDisposable
             }) psi.ArgumentList.Add(a);
             if (_cfg.NvencSpatialAq) psi.ArgumentList.Add("--nvenc-spatial-aq");
             if (_cfg.NvencTemporalAq) psi.ArgumentList.Add("--nvenc-temporal-aq");
-            if (OperatingSystem.IsWindows() && _cfg.EnableNeuralRendering) psi.ArgumentList.Add("--neural-rendering");
+            if (_neuralRendering) psi.ArgumentList.Add("--neural-rendering");
             psi.ArgumentList.Add("--content-profile");
             psi.ArgumentList.Add(_contentProfile);
             if (_cfg.EnableFrameInterpolation) psi.ArgumentList.Add("--frame-interpolation");
             if (_hdr) psi.ArgumentList.Add("--auto-hdr");
             _logger.LogInformation("VSR Everywhere profile quality={Quality} strength={Strength} preset={Preset} tune={Tune} " +
-                "lookahead={Lookahead} spatialAQ={SpatialAq} temporalAQ={TemporalAq} cq={CQ} bitrate={Mbps}",
+                "lookahead={Lookahead} spatialAQ={SpatialAq} temporalAQ={TemporalAq} cq={CQ} bitrate={Mbps} nr={NeuralRendering} content={ContentProfile}",
                 vsrQuality, vsrStrength, preset, tune, lookahead, _cfg.NvencSpatialAq,
-                _cfg.NvencTemporalAq, cq, _videoMbps);
+                _cfg.NvencTemporalAq, cq, _videoMbps, _neuralRendering, _contentProfile);
 
             try
             {

@@ -12,6 +12,13 @@ def coefficients(matrix):
     raise ValueError("Expected bt601, bt709, or bt2020 colour matrix")
 
 
+def srgb_to_bt709(rgb):
+    """Restore video's BT.709 transfer after Veyra's sRGB output, preserving black and white."""
+    import torch
+    linear = torch.where(rgb <= .04045, rgb / 12.92, ((rgb + .055) / 1.055).pow(2.4))
+    return torch.where(linear < .018, 4.5 * linear, 1.099 * linear.pow(.45) - .099)
+
+
 def rgb_to_yuv_reference(rgb, bits=8, matrix="bt709"):
     import numpy as np
     if bits not in (8, 10):

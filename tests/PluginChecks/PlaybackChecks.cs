@@ -56,12 +56,14 @@ internal static class PlaybackChecks
                 FfprobePath = Path.Combine(Path.GetDirectoryName(ffmpeg)!, "ffprobe.exe"),
                 CacheMode = "memory", MemoryBudgetMb = 512, CacheDirectory = cache,
                 SegmentType = kind, SeekLookaheadSeconds = 2, SeekCatchupSeconds = 0,
-                EnableNeuralRendering = advanced, EnableAutoHdr = advanced, EnableFrameInterpolation = advanced
+                EnableNeuralRendering = advanced, EnableAutoHdr = advanced, EnableFrameInterpolation = advanced,
+                ContentProfile = advanced ? "animation" : "auto"
             };
             if (kind == "mpegts") { cfg.ProcessingWidth = 5120; cfg.ProcessingHeight = 2880; }
             if (advanced) { cfg.ProcessingWidth = 1280; cfg.ProcessingHeight = 720; cfg.StreamWidth = 640; cfg.StreamHeight = 360; }
             if (production)
             {
+                cfg.ContentProfile = "live_action";
                 cfg.ProcessingWidth = 5120; cfg.ProcessingHeight = 2880; cfg.StreamWidth = 3840; cfg.StreamHeight = 2160;
                 cfg.VsrQuality = "ULTRA"; cfg.VsrStrength = 1; cfg.VideoMbps = 40;
                 cfg.NvencPreset = "p7"; cfg.NvencTune = "hq"; cfg.NvencLookahead = 12; cfg.NvencCq = 1; cfg.NvencTemporalAq = true;

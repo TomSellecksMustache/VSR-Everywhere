@@ -59,6 +59,16 @@ class EnhancementChecks(unittest.TestCase):
             packed = torch.tensor([[0xC00003FF, 0xC00FFC00, 0xFFF00000]], dtype=torch.uint32)
             np.testing.assert_allclose(unpack_hdr(packed).numpy()[:, 0, :], np.eye(3))
 
+    @unittest.skipUnless(importlib.util.find_spec('torch'), 'PyTorch required')
+    def test_nr_srgb_output_returns_to_video_levels_without_lifting_black(self):
+        import torch
+        from vsr_colour import srgb_to_bt709
+        rgb = torch.tensor([0., .04045, .5, 1.], dtype=torch.float64)
+        result = srgb_to_bt709(rgb)
+        expected = torch.tensor([0., .014088622291021673, .4501885294039068, 1.], dtype=torch.float64)
+        torch.testing.assert_close(result, expected, atol=1e-8, rtol=1e-8)
+        self.assertTrue(torch.all(result[1:] > result[:-1]))
+
     def test_runtime_extraction_keeps_needed_files_and_rejects_escape(self):
         prefix = 'Veyra-2.1.5-NVIDIA-win64-portable/'
         required = ['avutil-61.dll', 'swscale-10.dll', 'runtime/config/ngx-local.json',

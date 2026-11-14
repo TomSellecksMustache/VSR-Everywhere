@@ -142,6 +142,10 @@ class Enhancements:
             rgb = np.ascontiguousarray(frame.to_ndarray(format='rgb24'))
         with stats.gpu('upload', torch):
             tensor = torch.from_numpy(rgb).to('cuda:0').permute(2, 0, 1).float().div_(255).contiguous()
+        if self.nr:
+            from vsr_colour import srgb_to_bt709
+            with stats.gpu('nr_colour', torch):
+                tensor = srgb_to_bt709(tensor)
         with stats.gpu('vsr', torch):
             enhanced = torch.from_dlpack(effect.run(tensor, stream_ptr=stream_ptr).image).clone()
             enhanced = fit_rgb(enhanced, self.args.stream_width, self.args.stream_height, sar).clamp_(0, 1).contiguous()
