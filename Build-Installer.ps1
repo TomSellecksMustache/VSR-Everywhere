@@ -3,12 +3,12 @@ param([switch]$SkipPluginBuild, [string]$OutputDirectory = '')
 $ErrorActionPreference = 'Stop'
 Import-Module (Join-Path $PSHOME 'Modules\Microsoft.PowerShell.Utility\Microsoft.PowerShell.Utility.psd1') -Global
 $root = $PSScriptRoot
-if (-not $OutputDirectory) { $OutputDirectory = Join-Path $root 'dist\dlss-preview' }
+if (-not $OutputDirectory) { $OutputDirectory = Join-Path $root 'dist' }
 $OutputDirectory = [IO.Path]::GetFullPath($OutputDirectory)
 $allowedRoot = [IO.Path]::GetFullPath((Join-Path $root 'dist')).TrimEnd('\')
 if ($OutputDirectory -ne $allowedRoot -and -not $OutputDirectory.StartsWith($allowedRoot + '\', [StringComparison]::OrdinalIgnoreCase)) { throw 'Build output must stay inside this project dist folder.' }
 if (-not $SkipPluginBuild) { & (Join-Path $root 'Build-Windows.ps1') -OutputDirectory $OutputDirectory; if ($LASTEXITCODE -ne 0) { throw 'Plugin build failed.' } }
-$version = '1.0.0-dlss.4'
+$version = '1.1.0'
 $source = Join-Path $root 'installer'
 $build = Join-Path $source ('build\release-' + [Guid]::NewGuid().ToString('N'))
 $null = New-Item -ItemType Directory -Force -Path $build

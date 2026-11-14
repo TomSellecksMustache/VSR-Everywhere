@@ -17,7 +17,7 @@ PACKAGES = {
 }
 
 def fetch(url):
-    request = urllib.request.Request(url, headers={"User-Agent": "VSR-Everywhere-Release/1.0.0"})
+    request = urllib.request.Request(url, headers={"User-Agent": "VSR-Everywhere-Release/1.1.0"})
     return urllib.request.urlopen(request, timeout=120)
 
 class Links(HTMLParser):
@@ -75,7 +75,7 @@ def main():
                                    "torch-2.11.0+cu128-cp314-cp314-win_amd64.whl"))
     downloads.append(official_wheel("https://pypi.nvidia.com/nvidia-vfx/",
                                    "nvidia_vfx-0.2.0.0-cp312-abi3-win_amd64.whl"))
-    result = {"product": "VSR Everywhere", "version": "1.0.0", "pythonVersion": PYTHON,
+    result = {"product": "VSR Everywhere", "version": "1.1.0", "pythonVersion": PYTHON,
               "minimumDriver": "570.65", "targetAbi": "12.1.0.0", "downloads": downloads,
               "visualCppUrl": "https://aka.ms/vc14/vc_redist.x64.exe",
               "ffmpeg": {"file": "jellyfin-ffmpeg_8.1.3-1_portable_win64-clang-gpl.zip",

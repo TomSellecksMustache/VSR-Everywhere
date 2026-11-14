@@ -1,6 +1,6 @@
 {
   "product": "VSR Everywhere",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "pythonVersion": "3.14.7",
   "minimumDriver": "570.65",
   "targetAbi": "12.1.0.0",

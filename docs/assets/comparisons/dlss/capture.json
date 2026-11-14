@@ -1,5 +1,5 @@
 {
-  "branch": "testing-dlss",
+  "renderer_commit": "d02c74e2375ada11ec33d3f7ea4c6d6878d1bc37",
   "columns": [
     "Original (Lanczos)",
     "VSR",

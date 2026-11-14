@@ -1,19 +1,22 @@
 # Changelog
 
-## VSR Everywhere 1.0.0
+## 1.1.0
 
-- Project code licensed under MIT, with the license included in release packages.
-- Windows install wizard with Jellyfin discovery, selectable runtime/download drive, dependency downloads, GPU/video checks, and plugin-load verification.
-- Matching standalone PowerShell/ZIP installation and manual plugin package.
-- Independent 1080p, 1440p, 4K, 5K, 6K, and 8K processing/delivery dropdowns.
-- NVIDIA VSR quality/strength controls, HEVC Main 10 NVENC output, and AAC audio.
-- Direct GPU resize/conversion/encoding path, with a compatible FFmpeg path for lookahead settings.
-- Shared, bounded RAM segment cache; automatic budgeting, disk fallback, and seek-on-demand regeneration.
-- Fixed-rate frame scheduling preserves decoded presentation order for jittered timestamps and packed B-frames, with calibrated seek anchors.
-- Version-only upgrades can reuse an existing runtime when its verified dependency manifest is unchanged apart from the product version.
-- Device selection and preserved settings during installation.
-- Backups and rollback if plugin deployment or startup verification fails.
-- Setup log sharing compatible with the wizard reader, fresh-entry startup checks, and BOM-free Jellyfin manifest output.
-- Illustrated user documentation and eight matched screenshot comparisons.
+- Added optional Veyra neural rendering on Windows.
+- Automatic profiles use plain VSR for animation and NR+VSR for live action. Manual overrides remain available.
+- Corrected NR color transfer so it does not lift shadows or wash out colors before VSR.
+- Added adaptive interpolation while keeping the input frame rate. There are no fixed 30/60/120 fps modes.
+- Added a lighter startup pass and a continuous change to enhanced playback, with a small segment reserve to reduce early buffering.
+- Improved pacing, seek handling, and encoder buffering. Applied known client bitrate limits.
+- Added experimental Auto HDR, off by default. Reliable player HDR activation is still unresolved.
+- Updated the Windows wizard, Linux packages, documentation, and matched Original / VSR / NR+VSR comparisons.
 
-Current source support is 8-bit SDR at up to 1080p. Higher output presets depend on GPU/player capability. Playback with Jellyfin Roku 3.2.4 and MPEG-TS has been confirmed. The installer is unsigned; clean-PC installation remains unverified.
+Neural rendering, interpolation, and Auto HDR are Windows-only. Linux keeps plain VSR. Input remains 8-bit SDR up to 1080p. The Windows installer is unsigned.
+
+## 1.0.0
+
+- Windows wizard and PowerShell installation with runtime downloads, video checks, backups, and rollback.
+- Linux installer for native systemd Jellyfin services.
+- Independent processing and delivery resolutions, NVIDIA VSR controls, HEVC Main 10, and AAC.
+- RAM segment caching, disk fallback, seek regeneration, and device selection.
+- Frame-pacing repairs, reusable verified runtimes, and MIT licensing for project code.

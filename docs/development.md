@@ -1,78 +1,58 @@
-# Development and validation
+# Building and testing
 
-[Overview](../README.md) · [Documentation](README.md) · [Release preparation](releasing.md)
+## Layout
 
-## Source layout
-
-| Path | Purpose |
+| Path | Contents |
 | --- | --- |
-| `src/Jellyfin.Plugin.VsrEverywhere/` | Jellyfin integration, device/settings page, memory store, HLS endpoints, and session/seek control. |
-| `worker/` | Python VSR, GPU conversion/encoding, compatible encoding, and persistent-worker control. |
-| `installer/` | Windows wizard/bootstrap, dependency lock, runtime assembly, and deployment/rollback engine. |
-| `tests/` | Worker, settings, memory, transport, and playback checks. |
-| `tools/` | Benchmark and comparison utilities. |
-| `docs/` | User/developer guides and screenshot assets. |
-| `dist/` | Generated release files; excluded from Git. |
+| `src/Jellyfin.Plugin.VsrEverywhere/` | Jellyfin integration, settings, sessions, HLS endpoints, and memory cache. |
+| `worker/` | Video processing, encoding, startup, and interpolation. |
+| `native/veyra/` | The separate Windows Veyra filter. |
+| `installer/` | Windows and Linux setup code and dependency locks. |
+| `tests/` | Worker, settings, cache, and playback checks. |
+| `tools/` | Package builders and comparison tools. |
+| `dist/` | Generated release files, excluded from Git. |
 
-## Playback pipeline
+The direct path is decode/upload, optional NR, VSR, resize/color conversion, optional HDR/interpolation, NVENC, then HLS with AAC audio. Linux omits the Windows enhancement stages. Lookahead above 0 uses FFmpeg encoding with frame transfers through RAM. Compressed HLS segments use the shared RAM cache or disk fallback.
 
-```mermaid
-flowchart LR
-    source[8-bit SDR source] --> decode[Decode and upload]
-    decode --> vsr[NVIDIA VSR]
-    vsr --> resize[GPU resize and P010 conversion]
-    resize --> encode[HEVC Main 10 NVENC]
-    encode --> mux[HLS mux with AAC audio]
-    mux --> cache[Shared RAM segment cache]
-    cache --> player[Jellyfin player]
-```
+Veyra is a separate process. It retains model state across frames and resets history on seeks. The worker corrects its sRGB output to BT.709 before VSR. See [enhancements](enhancements.md) for the playback behavior.
 
-This diagram shows the direct GPU encoder path. Lookahead above 0 selects compatible FFmpeg encoding and copies enhanced frames through RAM. Completed encoded segments use the bounded RAM store; memory fallback can use disk. A persistent worker can retain the VSR model while the server requests uncached seek ranges.
+## Windows build
 
-## Build
-
-Use Windows x64 with the **.NET 10 SDK**. From the repository root:
+Use Windows x64, .NET 10 SDK, Visual Studio 2022 C++ Build Tools, CMake 3.24+, a Windows SDK with DXC, Git, and internet access.
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Build-Installer.ps1
 ```
 
-This builds the plugin and generates the EXE, matching ZIP/PowerShell pair, plugin ZIP, and source ZIP in `dist/`. It does not install the plugin or stop Jellyfin. The bootstrap uses the Windows .NET Framework compiler.
+This builds the plugin, Veyra component, EXE, Windows ZIP, PowerShell entry point, plugin ZIP, and source ZIP in `dist/`. It does not install anything into Jellyfin. `Build-Windows.ps1` builds only the plugin package. `Build-Installer.ps1 -SkipPluginBuild` reuses the plugin output, so only use it after building the current plugin.
 
-To build only the plugin:
+The dependency lock is `installer/downloads.lock.json`. `Build-Veyra.ps1` pins the upstream source and SDKs, checks downloads, and includes the GPL license and corresponding source with the native filter. [Native build details](../native/veyra/README.md).
 
-```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Build-Windows.ps1
+## Linux build
+
+With Python 3 and .NET 10 SDK:
+
+```bash
+python3 tools/build_linux.py
+python3 installer/linux/test_package.py
 ```
 
-The pinned dependency manifest is `installer/downloads.lock.json`. The wizard downloads its private runtime from those publisher URLs and verifies the recorded SHA-256 hashes. Review manifest changes together with runtime verification; `installer/Resolve-Downloads.py` is the maintainer utility for refreshing the lock.
+The output is a terminal installer, a tarball with the same installer and guides, and checksums in `dist/`. The Linux build does not need the Windows native filter.
 
 ## Checks
 
-Use Node.js for settings checks, .NET 10 for plugin checks, and a Python environment with the worker requirements installed for Python checks. GPU/codec tests additionally need the NVIDIA runtime and FFmpeg.
+Use Python with the worker dependencies, Node.js, and .NET 10:
 
 ```powershell
-node tests/settings.test.cjs
 python -m unittest discover -s tests -p "test_*.py"
-dotnet run --project tests/PluginChecks/PluginChecks.csproj -c Release
+node --test tests/settings.test.cjs
+dotnet run --project tests/PluginChecks -c Release -- python
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File installer/tests/Test-Installer.ps1
 python installer/tests/Test-Package.py
 ```
 
-The package check runs after building. It verifies that the EXE embeds the same ZIP and PowerShell file as the standalone artifacts, checks payload hashes and current sources, rejects an invalid manifest encoding, and confirms the documentation is included in the source archive.
+Run package checks after building. They compare embedded and standalone payloads, verify hashes and versions, and check current sources and documentation. Installer fixtures cover discovery, custom folders, settings, upgrades, startup checks, cancellation, and rollback.
 
-Installer fixtures cover settings migration, local-folder routing, downloads, simultaneous log reads/writes, fresh startup confirmation, deployment, and rollback. Transport/playback integration checks are separate from the basic CPU/configuration checks.
+The Linux CI runs installer, plugin/cache, and package checks on Ubuntu 24.04 and Rocky Linux 9. GPU playback checks need real hardware and are separate from CI. Stills do not prove motion quality, and short playback tests do not prove long-session stability or universal client support. Clean-machine installation and long-duration A/V drift still need broader testing.
 
-## Evidence and limits
-
-Validation performed during 1.0.0 development included:
-
-- Real VSR, HEVC Main 10, AAC, and HLS output on an RTX 4070 Ti SUPER.
-- 5K processing with 4K delivery.
-- Forward/backward seeking around the 40-minute point of a two-hour synthetic source, using both MPEG-TS and fMP4.
-- RAM transport/cache checks, worker/model retention, configuration/UI checks, and deployment/rollback fixtures.
-- Eight still comparisons with matched source-frame indices and pixel-exact detail crops.
-- Frame-order checks over 10,800 frames across six samples, including timestamp jitter, packed B-frames, and pixel-matched forward/backward seeks.
-- Maintainer-confirmed playback on Jellyfin Roku 3.2.4 with MPEG-TS after the pacing repair.
-
-This is not a claim of continuous two-hour playback, universal player compatibility, or sustained real-time speed at every preset. Clean-PC installation and a long-duration A/V-drift test remain unverified.
+[Overview](../README.md) · [Making a release](releasing.md)

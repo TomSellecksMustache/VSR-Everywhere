@@ -2,7 +2,7 @@ name: Linux server checks
 
 on:
   push:
-    branches: [main, linux-server, testing-dlss]
+    branches: [main, linux-server]
   pull_request:
 
 permissions:

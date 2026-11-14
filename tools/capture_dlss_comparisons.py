@@ -164,7 +164,7 @@ def main():
     print('GPU renders complete; exporting and verifying comparison assets.', flush=True)
     with ThreadPoolExecutor(max_workers=2) as pool:
         scenes = list(pool.map(compose, jobs))
-    provenance = {'branch': 'testing-dlss', 'columns': list(LABELS),
+    provenance = {'branch': 'main', 'columns': list(LABELS),
                   'profile': {**saved['profile'], 'EnableAutoHdr': False, 'EnableFrameInterpolation': False,
                               'DeliveryColor': 'BT.709 SDR', 'NrOutputTransfer': 'sRGB to BT.709 before VSR'},
                   'variants': {'vsr': {'EnableNeuralRendering': False}, 'nr_vsr': {'EnableNeuralRendering': True}},

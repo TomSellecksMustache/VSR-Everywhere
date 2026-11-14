@@ -19,7 +19,7 @@ function New-Fixture([string]$Name) {
     $plugin = Join-Path $data 'plugins\SelectedPlugin'
     $config = Join-Path $data 'plugins\configurations\Jellyfin.Plugin.Fixture.xml'
     $null = New-Item -ItemType Directory -Force -Path $plugin, ([IO.Path]::GetDirectoryName($config)), (Join-Path $data 'config')
-    @{ guid = '7ca129d0-7454-41c7-aad6-55250b1a7b5b'; name = 'VSR Everywhere'; version = '1.0.0.0' } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $plugin 'meta.json') -Encoding UTF8
+    @{ guid = '7ca129d0-7454-41c7-aad6-55250b1a7b5b'; name = 'VSR Everywhere'; version = '1.1.0.0' } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $plugin 'meta.json') -Encoding UTF8
     Set-Content -LiteralPath (Join-Path $plugin 'Jellyfin.Plugin.Fixture.dll') -Value 'fixture plugin'
     Set-Content -LiteralPath (Join-Path $data 'config\system.xml') -Value '<ServerConfiguration />'
     Set-Content -LiteralPath $config -Value '<PluginConfiguration><Enabled>false</Enabled><EnabledDeviceIds><string>living-room</string></EnabledDeviceIds><ProcessingWidth>5120</ProcessingWidth><ProcessingHeight>2880</ProcessingHeight><StreamWidth>3840</StreamWidth><StreamHeight>2160</StreamHeight><VsrQuality>ULTRA</VsrQuality><UnknownSetting>keep</UnknownSetting></PluginConfiguration>' -Encoding UTF8
@@ -48,7 +48,7 @@ $payload = Join-Path $work 'payload'
 $null = New-Item -ItemType Directory -Force -Path (Join-Path $payload 'worker')
 Set-Content -LiteralPath (Join-Path $payload 'Jellyfin.Plugin.VsrEverywhere.dll') -Value 'new plugin'
 Set-Content -LiteralPath (Join-Path $payload 'worker\vsr_everywhere.py') -Value '# fixture'
-@{ guid = '7ca129d0-7454-41c7-aad6-55250b1a7b5b'; name = 'VSR Everywhere'; version = '1.0.0.0' } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $payload 'meta.json') -Encoding UTF8
+@{ guid = '7ca129d0-7454-41c7-aad6-55250b1a7b5b'; name = 'VSR Everywhere'; version = '1.1.0.0' } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $payload 'meta.json') -Encoding UTF8
 $success = New-Fixture 'success'
 $backup = Join-Path $success.Data 'vsr-everywhere-backups\check'
 $installed = Install-VsrPluginFiles $success.Data $payload $backup $configuration { }
@@ -175,16 +175,16 @@ $verificationData = Join-Path $work 'startup-verification'
 $verificationLog = Join-Path $verificationData 'log\log_today.log'
 $null = New-Item -ItemType Directory -Force -Path ([IO.Path]::GetDirectoryName($verificationLog))
 $since = [DateTime]::UtcNow.AddMinutes(-1)
-$freshLine = '[' + [DateTimeOffset]::Now.ToString('yyyy-MM-dd HH:mm:ss.fff zzz', [Globalization.CultureInfo]::InvariantCulture) + '] [INF] PluginManager: Loaded plugin: "VSR Everywhere" "1.0.0.0"'
+$freshLine = '[' + [DateTimeOffset]::Now.ToString('yyyy-MM-dd HH:mm:ss.fff zzz', [Globalization.CultureInfo]::InvariantCulture) + '] [INF] PluginManager: Loaded plugin: "VSR Everywhere" "1.1.0.0"'
 Set-Content -LiteralPath $verificationLog -Value $freshLine -Encoding UTF8
 [IO.File]::SetLastWriteTimeUtc($verificationLog, $since.AddDays(-1))
 foreach ($index in 1..4) { Set-Content -LiteralPath (Join-Path $verificationData ('log\FFmpeg.Transcode-' + $index + '.log')) -Value 'Encoder output' }
 Wait-VsrPlugin $verificationData $since 0
 Check $true 'A fresh plugin confirmation was missed because the open log had an old file timestamp.'
-$staleLine = '[' + [DateTimeOffset]::Now.AddDays(-1).ToString('yyyy-MM-dd HH:mm:ss.fff zzz', [Globalization.CultureInfo]::InvariantCulture) + '] [INF] PluginManager: Loaded plugin: "VSR Everywhere" "1.0.0.0"'
+$staleLine = '[' + [DateTimeOffset]::Now.AddDays(-1).ToString('yyyy-MM-dd HH:mm:ss.fff zzz', [Globalization.CultureInfo]::InvariantCulture) + '] [INF] PluginManager: Loaded plugin: "VSR Everywhere" "1.1.0.0"'
 Set-Content -LiteralPath $verificationLog -Value $staleLine -Encoding UTF8
 Expect-Failure { Wait-VsrPlugin $verificationData $since 0 } 'A previous startup was accepted as the new plugin confirmation.'
-Set-Content -LiteralPath $verificationLog -Value $freshLine.Replace('1.0.0.0', '1.0.0.1') -Encoding UTF8
+Set-Content -LiteralPath $verificationLog -Value $freshLine.Replace('1.1.0.0', '1.1.0.1') -Encoding UTF8
 Expect-Failure { Wait-VsrPlugin $verificationData $since 0 } 'A different plugin version was accepted.'
 
 $python = (Get-Command python.exe).Source
@@ -211,14 +211,14 @@ foreach ($file in @(Get-ChildItem -LiteralPath $installer -File | Where-Object {
 $runtimeManifest = Join-Path $work 'runtime-manifest.json'
 $previousManifest = Join-Path $work 'previous-runtime-manifest.json'
 $runtimeMarker = Join-Path $work 'runtime-marker.json'
-$manifestJson = @{ product = 'VSR Everywhere'; version = '1.0.0'; dependencySha256 = ('a' * 64) } | ConvertTo-Json
+$manifestJson = @{ product = 'VSR Everywhere'; version = '1.1.0'; dependencySha256 = ('a' * 64) } | ConvertTo-Json
 [IO.File]::WriteAllText($runtimeManifest, $manifestJson, (New-Object Text.UTF8Encoding($false)))
-[IO.File]::WriteAllText($previousManifest, $manifestJson.Replace('"1.0.0"', '"0.0.1"'), (New-Object Text.UTF8Encoding($false)))
+[IO.File]::WriteAllText($previousManifest, $manifestJson.Replace('"1.1.0"', '"0.0.1"'), (New-Object Text.UTF8Encoding($false)))
 @{ product = 'VSR Everywhere'; version = '0.0.1'; manifestSha256 = (Get-FileHash -LiteralPath $previousManifest).Hash } | ConvertTo-Json | Set-Content -LiteralPath $runtimeMarker -Encoding UTF8
 Check (Test-SetupRuntimeManifest $runtimeMarker $runtimeManifest) 'A version-only release could not reuse its verified runtime.'
 [IO.File]::WriteAllText($runtimeManifest, $manifestJson.Replace(('a' * 64), ('b' * 64)), (New-Object Text.UTF8Encoding($false)))
 Check (-not (Test-SetupRuntimeManifest $runtimeMarker $runtimeManifest)) 'A runtime with different dependencies was accepted.'
-@{ product = 'VSR Everywhere'; version = '1.0.0'; manifestSha256 = (Get-FileHash -LiteralPath $runtimeManifest).Hash } | ConvertTo-Json | Set-Content -LiteralPath $runtimeMarker -Encoding UTF8
+@{ product = 'VSR Everywhere'; version = '1.1.0'; manifestSha256 = (Get-FileHash -LiteralPath $runtimeManifest).Hash } | ConvertTo-Json | Set-Content -LiteralPath $runtimeMarker -Encoding UTF8
 Check (Test-SetupRuntimeManifest $runtimeMarker $runtimeManifest) 'An exact runtime manifest was not reused.'
 
 function Test-Engine([string]$Name, [bool]$FailStartup, [bool]$CustomStorage = $false, [bool]$PreviousRuntime = $false, [bool]$UnknownDestination = $false) {
@@ -250,12 +250,12 @@ function Test-Engine([string]$Name, [bool]$FailStartup, [bool]$CustomStorage = $
     $lockHash = (Get-FileHash -LiteralPath $lockPath).Hash.ToLowerInvariant()
     $storageFolder = if ($CustomStorage) { Join-Path $case 'Custom storage' } else { $programData }
     $storageRoot = Join-Path $storageFolder 'VsrEverywhere'
-    $runtimeVersion = '1.0.0'; $savedHash = $lockHash
+    $runtimeVersion = '1.1.0'; $savedHash = $lockHash
     if ($PreviousRuntime) {
         $runtimeVersion = '0.0.1'
         $priorLock = Join-Path $case 'prior-lock.json'
         $priorText = [Text.Encoding]::UTF8.GetString([IO.File]::ReadAllBytes($lockPath))
-        $priorText = [regex]::Replace($priorText, '(?m)^(\s*"version"\s*:\s*")1\.0\.0(")', '${1}0.0.1${2}')
+        $priorText = [regex]::Replace($priorText, '(?m)^(\s*"version"\s*:\s*")1\.1\.0(")', '${1}0.0.1${2}')
         [IO.File]::WriteAllBytes($priorLock, [Text.Encoding]::UTF8.GetBytes($priorText))
         $savedHash = (Get-FileHash -LiteralPath $priorLock).Hash.ToLowerInvariant()
     }
@@ -301,7 +301,7 @@ Export-ModuleMember -Function *
 '@
     $module = (Get-Content -LiteralPath (Join-Path $installer 'Installer.Core.psm1') -Raw) + $mocks
     Set-Content -LiteralPath (Join-Path $engine 'Installer.Core.psm1') -Value $module -Encoding UTF8
-    $plan = @{ Product = 'VSR Everywhere'; Version = '1.0.0'; DataPath = $fixture.Data; ServerPath = (Join-Path $case 'jellyfin.exe'); AllDevices = $false }
+    $plan = @{ Product = 'VSR Everywhere'; Version = '1.1.0'; DataPath = $fixture.Data; ServerPath = (Join-Path $case 'jellyfin.exe'); AllDevices = $false }
     if ($CustomStorage) { $plan.InstallFolder = $storageFolder }
     $plan | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $job 'plan.json') -Encoding UTF8
     $events = Join-Path $case 'events.txt'

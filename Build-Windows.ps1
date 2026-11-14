@@ -3,7 +3,7 @@ param([switch]$NoRestore, [string]$OutputDirectory = '')
 $ErrorActionPreference = 'Stop'
 Import-Module (Join-Path $PSHOME 'Modules\Microsoft.PowerShell.Utility\Microsoft.PowerShell.Utility.psd1') -Global
 $root = $PSScriptRoot
-if (-not $OutputDirectory) { $OutputDirectory = Join-Path $root 'dist\dlss-preview' }
+if (-not $OutputDirectory) { $OutputDirectory = Join-Path $root 'dist' }
 $outputRoot = [IO.Path]::GetFullPath($OutputDirectory)
 $allowedRoot = [IO.Path]::GetFullPath((Join-Path $root 'dist')).TrimEnd('\')
 if ($outputRoot -ne $allowedRoot -and -not $outputRoot.StartsWith($allowedRoot + '\', [StringComparison]::OrdinalIgnoreCase)) { throw 'Build output must stay inside this project dist folder.' }
@@ -44,10 +44,10 @@ $metadata = [ordered]@{
     status = 'Active'
     targetAbi = '12.1.0.0'
     description = 'NVIDIA Video Super Resolution with selectable 1080p to 8K processing and HEVC streaming for selected Jellyfin devices.'
-    changelog = 'DLSS testing: Veyra experimental neural rendering, automatic content profiles, NVIDIA Auto HDR, and interpolation that preserves input frame rate.'
+    changelog = 'Neural rendering, automatic content profiles, source-rate interpolation, and improved startup and color handling. Auto HDR remains experimental.'
 }
 [IO.File]::WriteAllText((Join-Path $dist 'meta.json'), ($metadata | ConvertTo-Json -Depth 5), (New-Object Text.UTF8Encoding($false)))
-$zip = Join-Path $outputRoot "VSR-Everywhere-$version-dlss.4-plugin.zip"
+$zip = Join-Path $outputRoot "VSR-Everywhere-$version-plugin.zip"
 if (Test-Path -LiteralPath $zip) { Remove-Item -LiteralPath $zip -Force }
 Compress-Archive -Path (Join-Path $dist '*') -DestinationPath $zip -Force
 Write-Host "Built plugin directory: $dist" -ForegroundColor Green

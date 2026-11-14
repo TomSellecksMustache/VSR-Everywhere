@@ -179,7 +179,7 @@ def write_configuration(path, data, uid, gid, mode=0o600):
         temporary.unlink(missing_ok=True)
 
 
-LOADED = r'Loaded plugin:\s*"?VSR Everywhere"?\s+"?1\.0\.0(?:\.0)?"?\s*$'
+LOADED = r'Loaded plugin:\s*"?VSR Everywhere"?\s+"?1\.1\.0(?:\.0)?"?\s*$'
 
 
 def fresh_log_loaded(text, since):
@@ -215,7 +215,7 @@ def wait_loaded(service, logs, since):
             except OSError:
                 continue
         time.sleep(1)
-    raise RuntimeError('Jellyfin did not confirm loading VSR Everywhere 1.0.0. Inspect its journal and startup logs.')
+    raise RuntimeError('Jellyfin did not confirm loading VSR Everywhere 1.1.0. Inspect its journal and startup logs.')
 
 
 def deploy(target, payload, settings, prefix, service, expected_config):
@@ -271,7 +271,7 @@ def deploy(target, payload, settings, prefix, service, expected_config):
         since = time.time()
         run(['systemctl', 'start', service])
         wait_loaded(service, target['logs'], since)
-        LOG.info('Installed VSR Everywhere 1.0.0. Backup: %s', backup)
+        LOG.info('Installed VSR Everywhere 1.1.0. Backup: %s', backup)
     except BaseException as failure:
         errors = []
         try:
@@ -320,7 +320,7 @@ def setup_lock(service):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='VSR Everywhere 1.0.0 Linux service setup')
+    parser = argparse.ArgumentParser(description='VSR Everywhere 1.1.0 Linux service setup')
     parser.add_argument('--install-dir', default='/opt/vsr-everywhere')
     parser.add_argument('--service', default='jellyfin.service')
     for name in ('data-dir', 'config-dir', 'log-dir', 'ffmpeg', 'ffprobe'):

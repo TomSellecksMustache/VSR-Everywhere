@@ -1,66 +1,54 @@
-# VSR Everywhere 1.0.0 - Linux server setup
+# Linux server setup
 
-The Linux installer targets native **systemd Jellyfin services** across Debian/Ubuntu and RPM-based distributions. It installs a private, pinned Python/CUDA/VFX runtime, verifies the GPU as the Jellyfin service account, preserves existing plugin settings, and backs up the plugin before restarting Jellyfin. It uses the same GPU pipeline, RAM cache, seek handling, and resolution/device controls as the Windows build.
+This installer is for a native Jellyfin systemd service. It installs plain NVIDIA VSR, with the same resolution controls, RAM cache, and seek handling as the Windows build. Veyra neural rendering, interpolation, and Auto HDR are Windows-only.
 
 ## Requirements
 
-- An initialized, running **Jellyfin 12.1.x** systemd service under a non-root account.
-- **x86-64 Linux with glibc 2.28 or newer.** NVIDIA lists Ubuntu 20.04/22.04/24.04, Debian 12, and RHEL 8/9 for its Python runtime. Other compatible glibc distributions, including Fedora and Rocky, use the same installer but require local validation. ARM, musl/Alpine, Docker, and non-systemd services are outside this package.
-- An NVIDIA GPU with VSR and HEVC Main 10 support. NVIDIA specifies Linux drivers **570.190+, 580.82+, or 590.44+**; a newer driver branch is also accepted. Streaming modes require Ampere or newer.
-- The server's Jellyfin FFmpeg and FFprobe, internet access, and **25 GiB free** for a fresh runtime.
-- `bash`, `curl` or `wget`, `tar`, `base64`, `sha256sum`, `realpath`, `stat`, and `flock`. These are normally supplied by the distribution's coreutils/util-linux packages.
+- A running, initialized Jellyfin 12.1.x systemd service under a non-root account.
+- x86-64 Linux with glibc 2.28 or newer. The package targets compatible Debian/Ubuntu and RPM-based systems.
+- An NVIDIA GPU with VSR and HEVC Main 10 support. Streaming quality modes need Ampere or newer.
+- A supported NVIDIA driver: 570.190+, 580.82+, 590.44+, or a newer branch.
+- Jellyfin FFmpeg/FFprobe, internet access, and 25 GiB free for a fresh runtime.
+- `bash`, `curl` or `wget`, `tar`, `base64`, `sha256sum`, `realpath`, `stat`, and `flock`.
 
-NVIDIA's binary runtime sets the compatibility boundary: this cannot promise support for every Linux architecture or libc. See [NVIDIA's Python runtime requirements](https://pypi.org/project/nvidia-vfx/) and [Linux VSR driver requirements](https://docs.nvidia.com/maxine/vfx/latest/Filters/VideoSuperResolution.html).
+ARM, Alpine/musl, Docker, and non-systemd installations are outside this package. Automated checks run on Ubuntu 24.04 and Rocky Linux 9. Native Linux GPU playback still needs hardware validation; this is not a claim of support for every distribution.
 
 ## Install
 
-Download [Install-VSREverywhere-1.0.0-Linux.sh](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/download/v1.0.0/Install-VSREverywhere-1.0.0-Linux.sh) to the server, then run:
+Download [Install-VSREverywhere-1.1.0-Linux.sh](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/download/v1.1.0/Install-VSREverywhere-1.1.0-Linux.sh), then run:
 
 ```bash
-sudo bash ./Install-VSREverywhere-1.0.0-Linux.sh
+sudo bash ./Install-VSREverywhere-1.1.0-Linux.sh
 ```
 
-Press Enter to accept the runtime location and detected service settings. The script contains the plugin and setup code; it downloads the larger dependencies over HTTPS and checks their hashes. It uses a private Python 3.12 runtime, so the system Python version does not determine which GPU wheels are installed.
-
-Fresh Linux installs use 4K processing/delivery, HIGH quality, strength 0.75, 20 Mbps, p4, lookahead 0, MPEG-TS/AAC, automatic memory caching, and one session. HIGH also supports Turing GPUs; streaming modes require Ampere or later. Existing quality, resolution, encoder, and device selections are retained.
-
-To use another drive or mount:
+Accept the detected service settings or supply your own. To put the runtime on another mount:
 
 ```bash
-sudo bash ./Install-VSREverywhere-1.0.0-Linux.sh --install-dir /srv/vsr-everywhere
+sudo bash ./Install-VSREverywhere-1.1.0-Linux.sh --install-dir /srv/vsr-everywhere
 ```
 
-Choose a root-owned path whose parent directories are not writable by other users. Downloads, private libraries, setup temporary files, logs, and backups use that location. Playback caching defaults to RAM, with disk fallback below the Jellyfin data folder. Existing verified runtimes are reused without requiring another 25 GiB free.
+Use a root-owned path whose parents are not writable by other users. Downloads, runtime files, logs, and backups go there. The script includes the plugin and downloads a private Python runtime and pinned GPU libraries, checking their hashes. System Python is not used for GPU packages.
 
-For unattended setup with the same checks:
+Fresh installs use 4K processing/delivery, HIGH quality, strength 0.75, 20 Mbps, p4, lookahead 0, MPEG-TS/AAC, RAM caching, and one session. HIGH supports Turing hardware too. Existing settings are kept where compatible. A verified existing runtime can be reused without another 25 GiB free.
 
-```bash
-sudo bash ./Install-VSREverywhere-1.0.0-Linux.sh --yes --install-dir /srv/vsr-everywhere
-```
+## Options
 
-For a custom service or layout, use `--service jellyfin.service`, `--data-dir`, `--config-dir`, `--log-dir`, `--ffmpeg`, or `--ffprobe`. Active process arguments and environment variables are checked before the standard `/var/lib/jellyfin`, `/etc/jellyfin`, and FFmpeg locations.
+- `--yes`: unattended setup with the same checks.
+- `--service`: choose a custom systemd service.
+- `--data-dir`, `--config-dir`, `--log-dir`: override Jellyfin paths.
+- `--ffmpeg`, `--ffprobe`: override encoder tools.
+- `--check --yes`: check the platform, service, GPU access, configuration, and space without deploying the plugin. The bootstrap may still download private Python.
 
-`--check --yes` checks the platform, service, GPU access, driver, package, configuration, and free space without deploying the plugin or installing CUDA packages. The shell bootstrap may still download its small private Python runtime.
+The installer checks active service arguments and environment before standard paths. It does not install Jellyfin, change the graphics driver, or disable SELinux/AppArmor.
 
-## Installation and recovery
+## Tests, backups, and recovery
 
-VSR, HEVC Main 10, AAC, and HLS must pass synthetic-media tests **as the Jellyfin account**, using its environment, before deployment. Both direct GPU encoding and the FFmpeg/NVENC path for nonzero lookahead are checked. Setup then stops Jellyfin, backs up this plugin and its XML configuration, installs the files, restarts the service, and confirms a fresh plugin-loaded message in the journal or Jellyfin log. A deployment or startup failure restores the previous files and starts the service again. An interruption during deployment is also handled; a power loss or forced process kill can require manual recovery.
+Before deployment, setup tests VSR, HEVC Main 10, AAC, and HLS as the Jellyfin service account. It checks both the direct GPU encoder and the FFmpeg path used for lookahead.
 
-Logs remain in `<install-dir>/jobs/setup-*/setup.log`. Backups are in `<install-dir>/backups/`, with the original plugin directories, configuration XML, and `restore.json`. To recover manually, stop the service, restore only the recorded VSR Everywhere directories and XML from that backup, preserve their ownership, then start Jellyfin. Other plugins and media files are outside the deployment target.
+It then stops Jellyfin, backs up the plugin and XML settings, installs the files, restarts the service, and checks for a fresh plugin-loaded message. A deployment failure attempts to restore the backup and restart Jellyfin. A power loss or forced process kill may need manual recovery.
 
-If the GPU check fails, inspect device permissions for the Jellyfin account, the driver version, and the setup log. On SELinux/AppArmor systems, also check audit denials and the service's allowed executable paths. Apply a policy appropriate to the chosen runtime location; setup does not disable security enforcement.
+Logs are under `<install-dir>/jobs/setup-*/setup.log`. Backups are under `<install-dir>/backups/`, with a `restore.json` record. To restore manually, stop Jellyfin and restore only the recorded plugin directories and XML, preserving ownership. Then restart the service.
 
-The installer itself does not install Jellyfin or replace the graphics driver. Install/initialize those through your distribution's supported process first.
+For GPU failures, check the service account's device access and the setup log. For SELinux/AppArmor failures, check audit logs and allow the chosen executable paths through an appropriate policy.
 
-## Build and validation
-
-With .NET 10 SDK and Python 3 available in the source tree:
-
-```bash
-python3 tools/build_linux.py
-python3 -m unittest discover -s tests -p 'test_linux_*.py'
-```
-
-The build produces the standalone `.sh`, a `.tar.gz` containing the same installer and guides, and SHA-256 checksums in `dist/`. No Windows executable is required on the Linux server. The project code is [MIT licensed](LICENSE); dependencies retain their own licenses in [the notices](THIRD_PARTY_NOTICES.md).
-
-Automated installer, ownership, plugin/cache, and package checks pass on Ubuntu 24.04 and Rocky Linux 9. Native Linux GPU playback remains unverified.
+[Settings](docs/configuration.md) · [Building](docs/development.md) · [Third-party notices](THIRD_PARTY_NOTICES.md)

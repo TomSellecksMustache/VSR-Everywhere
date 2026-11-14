@@ -1,43 +1,32 @@
-# Preparing a GitHub release
+# Making a release
 
-[Overview](../README.md) · [Documentation](README.md) · [Build instructions](development.md)
+For 1.1.0, build Windows packages with `Build-Installer.ps1` and Linux packages with `python3 tools/build_linux.py`. Run the checks in [development](development.md), including package checks after both builds.
 
-The local documentation uses repository-relative links and includes its comparison images. It does not require a particular GitHub username, repository name, branch, or external image host.
+## Release files
 
-Repository: [TomSellecksMustache/VSR-Everywhere](https://github.com/TomSellecksMustache/VSR-Everywhere). Release downloads: [v1.0.0](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/tag/v1.0.0).
-
-## Local release files
-
-Build with `Build-Installer.ps1`, then check the outputs in `dist/`:
-
-For the Linux server packages, run `python3 tools/build_linux.py` and verify them with `python3 installer/linux/test_package.py`.
-
-| File | Audience |
+| File | Purpose |
 | --- | --- |
-| `VSR-Everywhere-1.0.0-Setup.exe` | Recommended single-file wizard. Downloads its larger dependencies. |
-| `VSR-Everywhere-1.0.0-Windows.zip` | Companion payload for the standalone PowerShell installer. |
-| `Install-VSREverywhere.ps1` | PowerShell entry point; must match the ZIP from the same build. |
-| `VSR-Everywhere-1.0.0-plugin.zip` | Manual deployment for administrators with a working runtime. |
-| `VSR-Everywhere-1.0.0-Source.zip` | Source, guides, and comparison images for review or rebuilding. |
-| `Install-VSREverywhere-1.0.0-Linux.sh` | Standalone terminal installer for native Linux systemd services. |
-| `VSR-Everywhere-1.0.0-Linux.tar.gz` | The Linux installer, setup guide, and license notices. |
-| `VSR-Everywhere-1.0.0-Linux-SHA256SUMS.txt` | Checksums for the Linux installer and bundle. |
-| `LICENSE` | MIT license for the project code; also included in the packages. |
+| `VSR-Everywhere-1.1.0-Setup.exe` | Windows wizard. Put this download first in the release notes. |
+| `VSR-Everywhere-1.1.0-Windows.zip` | Payload for the PowerShell installer. |
+| `Install-VSREverywhere.ps1` | Must match the Windows ZIP from the same build. |
+| `VSR-Everywhere-1.1.0-plugin.zip` | Manual deployment with an existing runtime. |
+| `VSR-Everywhere-1.1.0-Source.zip` | Source, documentation, and comparison images. |
+| `Install-VSREverywhere-1.1.0-Linux.sh` | Linux systemd server installer. |
+| `VSR-Everywhere-1.1.0-Linux.tar.gz` | Linux installer and guides. |
+| `VSR-Everywhere-1.1.0-Linux-SHA256SUMS.txt` | Linux package hashes. |
+| `VSR-Everywhere-1.1.0-SHA256SUMS.txt` | Hashes for the release downloads. |
+| `LICENSE` | Project MIT license; also included in packages. |
 
-The separate `VSR-Everywhere-Comparison-Shots.zip` contains the original 40 exported PNGs and can be attached as an additional release asset. The repository's gallery uses smaller WebP assets to keep the source tree manageable.
+Keep the plugin version, installer versions, startup checks, tests, download links, and changelog aligned. Keep the plugin ID unchanged so upgrades retain settings. Cache ownership markers describe the cache format and do not need to change with the release version.
 
-## Before publication
+## Publish
 
-1. Review the README, comparison captions, source/input limits, and [1.0.0 release notes](../CHANGELOG.md).
-2. Confirm that the packages include the project's MIT `LICENSE` and third-party notices. Third-party software and sample footage retain their respective rights.
-3. Run the checks in [development](development.md), including package integrity after the build. Review the generated source archive before uploading it.
-4. Confirm that the intended release artifacts match. The EXE and standalone PowerShell entry point must contain the same current payload.
-5. Decide whether to sign the EXE with the publisher's certificate. The current build is unsigned.
+1. Review the code, docs, known issues, and license notices. The Windows installer is unsigned unless signed separately.
+2. Push the reviewed commit to `main` and wait for CI.
+3. Create a draft `v1.1.0` release at that commit and upload the exact files from this build.
+4. Check the uploaded names, sizes, and SHA-256 hashes against the local files.
+5. Publish as a normal release and mark it Latest. Check the README download links.
 
-## Publishing when ready
+Keep runtimes, build output, test jobs, source videos, and server settings out of Git. Binaries belong in release assets. The Veyra executable must retain its GPL license and corresponding source. Other downloaded components keep their own terms.
 
-Push the reviewed source tree to the repository, then create a **v1.0.0** release at the reviewed commit and attach the intended files. Use the [changelog](../CHANGELOG.md) as the release description. Keep the README's download links aligned with the release tag and asset names.
-
-Keep generated `dist/`, dependency runtimes, build directories, test work directories, internal handoff notes, source videos, and local server settings out of the Git history. `.gitignore` covers generated files inside this project. Release binaries belong in release assets rather than the source history.
-
-These are maintainer instructions. Preparing this package does not create a remote repository, commit, tag, release, or push.
+[Overview](../README.md) · [Changelog](../CHANGELOG.md)

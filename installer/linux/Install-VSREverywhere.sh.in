@@ -11,7 +11,7 @@ while (($#)); do
         --yes) assume_yes=1; shift ;;
         -h|--help)
             cat <<'HELP'
-VSR Everywhere 1.0.0 Linux setup
+VSR Everywhere 1.1.0 Linux setup
 Usage: sudo bash Install-VSREverywhere-Linux.sh [options]
   --install-dir PATH  Private runtime/download folder (default /opt/vsr-everywhere)
   --service UNIT      Jellyfin systemd unit (default jellyfin.service)
