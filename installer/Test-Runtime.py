@@ -29,6 +29,7 @@ def main():
     p.add_argument("--quality", default="STREAMING_MEDIUM")
     p.add_argument("--nvenc-lookahead", type=int, default=0)
     p.add_argument("--neural-rendering", action='store_true')
+    p.add_argument("--no-vsr", action='store_true')
     p.add_argument("--veyra-filter")
     p.add_argument("--auto-hdr", action='store_true')
     p.add_argument("--frame-interpolation", action='store_true')
@@ -41,7 +42,7 @@ def main():
     if not torch.cuda.is_available():
         raise RuntimeError("CUDA is unavailable. Install a compatible NVIDIA driver and run setup again.")
     gpu = torch.cuda.get_device_name(0)
-    print(f"Checking VSR on {gpu}...", flush=True)
+    print(f"Checking video processing on {gpu}...", flush=True)
     # Synthetic media only: no library files, user credentials, or server changes.
     with tempfile.TemporaryDirectory(prefix="VsrEverywhere-Check-") as temp:
         root = Path(temp)
@@ -63,6 +64,8 @@ def main():
             cmd += ['--frame-interpolation']
         if args.neural_rendering:
             cmd += ['--neural-rendering']
+        if args.no_vsr:
+            cmd += ['--no-vsr']
         if args.auto_hdr:
             cmd += ['--auto-hdr']
         if args.veyra_filter:

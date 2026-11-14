@@ -10,13 +10,13 @@ if ($outputRoot -ne $allowedRoot -and -not $outputRoot.StartsWith($allowedRoot +
 & (Join-Path $root 'Build-Veyra.ps1')
 $project = Join-Path $root 'src\Jellyfin.Plugin.VsrEverywhere\Jellyfin.Plugin.VsrEverywhere.csproj'
 $cfg = Join-Path $root 'NuGet.Config'
-$dll = Join-Path $root 'src\Jellyfin.Plugin.VsrEverywhere\bin\Release\net10.0\Jellyfin.Plugin.VsrEverywhere.dll'
+$dll = Join-Path $root 'src\Jellyfin.Plugin.VsrEverywhere\bin\Release\net8.0\Jellyfin.Plugin.VsrEverywhere.dll'
 if (-not (Get-Command dotnet -ErrorAction SilentlyContinue)) { throw 'Install .NET 10 SDK.' }
 if (-not $NoRestore) {
     & dotnet restore $project --configfile $cfg
     if ($LASTEXITCODE -ne 0) { throw 'NuGet restore failed.' }
 }
-& dotnet build $project -c Release -f net10.0 --no-restore --no-incremental
+& dotnet build $project -c Release -f net8.0 --no-restore --no-incremental
 if ($LASTEXITCODE -ne 0) { throw '.NET build failed.' }
 if (-not (Test-Path -LiteralPath $dll -PathType Leaf)) { throw "DLL missing: $dll" }
 $assembly = [xml](Get-Content -LiteralPath $project -Raw)
@@ -42,7 +42,7 @@ $metadata = [ordered]@{
     name = 'VSR Everywhere'
     version = ($version + $(if ($version.Split('.').Count -eq 3) { '.0' } else { '' }))
     status = 'Active'
-    targetAbi = '12.1.0.0'
+    targetAbi = '10.10.0.0'
     description = 'NVIDIA Video Super Resolution with selectable 1080p to 8K processing and HEVC streaming for selected Jellyfin devices.'
     changelog = 'Neural rendering, automatic content profiles, source-rate interpolation, and improved startup and color handling. Auto HDR remains experimental.'
 }

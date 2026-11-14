@@ -2,6 +2,16 @@
 from __future__ import annotations
 
 
+def frame_rgb(frame):
+    """Keep higher-depth SDR samples until the enhancement model's input boundary."""
+    import numpy as np
+    bits = max((c.bits for c in getattr(getattr(frame, 'format', None), 'components', ())), default=8)
+    if bits > 10:
+        raise ValueError('Only 8-bit and 10-bit SDR sources are supported')
+    high_depth = bits > 8
+    return np.ascontiguousarray(frame.to_ndarray(format='rgb48le' if high_depth else 'rgb24')), 65535 if high_depth else 255
+
+
 def coefficients(matrix):
     if matrix == "bt709":
         return 0.2126, 0.7152, 0.0722

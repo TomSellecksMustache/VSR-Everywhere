@@ -55,7 +55,7 @@ public sealed class PlaybackFilter : IAsyncActionFilter
                 result.Result?.GetType().Name ?? "null", (result.Result as ObjectResult)?.Value?.GetType().Name ?? "null");
             return;
         }
-        // Resolve authenticated client identity through Jellyfin 12.1.
+        // Resolve authenticated client identity through the registered access token.
         // Roku may not send the legacy X-Emby-Client headers.
         // DEVICESELECT: Device authorization is established by the *registered access token*,
         // not client-name/DeviceId headers, which are missing on some Roku requests and spoofable.
@@ -67,13 +67,13 @@ public sealed class PlaybackFilter : IAsyncActionFilter
         }
 
         MediaBrowser.Controller.Net.AuthorizationInfo authorization;
-        Jellyfin.Database.Implementations.Entities.Security.Device? registeredDevice;
+        string? registeredDeviceId = null, registeredAppName = null;
         try
         {
             var authorizationContext = context.HttpContext.RequestServices
                 .GetRequiredService<MediaBrowser.Controller.Net.IAuthorizationContext>();
             authorization = await authorizationContext.GetAuthorizationInfo(context.HttpContext).ConfigureAwait(false);
-            if (!authorization.IsAuthenticated || authorization.IsApiKey || authorization.User is null ||
+            if (!authorization.IsAuthenticated || authorization.IsApiKey || authorization.GetType().GetProperty("User")?.GetValue(authorization) is null ||
                 string.IsNullOrWhiteSpace(authorization.Token))
             {
                 _logger.LogInformation("VsrEverywhere DEVICESELECT skipped: no authenticated device user");
@@ -81,11 +81,11 @@ public sealed class PlaybackFilter : IAsyncActionFilter
             }
 
             var manager = context.HttpContext.RequestServices.GetRequiredService<MediaBrowser.Controller.Devices.IDeviceManager>();
-            registeredDevice = manager.GetDevices(new Jellyfin.Data.Queries.DeviceQuery
+            (registeredDeviceId, registeredAppName) = RegisteredDevice(manager, new Jellyfin.Data.Queries.DeviceQuery
             {
                 AccessToken = authorization.Token,
                 UserId = authorization.UserId
-            }).Items.FirstOrDefault();
+            });
         }
         catch (Exception ex)
         {
@@ -93,14 +93,13 @@ public sealed class PlaybackFilter : IAsyncActionFilter
             return;
         }
 
-        if (registeredDevice is null || string.IsNullOrWhiteSpace(registeredDevice.DeviceId) ||
-            (!cfg.EnableAllDevices && !approvedDeviceIds.Contains(registeredDevice.DeviceId, StringComparer.Ordinal)))
+        if (string.IsNullOrWhiteSpace(registeredDeviceId) ||
+            (!cfg.EnableAllDevices && !approvedDeviceIds.Contains(registeredDeviceId, StringComparer.Ordinal)))
         {
             _logger.LogInformation("VsrEverywhere DEVICESELECT skipped: device not approved");
             return;
         }
 
-        var client = registeredDevice.AppName + " / " + registeredDevice.DeviceName;
         _logger.LogInformation("VsrEverywhere DEVICESELECT approved device for VSR");
 
         if (!IsSafePlaybackRequest(context.ActionArguments))
@@ -133,22 +132,10 @@ public sealed class PlaybackFilter : IAsyncActionFilter
                 _logger.LogWarning("VsrEverywhere TRACE source rejected: missing dimensions/video stream");
                 continue;
             }
-            if (source.VideoStream.Width > 1920 || source.VideoStream.Height > 1080)
-            {
-                _logger.LogWarning("VsrEverywhere TRACE source rejected: dimensions above 1920x1080");
-                continue;
-            }
             var v = source.VideoStream;
-            var transfer = v.GetType().GetProperty("ColorTransfer")?.GetValue(v)?.ToString()?.ToLowerInvariant();
-            if (transfer is "smpte2084" or "arib-std-b67" or "pq" or "hlg")
+            if (!SupportsInput(v))
             {
-                _logger.LogWarning("VsrEverywhere TRACE source rejected: HDR input excluded");
-                continue;
-            }
-            var bitDepth = v.GetType().GetProperty("BitDepth")?.GetValue(v);
-            if (bitDepth is int depth && depth > 8)
-            {
-                _logger.LogWarning("VsrEverywhere TRACE source rejected: >8-bit video excluded");
+                _logger.LogWarning("VsrEverywhere TRACE source rejected: unsupported dimensions, bit depth, or HDR input");
                 continue;
             }
             var profile = "unknown";
@@ -175,12 +162,14 @@ public sealed class PlaybackFilter : IAsyncActionFilter
                 .Select(value => value!.GetType().GetProperty("DeviceProfile")?.GetValue(value)).OfType<DeviceProfile>().FirstOrDefault();
             var profileSource = deviceProfile is null ? "registered device" : "playback request";
             deviceProfile ??= context.HttpContext.RequestServices.GetRequiredService<MediaBrowser.Controller.Devices.IDeviceManager>()
-                .GetCapabilities(registeredDevice.DeviceId)?.DeviceProfile;
+                .GetCapabilities(registeredDeviceId)?.DeviceProfile;
             var supportsHdr = EnhancementProfiles.SupportsHdr10(deviceProfile);
             var hdr = cfg.EnableAutoHdr && supportsHdr;
+            if (!cfg.EnableVsr && !(OperatingSystem.IsWindows() && EnhancementProfiles.UseNeuralRendering(cfg.EnableNeuralRendering, cfg.ContentProfile, profile))
+                && !cfg.EnableFrameInterpolation && !hdr) continue;
             _logger.LogInformation("VSR Everywhere HDR requested={Requested} clientHdr10={ClientHdr10} profile={ProfileSource} output={Range}",
                 cfg.EnableAutoHdr, supportsHdr, deviceProfile is null ? "missing" : profileSource, hdr ? "HDR10" : "SDR");
-            var videoMbps = EnhancementProfiles.DeliveryMbps(cfg.VideoMbps, registeredDevice.AppName);
+            var videoMbps = EnhancementProfiles.DeliveryMbps(cfg.VideoMbps, registeredAppName);
             if (videoMbps != cfg.VideoMbps)
                 _logger.LogInformation("VSR Everywhere delivery bitrate limited to {Mbps} Mbps for this client", videoMbps);
             var token = _sessions.Register(source.Path, cfg, profile, hdr, videoMbps);
@@ -206,6 +195,26 @@ public sealed class PlaybackFilter : IAsyncActionFilter
             return;
         }
         _logger.LogWarning("VsrEverywhere TRACE finished: no eligible media sources");
+    }
+
+    internal static bool SupportsInput(MediaBrowser.Model.Entities.MediaStream video)
+    {
+        var transfer = video.GetType().GetProperty("ColorTransfer")?.GetValue(video)?.ToString()?.ToLowerInvariant();
+        var range = video.GetType().GetProperty("VideoRangeType")?.GetValue(video)?.ToString()?.ToLowerInvariant() ?? "";
+        return video.Width is > 0 and <= 1920 && video.Height is > 0 and <= 1080
+            && video.BitDepth is not > 10 && transfer is not ("smpte2084" or "arib-std-b67" or "pq" or "hlg")
+            && !range.Contains("hdr") && !range.Contains("hlg") && !range.Contains("dovi") && !range.Contains("dolby");
+    }
+
+    internal static (string? DeviceId, string? AppName) RegisteredDevice(
+        MediaBrowser.Controller.Devices.IDeviceManager manager, Jellyfin.Data.Queries.DeviceQuery query)
+    {
+        // The database entity returned by GetDevices moved namespaces between Jellyfin versions.
+        var result = typeof(MediaBrowser.Controller.Devices.IDeviceManager).GetMethod("GetDevices", [typeof(Jellyfin.Data.Queries.DeviceQuery)])?.Invoke(manager, [query]);
+        var items = result?.GetType().GetProperty("Items")?.GetValue(result) as System.Collections.IEnumerable;
+        var device = items?.Cast<object>().FirstOrDefault();
+        return (device?.GetType().GetProperty("DeviceId")?.GetValue(device) as string,
+            device?.GetType().GetProperty("AppName")?.GetValue(device) as string);
     }
 
     private static bool IsSafePlaybackRequest(IDictionary<string, object?> args)

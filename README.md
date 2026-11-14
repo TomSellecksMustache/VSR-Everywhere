@@ -4,9 +4,9 @@ NVIDIA Video Super Resolution for Jellyfin servers.
 
 This plugin processes video on your server and sends the result to your Jellyfin player. Your original files stay as they are. The player needs to support the stream you choose, but it does not need its own AI upscaler.
 
-[**Download the Windows installer — 1.1.0**](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/download/v1.1.0/VSR-Everywhere-1.1.0-Setup.exe) · [All downloads](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/tag/v1.1.0)
+[**Download the Windows installer — 1.2.0**](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/download/v1.2.0/VSR-Everywhere-1.2.0-Setup.exe) · [All downloads](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/tag/v1.2.0)
 
-**Linux:** [Download the server installer](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/download/v1.1.0/Install-VSREverywhere-1.1.0-Linux.sh) · [Linux setup](INSTALL-LINUX.md)
+**Linux:** [Download the server installer](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/download/v1.2.0/Install-VSREverywhere-1.2.0-Linux.sh) · [Linux setup](INSTALL-LINUX.md)
 
 ## What it does
 
@@ -20,7 +20,7 @@ This plugin processes video on your server and sends the result to your Jellyfin
 ## What it doesn't do
 
 - It does not replace Jellyfin, install a graphics driver, or change your media files.
-- The input path accepts 8-bit SDR video up to 1080p. Other sources use normal Jellyfin playback.
+- The input path accepts 8-bit or 10-bit SDR video up to 1080p. Other sources use normal Jellyfin playback.
 - It does not turn a low-quality source into a perfect one. Strong settings can change texture or introduce artifacts.
 - It does not guarantee real-time playback at every resolution or on every GPU.
 - It does not provide NVIDIA's official DLSS 5 game integration. The neural-rendering option uses Veyra's experimental community runtime.
@@ -29,11 +29,13 @@ This plugin processes video on your server and sends the result to your Jellyfin
 
 ## Install
 
-You need an initialized **Jellyfin 12.1 server**, compatible **NVIDIA hardware and drivers**, internet access, and a folder with **25 GB free** for a fresh runtime. Windows uses the install wizard. Linux uses a terminal installer for native systemd services.
+You need an initialized **Jellyfin server**, compatible **NVIDIA hardware and drivers**, internet access, and room for the downloads and private runtime. Windows uses the install wizard. Linux uses a terminal installer for native systemd services.
 
 On Windows, open the EXE, confirm your Jellyfin server, choose a folder, and install. Setup downloads the dependencies, tests video processing, and briefly restarts Jellyfin to install the plugin. You do not need to install Python or build anything.
 
 [Windows setup](INSTALL-WINDOWS.md) · [Linux setup](INSTALL-LINUX.md) · [Settings](docs/configuration.md) · [Troubleshooting](docs/troubleshooting.md)
+
+There is no fixed free-space minimum. Setup reports an error if storage runs out. The plugin targets the Jellyfin 10.10 API and .NET 8; setup verifies that it loads rather than enforcing one server version.
 
 Start with the default settings. Higher processing resolutions and stronger quality settings need more GPU time. A 4K player can receive 4K while VSR processes at 5K.
 

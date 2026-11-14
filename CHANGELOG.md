@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.0
+
+- Accept 8-bit and 10-bit SDR sources up to 1080p. HDR sources keep normal Jellyfin playback.
+- Put VSR, Veyra, Interpolation, and resolution controls below the device list. Other settings are under Advanced.
+- Allow VSR to be switched off independently of Veyra and interpolation.
+- Build against the Jellyfin 10.10 API and .NET 8, with compatibility checks against 10.10, 10.11, and 12.1 APIs. Setup verifies plugin loading instead of requiring exactly 12.1.
+- Remove the fixed 25 GB installation gate and explain actual disk-full errors.
+
 ## 1.1.0
 
 - Added optional Veyra neural rendering on Windows.

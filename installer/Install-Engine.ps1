@@ -13,7 +13,7 @@ try {
     if (-not (Test-SetupAdministrator)) { throw 'Run setup as administrator.' }
     $plan = Get-Content -LiteralPath (Join-Path $JobPath 'plan.json') -Raw | ConvertFrom-Json
     $manifest = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'downloads.lock.json') -Raw | ConvertFrom-Json
-    if ($plan.Product -ne 'VSR Everywhere' -or $plan.Version -ne '1.1.0') { throw 'The setup plan does not match this release.' }
+    if ($plan.Product -ne 'VSR Everywhere' -or $plan.Version -ne '1.2.0') { throw 'The setup plan does not match this release.' }
     if (-not [Environment]::Is64BitOperatingSystem -or $env:PROCESSOR_ARCHITECTURE -eq 'ARM64') { throw 'This release requires Windows 10 or 11 on an x64 computer.' }
     Write-SetupStatus $JobPath 'prepare' 'Checking Jellyfin and NVIDIA hardware...' 2
     $target = Get-JellyfinTarget -DataPath $plan.DataPath -ServerPath $plan.ServerPath
@@ -33,7 +33,7 @@ try {
     $downloads = Join-Path $root 'downloads'
     $manifestPath = Join-Path $PSScriptRoot 'downloads.lock.json'
     $lockHash = (Get-FileHash -LiteralPath $manifestPath -Algorithm SHA256).Hash.ToLowerInvariant()
-    $runtime = Join-Path $root ('runtimes\1.1.0-' + $lockHash.Substring(0, 12))
+    $runtime = Join-Path $root ('runtimes\1.2.0-' + $lockHash.Substring(0, 12))
     $marker = Join-Path $runtime 'vsr-runtime.json'
     $reuse = $false
     if (Test-Path -LiteralPath $marker) {
@@ -49,9 +49,6 @@ try {
         }
     }
     if (-not $reuse) {
-        if ($drive.AvailableFreeSpace -lt 25GB) {
-            throw ('A fresh installation needs 25 GB free on ' + $drive.Name + ' for downloads, the runtime, and temporary files. Available: ' + [Math]::Round($drive.AvailableFreeSpace / 1GB, 1) + ' GB. Run setup again and choose another folder.')
-        }
         $index = 0
         foreach ($item in $manifest.downloads) {
             Write-SetupStatus $JobPath 'download' ('Downloading ' + $item.file + '...') (5 + [int](50 * $index / $manifest.downloads.Count))
@@ -113,6 +110,7 @@ try {
         '--stream-width', (Get-XmlValue $configuration 'StreamWidth'), '--stream-height', (Get-XmlValue $configuration 'StreamHeight'))
     $testArgs += @('--veyra-filter', (Join-Path $veyra 'VsrVeyraFilter.exe'))
     if ((Get-XmlValue $configuration 'EnableNeuralRendering') -eq 'true') { $testArgs += '--neural-rendering' }
+    if ((Get-XmlValue $configuration 'EnableVsr' 'true') -eq 'false') { $testArgs += '--no-vsr' }
     if ((Get-XmlValue $configuration 'EnableAutoHdr') -eq 'true') { $testArgs += '--auto-hdr' }
     if ((Get-XmlValue $configuration 'EnableFrameInterpolation' 'true') -eq 'true') { $testArgs += '--frame-interpolation' }
     if ((Invoke-SetupProcess $python $testArgs $JobPath 420) -ne 0) { throw 'The VSR or video encoding test failed. Jellyfin has not been changed. See the setup log for the exact cause.' }
@@ -138,21 +136,22 @@ try {
     $null = Install-VsrPluginFiles $target.DataPath $payload $backup $configuration $verify
     $installed = $true; $stopped = $false
     $result.Success = $true; $result.Restarted = $true
-    $result.Message = 'VSR Everywhere 1.1.0 is installed, tested, and loaded by Jellyfin.'
+    $result.Message = 'VSR Everywhere 1.2.0 is installed, tested, and loaded by Jellyfin.'
     Write-SetupStatus $JobPath 'done' $result.Message 100
 } catch [OperationCanceledException] {
     $result.Cancelled = $true; $result.Message = $_.Exception.Message
     Write-SetupStatus $JobPath 'cancelled' $result.Message 0
 } catch {
-    $result.Message = $_.Exception.Message
+    $result.Message = Get-SetupFailureMessage $_.Exception
     if ($stopped -and -not $installed -and $target -and $target.WasRunning) {
         try { Start-SelectedJellyfin $target; $result.Restarted = $true }
         catch { $result.Message += ' Jellyfin could not be restarted automatically. Start it from its service or tray app.' }
     }
-    Write-SetupStatus $JobPath 'failed' $result.Message 0
-    Write-SetupLog $JobPath ($_ | Out-String)
+    [Console]::Error.WriteLine($result.Message)
+    try { Write-SetupStatus $JobPath 'failed' $result.Message 0; Write-SetupLog $JobPath ($_ | Out-String) } catch { }
 } finally {
-    [IO.File]::WriteAllText((Join-Path $JobPath 'result.json'), ($result | ConvertTo-Json), (New-Object Text.UTF8Encoding($false)))
+    try { [IO.File]::WriteAllText((Join-Path $JobPath 'result.json'), ($result | ConvertTo-Json), (New-Object Text.UTF8Encoding($false))) }
+    catch { $result.Success = $false; [Console]::Error.WriteLine((Get-SetupFailureMessage $_.Exception)) }
     if ($locked) { $mutex.ReleaseMutex() }
     $mutex.Dispose()
 }

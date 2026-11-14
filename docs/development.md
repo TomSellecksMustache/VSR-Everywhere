@@ -18,7 +18,7 @@ Veyra is a separate process. It retains model state across frames and resets his
 
 ## Windows build
 
-Use Windows x64, .NET 10 SDK, Visual Studio 2022 C++ Build Tools, CMake 3.24+, a Windows SDK with DXC, Git, and internet access.
+Use Windows x64, .NET 10 SDK (the plugin targets .NET 8), Visual Studio 2022 C++ Build Tools, CMake 3.24+, a Windows SDK with DXC, Git, and internet access.
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Build-Installer.ps1
@@ -52,6 +52,8 @@ python installer/tests/Test-Package.py
 ```
 
 Run package checks after building. They compare embedded and standalone payloads, verify hashes and versions, and check current sources and documentation. Installer fixtures cover discovery, custom folders, settings, upgrades, startup checks, cancellation, and rollback.
+
+Plugin checks accept `-p:JellyfinVersion=10.10.0`, `10.11.5`, or `12.1.0` to exercise the actual API assemblies. The device lookup adapter avoids a database-entity namespace change without replacing registered-token authorization.
 
 The Linux CI runs installer, plugin/cache, and package checks on Ubuntu 24.04 and Rocky Linux 9. GPU playback checks need real hardware and are separate from CI. Stills do not prove motion quality, and short playback tests do not prove long-session stability or universal client support. Clean-machine installation and long-duration A/V drift still need broader testing.
 

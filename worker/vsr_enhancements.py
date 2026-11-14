@@ -129,7 +129,6 @@ class Enhancements:
             self.nr.reset = True
 
     def render(self, frame, slot, fps, effect, sar, stream_ptr, stats):
-        import numpy as np
         import torch
         from vsr_gpu import fit_rgb
         if slot in self.cache:
@@ -138,16 +137,18 @@ class Enhancements:
         if self.nr:
             with stats.cpu('neural_rendering'):
                 rgb = self.nr.run(frame, slot, fps)
+                maximum = 255
         else:
-            rgb = np.ascontiguousarray(frame.to_ndarray(format='rgb24'))
+            from vsr_colour import frame_rgb
+            rgb, maximum = frame_rgb(frame)
         with stats.gpu('upload', torch):
-            tensor = torch.from_numpy(rgb).to('cuda:0').permute(2, 0, 1).float().div_(255).contiguous()
+            tensor = torch.from_numpy(rgb).to('cuda:0').permute(2, 0, 1).float().div_(maximum).contiguous()
         if self.nr:
             from vsr_colour import srgb_to_bt709
             with stats.gpu('nr_colour', torch):
                 tensor = srgb_to_bt709(tensor)
         with stats.gpu('vsr', torch):
-            enhanced = torch.from_dlpack(effect.run(tensor, stream_ptr=stream_ptr).image).clone()
+            enhanced = torch.from_dlpack(effect.run(tensor, stream_ptr=stream_ptr).image).clone() if effect is not None else tensor
             enhanced = fit_rgb(enhanced, self.args.stream_width, self.args.stream_height, sar).clamp_(0, 1).contiguous()
         if self.hdr:
             with stats.gpu('hdr', torch):

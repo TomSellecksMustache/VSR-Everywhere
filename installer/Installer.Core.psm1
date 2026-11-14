@@ -139,7 +139,7 @@ function Get-JellyfinTarget([string]$DataPath, [string]$ServerPath, $Services = 
     if ([IO.Path]::GetFileName($ServerPath) -ine 'jellyfin.exe' -or -not (Test-Path -LiteralPath $ServerPath -PathType Leaf)) { throw 'Select the Jellyfin Server executable (jellyfin.exe).' }
     $info = (Get-Item -LiteralPath $ServerPath).VersionInfo
     $version = '{0}.{1}.{2}' -f $info.FileMajorPart, $info.FileMinorPart, $info.FileBuildPart
-    if ($info.FileMajorPart -ne 12 -or $info.FileMinorPart -ne 1) { throw "This release requires Jellyfin 12.1. The selected server is $version. Setup will not upgrade or replace your server." }
+    # Startup verification checks compatibility instead of rejecting server version numbers.
     if ($null -eq $Services) { $Services = @(Get-CimInstance Win32_Service -Filter "Name LIKE '%jellyfin%'" -ErrorAction SilentlyContinue) }
     if ($null -eq $Processes) { $Processes = @(Get-CimInstance Win32_Process -Filter "Name = 'jellyfin.exe'" -ErrorAction SilentlyContinue) }
     $service = $null
@@ -202,7 +202,7 @@ function Get-NvidiaStatus {
 function New-PluginConfiguration($Existing, [string]$Python, [string]$Ffmpeg, [string]$Ffprobe, [string]$Cache, [bool]$AllDevices) {
     if ($Existing) { $xml = [xml]$Existing.OuterXml }
     else { $xml = [xml]'<?xml version="1.0" encoding="utf-8"?><PluginConfiguration />' }
-    $defaults = [ordered]@{ Backend = 'nvidia'; EnableNeuralRendering = 'true'; ContentProfile = 'auto'; EnableAutoHdr = 'false'; EnableFrameInterpolation = 'true';
+    $defaults = [ordered]@{ Backend = 'nvidia'; EnableVsr = 'true'; EnableNeuralRendering = 'true'; ContentProfile = 'auto'; EnableAutoHdr = 'false'; EnableFrameInterpolation = 'true';
         VideoMbps = '20'; VsrQuality = 'STREAMING_MEDIUM'; VsrStrength = '0.75';
         NvencPreset = 'p4'; NvencTune = 'default'; NvencLookahead = '0'; NvencSpatialAq = 'false'; NvencTemporalAq = 'false';
         NvencCq = '0'; SegmentType = 'mpegts'; MaxSessions = '1'; SessionMinutes = '180';
@@ -221,6 +221,17 @@ function New-PluginConfiguration($Existing, [string]$Python, [string]$Ffmpeg, [s
     }
     if (-not $xml.DocumentElement.SelectSingleNode('EnabledDeviceIds')) { $null = $xml.DocumentElement.AppendChild($xml.CreateElement('EnabledDeviceIds')) }
     return ,$xml
+}
+
+function Get-SetupFailureMessage([Exception]$Exception) {
+    $current = $Exception
+    while ($current) {
+        if (($current.HResult -band 0xffff) -in @(39, 112) -or $current.Message -match 'no space left on device|not enough (free )?(disk )?space|disk (is )?full') {
+            return 'Not enough free disk space. Free space or choose another installation folder, then retry. Check the setup log and backups if recovery is needed.'
+        }
+        $current = $current.InnerException
+    }
+    return $Exception.Message
 }
 
 function Write-SetupLog([string]$JobPath, [string]$Text) {
@@ -268,7 +279,10 @@ function Get-VerifiedDownload($Item, [string]$CachePath, [string]$JobPath) {
             return $file
         } catch [OperationCanceledException] { throw }
         catch { if ($attempt -eq 3) { throw }; Start-Sleep -Seconds $attempt }
-        finally { if ($output) { $output.Dispose() }; if ($input) { $input.Dispose() }; if ($response) { $response.Dispose() }; $client.Dispose() }
+        finally {
+            if ($output) { $output.Dispose() }; if ($input) { $input.Dispose() }; if ($response) { $response.Dispose() }; $client.Dispose()
+            if (Test-Path -LiteralPath $partial) { Remove-Item -LiteralPath $partial -Force -ErrorAction SilentlyContinue }
+        }
     }
 }
 
@@ -306,6 +320,9 @@ function Invoke-SetupProcess([string]$Executable, [string[]]$Arguments, [string]
             if ([DateTime]::UtcNow -gt $deadline) { throw 'A setup check timed out. See the setup log.' }
         }
         $text = $stdout.GetAwaiter().GetResult() + $stderr.GetAwaiter().GetResult()
+        if ($process.ExitCode -ne 0 -and $text -match 'no space left on device|not enough (free )?(disk )?space|disk (is )?full') {
+            throw (Get-SetupFailureMessage (New-Object Exception($text)))
+        }
         if ($text) { Write-SetupLog $JobPath $text }
         return $process.ExitCode
     } finally {
@@ -375,7 +392,7 @@ function Start-SelectedJellyfin($Target) {
 
 function Wait-VsrPlugin([string]$DataPath, [datetime]$Since, [int]$Seconds = 90) {
     $deadline = [DateTime]::UtcNow.AddSeconds($Seconds)
-    $pattern = '(?m)^\[(?<timestamp>[^\]]+)\][^\r\n]*Loaded plugin:\s*"?VSR Everywhere"?\s+"?1\.1\.0(?:\.0)?"?\s*$'
+    $pattern = '(?m)^\[(?<timestamp>[^\]]+)\][^\r\n]*Loaded plugin:\s*"?VSR Everywhere"?\s+"?1\.2\.0(?:\.0)?"?\s*$'
     do {
         # An open Jellyfin log can keep its old file timestamp until the server exits.
         foreach ($file in @(Get-ChildItem -LiteralPath (Join-Path $DataPath 'log') -Filter '*.log' -File -ErrorAction SilentlyContinue | Where-Object { $_.Name -notlike 'FFmpeg.*' } | Sort-Object LastWriteTimeUtc -Descending | Select-Object -First 3)) {
@@ -387,7 +404,7 @@ function Wait-VsrPlugin([string]$DataPath, [datetime]$Since, [int]$Seconds = 90)
         }
         Start-Sleep -Milliseconds 500
     } while ([DateTime]::UtcNow -lt $deadline)
-    throw ('Jellyfin did not confirm loading VSR Everywhere 1.1.0. Check ' + (Join-Path $DataPath 'log') + ' for startup errors. Setup will restore the previous files.')
+    throw ('Jellyfin did not confirm loading VSR Everywhere 1.2.0. Check ' + (Join-Path $DataPath 'log') + ' for startup errors. Setup will restore the previous files.')
 }
 
 function Install-VsrPluginFiles([string]$DataPath, [string]$PayloadPath, [string]$BackupPath, $Configuration, [scriptblock]$Verify) {
@@ -400,7 +417,7 @@ function Install-VsrPluginFiles([string]$DataPath, [string]$PayloadPath, [string
     $oldConfig = Join-Path $BackupPath 'configuration.xml'
     $hadConfig = Test-Path -LiteralPath $snapshot.ConfigPath -PathType Leaf
     if ($hadConfig) { Copy-Item -LiteralPath $snapshot.ConfigPath -Destination $oldConfig }
-    $record = @{ Product = 'VSR Everywhere'; Version = '1.1.0'; DataPath = $DataPath; PluginPath = $snapshot.PluginPath;
+    $record = @{ Product = 'VSR Everywhere'; Version = '1.2.0'; DataPath = $DataPath; PluginPath = $snapshot.PluginPath;
         OriginalConfigPath = $snapshot.ConfigPath; ConfigPath = $configPath; HadConfig = $hadConfig }
     $record | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $BackupPath 'restore.json') -Encoding UTF8
     $pluginMoved = $false; $newPlugin = $false; $configWritten = $false

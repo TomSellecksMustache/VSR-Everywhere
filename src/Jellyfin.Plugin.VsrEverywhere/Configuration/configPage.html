@@ -4,37 +4,18 @@
 <div data-role="content"><div class="content-primary">
 <h2>VSR Everywhere</h2>
 <form id="VsrEverywhereForm">
-<div class="checkboxContainer"><label class="emby-checkbox-label"><input id="Enabled" type="checkbox" is="emby-checkbox"><span>Enable VSR playback interception</span></label></div>
+<div class="checkboxContainer"><label class="emby-checkbox-label"><input id="Enabled" type="checkbox" is="emby-checkbox"><span>Enable VSR Everywhere</span></label></div>
 <h3>Previously connected Jellyfin devices</h3>
 <div class="checkboxContainer"><label class="emby-checkbox-label"><input id="EnableAllDevices" type="checkbox" is="emby-checkbox"><span>Enable VSR for all devices</span></label></div>
 <div id="VsrDevicesStatus" role="status" aria-live="polite">Loading connected devices…</div>
 <div id="VsrDevicesList" style="margin:1em 0;"></div>
 <button id="RefreshVsrDevices" type="button" is="emby-button" class="raised emby-button">Refresh devices</button>
 <hr>
-<div class="selectContainer"><label class="selectLabel" for="Backend">VSR backend</label><select id="Backend" is="emby-select"><option value="nvidia">NVIDIA Video Super Resolution + NVENC</option></select></div>
-<h3>Experimental NVIDIA enhancements (Windows)</h3>
-<div class="checkboxContainer"><label class="emby-checkbox-label"><input id="EnableNeuralRendering" type="checkbox" is="emby-checkbox"><span>Veyra experimental neural rendering</span></label></div>
-<div class="selectContainer"><label class="selectLabel" for="ContentProfile">Content profile</label><select id="ContentProfile" is="emby-select"><option value="auto">Automatic (VSR for animation)</option><option value="animation">Animation (NR profile override)</option><option value="live_action">Live action</option></select></div>
-<div class="checkboxContainer"><label class="emby-checkbox-label"><input id="EnableAutoHdr" type="checkbox" is="emby-checkbox"><span>NVIDIA Auto HDR (HDR10 players)</span></label></div>
-<div class="checkboxContainer"><label class="emby-checkbox-label"><input id="EnableFrameInterpolation" type="checkbox" is="emby-checkbox"><span>Use interpolation to maintain the input frame rate</span></label></div>
-<div class="inputContainer"><label class="inputLabel" for="PythonPath">Python executable</label><input id="PythonPath" type="text" is="emby-input"></div>
-<div class="inputContainer"><label class="inputLabel" for="FfmpegPath">FFmpeg executable</label><input id="FfmpegPath" type="text" is="emby-input"></div>
-<div class="inputContainer"><label class="inputLabel" for="FfprobePath">FFprobe executable</label><input id="FfprobePath" type="text" is="emby-input"></div>
-
-<h3>VSR cache management</h3>
-<div class="selectContainer"><label class="selectLabel" for="CacheMode">Segment cache</label><select id="CacheMode" is="emby-select"><option value="memory">Memory (automatic)</option><option value="disk">Disk</option></select></div>
-<div id="MemoryCacheFields">
-<div class="inputContainer"><label class="inputLabel" for="MemoryBudgetMb">Memory budget (MB, 0 = automatic)</label><input id="MemoryBudgetMb" type="number" min="0" step="1" is="emby-input"></div>
-<p id="MemoryBudgetStatus" class="fieldDescription" role="status"></p>
-</div>
-<div id="DiskCacheFields" hidden>
-<div class="inputContainer"><label class="inputLabel" for="CacheMaxGb">Total VSR cache budget (GB)</label><input id="CacheMaxGb" type="number" min="2" max="500" step="1" is="emby-input"><div class="fieldDescription">Rejects new enhanced streams when the plugin-owned cache is over budget. In full-playback mode, an active long movie may exceed the budget; use rolling mode to bound growth.</div></div>
-<div class="inputContainer"><label class="inputLabel" for="CacheMinFreeGb">Minimum free space before starting VSR (GB)</label><input id="CacheMinFreeGb" type="number" min="2" max="200" step="1" is="emby-input"></div>
-<div class="inputContainer"><label class="inputLabel" for="CacheDirectory">Writable temporary segment directory</label><input id="CacheDirectory" type="text" is="emby-input"></div>
-</div>
-<div class="inputContainer"><label class="inputLabel" for="CacheIdleMinutes">Clean inactive session after (minutes)</label><input id="CacheIdleMinutes" type="number" min="2" max="240" step="1" is="emby-input"><div class="fieldDescription">Idle sessions release their cached segments.</div></div>
-<div id="DiskRollingCache" class="checkboxContainer"><label class="emby-checkbox-label"><input id="EnableRollingCache" type="checkbox" is="emby-checkbox"><span>Rolling HLS cache (limited seek window)</span></label></div>
-<div class="inputContainer"><label class="inputLabel" for="RollingRewindMinutes">Rolling rewind window (minutes)</label><input id="RollingRewindMinutes" type="number" min="2" max="60" step="1" is="emby-input"><div class="fieldDescription">Memory and rolling disk caches retain this rewind window, within the available budget.</div></div>
+<h3>Features</h3>
+<div class="checkboxContainer"><label class="emby-checkbox-label"><input id="EnableVsr" type="checkbox" is="emby-checkbox"><span>VSR</span></label></div>
+<div class="checkboxContainer"><label class="emby-checkbox-label"><input id="EnableNeuralRendering" type="checkbox" is="emby-checkbox"><span>Veyra</span></label></div>
+<div class="checkboxContainer"><label class="emby-checkbox-label"><input id="EnableFrameInterpolation" type="checkbox" is="emby-checkbox"><span>Interpolation</span></label></div>
+<p class="fieldDescription">Veyra and interpolation currently require Windows.</p>
 <h3>Processing and delivery resolution</h3>
 <div class="selectContainer"><label class="selectLabel" for="ProcessingResolution">VSR processing resolution</label><select id="ProcessingResolution" is="emby-select">
 <option value="1920x1080">1080p (1920 × 1080)</option>
@@ -52,8 +33,10 @@
 <option value="5760x3240">6K (5760 × 3240)</option>
 <option value="7680x4320">8K (7680 × 4320)</option>
 </select></div>
-<div class="selectContainer"><label class="selectLabel" for="SegmentType">HLS segment type</label><select id="SegmentType" is="emby-select"><option value="mpegts">MPEG-TS</option><option value="fmp4">fMP4</option></select></div>
-
+<details><summary>Advanced settings</summary>
+<h3>Feature options</h3>
+<div class="selectContainer"><label class="selectLabel" for="ContentProfile">Content profile</label><select id="ContentProfile" is="emby-select"><option value="auto">Automatic (VSR for animation)</option><option value="animation">Animation (NR profile override)</option><option value="live_action">Live action</option></select></div>
+<div class="checkboxContainer"><label class="emby-checkbox-label"><input id="EnableAutoHdr" type="checkbox" is="emby-checkbox"><span>NVIDIA Auto HDR (HDR10 players)</span></label></div>
 <h3>VSR image enhancement</h3>
 <div class="selectContainer"><label class="selectLabel" for="VsrQuality">NVIDIA VSR processing mode</label><select id="VsrQuality" is="emby-select">
 <option value="STREAMING_MEDIUM">Streaming Medium</option>
@@ -68,7 +51,7 @@
 </select><div class="fieldDescription">Standard modes remove compression artifacts; high-bitrate modes preserve more texture in cleaner sources. Modes depend on your installed NVIDIA VFX SDK.</div></div>
 <div class="inputContainer"><label class="inputLabel" for="VsrStrength">VSR enhancement strength (0–1)</label><input id="VsrStrength" type="number" min="0" max="1" step="0.05" is="emby-input"><div class="fieldDescription">Default 0.75. Try 0.5–0.75 to avoid waxy textures.</div></div>
 <h3>HEVC NVENC encoding</h3>
-<div class="inputContainer"><label class="inputLabel" for="VideoMbps">HEVC bitrate limit (Mbps; Roku maximum 40)</label><input id="VideoMbps" type="number" min="4" max="60" is="emby-input"></div>
+<div class="inputContainer"><label class="inputLabel" for="VideoMbps">HEVC bitrate limit (Mbps)</label><input id="VideoMbps" type="number" min="4" max="60" is="emby-input"></div>
 
 <div class="selectContainer"><label class="selectLabel" for="NvencPreset">NVENC encoding preset</label><select id="NvencPreset" is="emby-select">
 <option value="p4">p4 – Balanced</option><option value="p5">p5 – good quality</option><option value="p6">p6 – higher quality</option><option value="p7">p7 – highest quality (slowest)</option></select></div>
@@ -80,6 +63,28 @@
 <p class="fieldDescription">Changes apply to new playback sessions. More demanding settings can increase processing load.</p>
 <div class="inputContainer"><label class="inputLabel" for="MaxSessions">Maximum concurrent sessions</label><input id="MaxSessions" type="number" min="1" max="16" is="emby-input"></div>
 <div class="inputContainer"><label class="inputLabel" for="SessionMinutes">Session lifetime (minutes)</label><input id="SessionMinutes" type="number" min="10" max="1440" is="emby-input"></div>
+<div class="selectContainer"><label class="selectLabel" for="SegmentType">HLS segment type</label><select id="SegmentType" is="emby-select"><option value="mpegts">MPEG-TS</option><option value="fmp4">fMP4</option></select></div>
+<h3>VSR cache management</h3>
+<div class="selectContainer"><label class="selectLabel" for="CacheMode">Segment cache</label><select id="CacheMode" is="emby-select"><option value="memory">Memory (automatic)</option><option value="disk">Disk</option></select></div>
+<div id="MemoryCacheFields">
+<div class="inputContainer"><label class="inputLabel" for="MemoryBudgetMb">Memory budget (MB, 0 = automatic)</label><input id="MemoryBudgetMb" type="number" min="0" step="1" is="emby-input"></div>
+<p id="MemoryBudgetStatus" class="fieldDescription" role="status"></p>
+</div>
+<div id="DiskCacheFields" hidden>
+<div class="inputContainer"><label class="inputLabel" for="CacheMaxGb">Total VSR cache budget (GB)</label><input id="CacheMaxGb" type="number" min="2" max="500" step="1" is="emby-input"><div class="fieldDescription">Rejects new enhanced streams when the plugin-owned cache is over budget. In full-playback mode, an active long movie may exceed the budget; use rolling mode to bound growth.</div></div>
+<div class="inputContainer"><label class="inputLabel" for="CacheMinFreeGb">Minimum free space before starting VSR (GB)</label><input id="CacheMinFreeGb" type="number" min="2" max="200" step="1" is="emby-input"></div>
+<div class="inputContainer"><label class="inputLabel" for="CacheDirectory">Writable temporary segment directory</label><input id="CacheDirectory" type="text" is="emby-input"></div>
+</div>
+<div class="inputContainer"><label class="inputLabel" for="CacheIdleMinutes">Clean inactive session after (minutes)</label><input id="CacheIdleMinutes" type="number" min="2" max="240" step="1" is="emby-input"><div class="fieldDescription">Idle sessions release their cached segments.</div></div>
+<div id="DiskRollingCache" class="checkboxContainer"><label class="emby-checkbox-label"><input id="EnableRollingCache" type="checkbox" is="emby-checkbox"><span>Rolling HLS cache (limited seek window)</span></label></div>
+<div class="inputContainer"><label class="inputLabel" for="RollingRewindMinutes">Rolling rewind window (minutes)</label><input id="RollingRewindMinutes" type="number" min="2" max="60" step="1" is="emby-input"><div class="fieldDescription">Memory and rolling disk caches retain this rewind window, within the available budget.</div></div>
+<h3>Runtime paths</h3>
+<div class="selectContainer"><label class="selectLabel" for="Backend">VSR backend</label><select id="Backend" is="emby-select"><option value="nvidia">NVIDIA Video Super Resolution + NVENC</option></select></div>
+<div class="inputContainer"><label class="inputLabel" for="PythonPath">Python executable</label><input id="PythonPath" type="text" is="emby-input"></div>
+<div class="inputContainer"><label class="inputLabel" for="FfmpegPath">FFmpeg executable</label><input id="FfmpegPath" type="text" is="emby-input"></div>
+<div class="inputContainer"><label class="inputLabel" for="FfprobePath">FFprobe executable</label><input id="FfprobePath" type="text" is="emby-input"></div>
+
+</details>
 <p class="fieldDescription">Unsupported sources use standard Jellyfin playback.</p>
 <button type="submit" is="emby-button" class="raised button-submit block emby-button"><span>Save configuration</span></button>
 </form>
@@ -91,7 +96,7 @@
     const page = document.querySelector('#VsrEverywherePage');
     const status = page.querySelector('#VsrDevicesStatus');
     const list = page.querySelector('#VsrDevicesList');
-    const fields = ['Enabled','EnableAllDevices','Backend','EnableNeuralRendering','ContentProfile','EnableAutoHdr','EnableFrameInterpolation','PythonPath','FfmpegPath','FfprobePath','CacheMode','MemoryBudgetMb','CacheDirectory','CacheMaxGb','CacheMinFreeGb','CacheIdleMinutes','EnableRollingCache','RollingRewindMinutes','VideoMbps','VsrQuality','VsrStrength','NvencPreset','NvencTune','NvencLookahead','NvencSpatialAq','NvencTemporalAq','NvencCq','SegmentType','MaxSessions','SessionMinutes'];
+    const fields = ['Enabled','EnableVsr','EnableAllDevices','Backend','EnableNeuralRendering','ContentProfile','EnableAutoHdr','EnableFrameInterpolation','PythonPath','FfmpegPath','FfprobePath','CacheMode','MemoryBudgetMb','CacheDirectory','CacheMaxGb','CacheMinFreeGb','CacheIdleMinutes','EnableRollingCache','RollingRewindMinutes','VideoMbps','VsrQuality','VsrStrength','NvencPreset','NvencTune','NvencLookahead','NvencSpatialAq','NvencTemporalAq','NvencCq','SegmentType','MaxSessions','SessionMinutes'];
     const resolutionFields = ['Processing', 'Stream'];
     let approvedIds = new Set();
     let retrievedDevices = [];
@@ -204,7 +209,7 @@
             for (const key of fields) {
                 const control = page.querySelector('#' + key);
                 if (!control) continue;
-                if (control.type === 'checkbox') control.checked = !!(cfg[key] ?? (key === 'EnableFrameInterpolation'));
+                if (control.type === 'checkbox') control.checked = !!(cfg[key] ?? (key === 'EnableFrameInterpolation' || key === 'EnableVsr'));
                 else control.value = cfg[key] ?? ({ CacheMode: 'memory', MemoryBudgetMb: 0, ContentProfile: 'auto' }[key] ?? '');
             }
             loadResolutions(cfg);

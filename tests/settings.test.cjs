@@ -50,9 +50,14 @@ assert(!html.includes('All new devices default to disabled.'));
 assert(!html.includes("Selection uses that device's Jellyfin registration ID"));
 assert(!controls.ProcessingWidth && !controls.StreamWidth);
 assert(html.includes('<title>VSR Everywhere</title>'));
+assert(html.indexOf('id="RefreshVsrDevices"') < html.indexOf('id="EnableVsr"'));
+assert(html.indexOf('id="EnableVsr"') < html.indexOf('id="EnableNeuralRendering"'));
+assert(html.indexOf('id="EnableFrameInterpolation"') < html.indexOf('id="ProcessingResolution"'));
+assert(html.indexOf('id="StreamResolution"') < html.indexOf('<details>'));
+assert(html.indexOf('<details>') < html.indexOf('id="NvencPreset"'));
 
 let config = {
-    Enabled: true, EnableAllDevices: false, Backend: 'nvidia', EnabledDeviceIds: ['device-1'],
+    Enabled: true, EnableVsr: true, EnableAllDevices: false, Backend: 'nvidia', EnabledDeviceIds: ['device-1'],
     ProcessingWidth: 5120, ProcessingHeight: 2880, StreamWidth: 3840, StreamHeight: 2160,
     PythonPath: 'python', FfmpegPath: 'ffmpeg', FfprobePath: 'ffprobe', CacheDirectory: 'cache',
     CacheMode: 'disk', MemoryBudgetMb: 0, EffectiveMemoryBudgetMb: 7168,
@@ -85,11 +90,18 @@ const save = () => controls.VsrEverywhereForm.listeners.submit({ preventDefault(
     await save();
     assert.deepEqual(config, original, 'Opening and saving must retain the existing configuration');
     for (const enabled of [false, true]) {
+        controls.EnableVsr.checked = enabled;
         controls.EnableFrameInterpolation.checked = enabled;
         await save(); await load();
         assert.equal(config.EnableFrameInterpolation, enabled);
+        assert.equal(config.EnableVsr, enabled);
         assert.equal(controls.EnableFrameInterpolation.checked, enabled);
     }
+    delete config.EnableVsr;
+    await load();
+    assert.equal(controls.EnableVsr.checked, true, 'Existing installations must keep VSR enabled');
+    await save();
+    assert.equal(config.EnableVsr, true);
     controls.ContentProfile.value = 'animation';
     controls.EnableNeuralRendering.checked = true;
     controls.EnableAutoHdr.checked = true;

@@ -41,13 +41,12 @@ class Startup:
         return self.preview(pair[0], sar, stats)
 
     def preview(self, frame, sar, stats):
-        import numpy as np
         import torch
         from vsr_gpu import fit_rgb
-        from vsr_colour import sdr_to_hdr
+        from vsr_colour import sdr_to_hdr, frame_rgb
         with stats.gpu('preview', torch):
-            rgb = np.ascontiguousarray(frame.to_ndarray(format='rgb24'))
-            tensor = torch.from_numpy(rgb).to('cuda:0').permute(2, 0, 1).float().div_(255).contiguous()
+            rgb, maximum = frame_rgb(frame)
+            tensor = torch.from_numpy(rgb).to('cuda:0').permute(2, 0, 1).float().div_(maximum).contiguous()
             result = fit_rgb(tensor, self.args.stream_width, self.args.stream_height, sar).clamp_(0, 1)
             if self.args.auto_hdr:
                 result = sdr_to_hdr(result)
@@ -63,4 +62,5 @@ class Startup:
         if future is not None and future.exception() is None:
             effect, enhancements = future.result()
             enhancements.close()
-            effect.close()
+            if effect is not None:
+                effect.close()

@@ -1,9 +1,9 @@
 {
   "product": "VSR Everywhere",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "pythonVersion": "3.14.7",
   "minimumDriver": "570.65",
-  "targetAbi": "12.1.0.0",
+  "targetAbi": "10.10.0.0",
   "downloads": [
     {
       "file": "python-3.14.7-embed-amd64.zip",

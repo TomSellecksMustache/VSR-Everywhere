@@ -210,6 +210,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--segment-type", default="fmp4", choices=["fmp4", "mpegts"])
     p.add_argument("--quality", default="STREAMING_MEDIUM", choices=QUALITY)
     p.add_argument("--strength", type=float, default=0.75)
+    p.add_argument("--no-vsr", action="store_true", help="Skip NVIDIA VSR while retaining other selected features")
     p.add_argument("--nvenc-preset", default="p4", choices=["p4", "p5", "p6", "p7"])
     p.add_argument("--nvenc-tune", default="default", choices=["default", "hq"])
     p.add_argument("--nvenc-lookahead", type=int, default=0)
@@ -286,9 +287,10 @@ def run(args: argparse.Namespace, retained=None, initialize_only=False, control=
         sar = stream.sample_aspect_ratio or Fraction(1, 1)
         g = geometry(width, height, sar.numerator, sar.denominator,
                      args.processing_width, args.processing_height)
-        pixfmt = str(stream.codec_context.pix_fmt or "").lower()
-        if "10" in pixfmt or "p010" in pixfmt:
-            raise RuntimeError("Initial VSR bridge supports 8-bit SDR only; use normal Jellyfin for 10-bit/HDR")
+        source_format = getattr(stream.codec_context, 'format', None)
+        source_depth = max((c.bits for c in getattr(source_format, 'components', ())), default=8)
+        if source_depth > 10:
+            raise RuntimeError("Only 8-bit and 10-bit SDR sources are supported")
         if stream.codec_context.color_trc not in (None, 0, 1, 2):
             raise RuntimeError("Non-SDR color transfer; use standard Jellyfin playback")
         fps = Fraction(stream.average_rate or getattr(stream, 'guessed_rate', None)
@@ -297,7 +299,7 @@ def run(args: argparse.Namespace, retained=None, initialize_only=False, control=
             raise RuntimeError("Unsupported input framerate")
         source_fps = fps
         from vsr_temporal import source_pairs
-        advanced = args.neural_rendering or args.auto_hdr or args.frame_interpolation or args.serve
+        advanced = args.neural_rendering or args.auto_hdr or args.frame_interpolation or args.serve or getattr(args, 'no_vsr', False)
         duration = 0
         if initialize_only or advanced:
             duration = float(stream.duration * stream.time_base) if stream.duration is not None else float(container.duration or 0) / 1_000_000
@@ -320,6 +322,8 @@ def run(args: argparse.Namespace, retained=None, initialize_only=False, control=
                                   "pipeline": "legacy"}), flush=True)
         threaded = not advanced and retained is None and encoder is None and args.legacy_schedule == "threaded"
         def create_effect(stream_ptr=0):
+            if getattr(args, 'no_vsr', False):
+                return None
             created = VideoSuperRes(quality=VideoSuperRes.QualityLevel[args.quality],
                                    strength=args.strength, device=0,
                                    image_encoding=VideoSuperRes.ImageEncoding.RGB8)
@@ -407,7 +411,7 @@ def run(args: argparse.Namespace, retained=None, initialize_only=False, control=
         print(json.dumps({"event": "start", "source_size": [width, height],
                           "vsr_size": [g.vsr_width, g.vsr_height],
                           "output_size": [args.stream_width, args.stream_height],
-                          "quality": args.quality, "strength": args.strength,
+                          "quality": args.quality, "strength": args.strength, "vsr_enabled": not getattr(args, 'no_vsr', False),
                           "nvenc": {"preset": args.nvenc_preset, "tune": args.nvenc_tune,
                                     "lookahead": args.nvenc_lookahead, "cq": args.nvenc_cq,
                                     "spatial_aq": args.nvenc_spatial_aq,
@@ -474,10 +478,11 @@ def run(args: argparse.Namespace, retained=None, initialize_only=False, control=
                         and frame.time - float((getattr(stream, 'start_time', None) or 0) * stream.time_base) < args.start_time):
                     continue
                 if not advanced:
-                    rgb = np.ascontiguousarray(frame.to_ndarray(format="rgb24"))
+                    from vsr_colour import frame_rgb
+                    rgb, maximum = frame_rgb(frame)
                     stats.add("decode", (time.perf_counter() - decode_start) * 1000)
                     with stats.gpu("upload", torch):
-                        tensor = torch.from_numpy(rgb).to("cuda:0").permute(2, 0, 1).float().div(255).contiguous()
+                        tensor = torch.from_numpy(rgb).to("cuda:0").permute(2, 0, 1).float().div(maximum).contiguous()
                     with stats.gpu("vsr", torch):
                         result = effect.run(tensor, stream_ptr=stream_ptr)
                         # clone because the VFX SDK retains ownership of the DLPack memory.

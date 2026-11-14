@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import errno
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from hashlib import sha256
@@ -23,7 +24,16 @@ import xml.etree.ElementTree as ET
 GUID = '7ca129d0-7454-41c7-aad6-55250b1a7b5b'
 CONFIG = 'Jellyfin.Plugin.VsrEverywhere.xml'
 LOG = logging.getLogger('VSR Everywhere')
-DEFAULTS = dict(Backend='nvidia', Enabled='true', EnableAllDevices='true', VideoMbps='20',
+
+
+def failure_message(error):
+    text = str(error)
+    if getattr(error, 'errno', None) == errno.ENOSPC or re.search(r'no space left on device|not enough (free )?(disk )?space|disk (is )?full', text, re.I):
+        return 'Not enough free disk space. Free space or choose another --install-dir, then retry. Check the setup log and backups if recovery is needed.'
+    return text
+
+
+DEFAULTS = dict(Backend='nvidia', Enabled='true', EnableVsr='true', EnableAllDevices='true', VideoMbps='20',
     VsrQuality='HIGH', VsrStrength='0.75', NvencPreset='p4', NvencTune='default',
     NvencLookahead='0', NvencSpatialAq='false', NvencTemporalAq='false', NvencCq='0',
     SegmentType='mpegts', MaxSessions='1', SessionMinutes='180', CacheMode='memory',
@@ -98,8 +108,7 @@ def discover(args):
         raise RuntimeError('Jellyfin data/configuration was not found. Use --data-dir and --config-dir for custom paths.')
     executable = arguments[:2] if Path(arguments[0]).name == 'dotnet' else arguments[:1]
     version = run([*executable, '--version'])
-    if not re.search(r'\b12\.1\.\d+(?:\.\d+)?\b', version):
-        raise RuntimeError('This build requires Jellyfin 12.1.x.')
+    LOG.info('Jellyfin version: %s', version.strip())
     selected_ffmpeg = args.ffmpeg or option(arguments, '--ffmpeg', environment.get('JELLYFIN_FFMPEG', ''))
     ffmpeg = next((Path(path) for path in [selected_ffmpeg, '/usr/lib/jellyfin-ffmpeg/ffmpeg',
         '/usr/lib64/jellyfin-ffmpeg/ffmpeg', '/usr/share/jellyfin-ffmpeg/ffmpeg', shutil.which('ffmpeg')]
@@ -179,7 +188,7 @@ def write_configuration(path, data, uid, gid, mode=0o600):
         temporary.unlink(missing_ok=True)
 
 
-LOADED = r'Loaded plugin:\s*"?VSR Everywhere"?\s+"?1\.1\.0(?:\.0)?"?\s*$'
+LOADED = r'Loaded plugin:\s*"?VSR Everywhere"?\s+"?1\.2\.0(?:\.0)?"?\s*$'
 
 
 def fresh_log_loaded(text, since):
@@ -215,7 +224,7 @@ def wait_loaded(service, logs, since):
             except OSError:
                 continue
         time.sleep(1)
-    raise RuntimeError('Jellyfin did not confirm loading VSR Everywhere 1.1.0. Inspect its journal and startup logs.')
+    raise RuntimeError('Jellyfin did not confirm loading VSR Everywhere 1.2.0. Inspect its journal and startup logs.')
 
 
 def deploy(target, payload, settings, prefix, service, expected_config):
@@ -271,7 +280,7 @@ def deploy(target, payload, settings, prefix, service, expected_config):
         since = time.time()
         run(['systemctl', 'start', service])
         wait_loaded(service, target['logs'], since)
-        LOG.info('Installed VSR Everywhere 1.1.0. Backup: %s', backup)
+        LOG.info('Installed VSR Everywhere 1.2.0. Backup: %s', backup)
     except BaseException as failure:
         errors = []
         try:
@@ -320,7 +329,7 @@ def setup_lock(service):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='VSR Everywhere 1.1.0 Linux service setup')
+    parser = argparse.ArgumentParser(description='VSR Everywhere 1.2.0 Linux service setup')
     parser.add_argument('--install-dir', default='/opt/vsr-everywhere')
     parser.add_argument('--service', default='jellyfin.service')
     for name in ('data-dir', 'config-dir', 'log-dir', 'ffmpeg', 'ffprobe'):
@@ -367,12 +376,10 @@ def main():
         python = runtime / 'bin/python3'
         marker = runtime / '.verified'
         reuse = marker.is_file() and marker.read_text() == runtime_id and python.is_file()
-        if not reuse and shutil.disk_usage(prefix).free < 25 * 1024**3:
-            raise RuntimeError('A fresh runtime needs 25 GiB free. Choose another --install-dir.')
         settings = configuration(existing, python, target['ffmpeg'], target['ffprobe'], target['data'] / 'cache/vsr-everywhere')
         LOG.info('Service: %s; account: %s; data: %s; runtime: %s', args.service, user.pw_name, target['data'], runtime)
         if args.check:
-            LOG.info('Platform, package, service, GPU access, driver, configuration, and space checks passed.')
+            LOG.info('Platform, package, service, GPU access, driver, and configuration checks passed.')
             return
         if not args.yes and input('Install with these settings? [Y/n] ').strip().lower() not in ('', 'y', 'yes'):
             return
@@ -381,8 +388,8 @@ def main():
             runtime.parent.mkdir(parents=True, exist_ok=True)
             if runtime.exists():
                 raise RuntimeError(f'Incomplete runtime at {runtime}; move it aside and retry.')
-            run([sys.executable, '-m', 'venv', '--copies', runtime])
             try:
+                run([sys.executable, '-m', 'venv', '--copies', runtime])
                 run([python, '-m', 'pip', '--isolated', 'install', '--disable-pip-version-check', '--progress-bar', 'off',
                     '--cache-dir', prefix / 'downloads/pip', '--require-hashes', '--only-binary=:all:',
                     '-r', payload / 'requirements.lock.txt'], timeout=3600)
@@ -398,6 +405,8 @@ def main():
         for key, flag in [('ProcessingWidth', 'processing-width'), ('ProcessingHeight', 'processing-height'),
                           ('StreamWidth', 'stream-width'), ('StreamHeight', 'stream-height'), ('VsrQuality', 'quality')]:
             command += ['--' + flag, profile.findtext(key)]
+        if profile.findtext('EnableVsr') == 'false':
+            command += ['--no-vsr']
         as_user(user, command, test_dir, target['environment'])
         LOG.info('Testing the compatible FFmpeg/NVENC lookahead path...')
         legacy = command.copy()
@@ -412,5 +421,5 @@ if __name__ == '__main__':
     try:
         main()
     except (Exception, KeyboardInterrupt) as error:
-        print(f'Setup failed: {error}', file=sys.stderr, flush=True)
+        print(f'Setup failed: {failure_message(error)}', file=sys.stderr, flush=True)
         sys.exit(1)

@@ -6,13 +6,13 @@ Start with **Open setup log** in the wizard. Setup tests processing before chang
 
 | Problem | Check |
 | --- | --- |
-| Not enough disk space | Select another local folder with 25 GB free. The small bootstrap and Microsoft runtime still need some system-drive space. |
-| Jellyfin not found | Initialize Jellyfin 12.1 first, or choose its data folder and executable. The data folder must contain `config/system.xml`. |
+| Not enough disk space | Free space or select another local runtime folder, then retry. The small bootstrap and Microsoft runtime still need some system-drive space. |
+| Jellyfin not found | Initialize Jellyfin first, or choose its data folder and executable. The data folder must contain `config/system.xml`. |
 | Download or checksum failure | Use files from the same release and rerun with the same runtime folder. Complete, verified downloads can be reused. |
 | Microsoft runtime asks for a reboot | Restart as requested, then rerun setup. |
 | Unfamiliar-app warning | The EXE is unsigned. Check that the file came from the intended release. |
 | VSR effect not initialized | Read the underlying worker error. Check the NVIDIA driver, free VRAM, runtime compatibility, and processing resolution. |
-| Plugin load not confirmed | Check Jellyfin's fresh startup log for VSR Everywhere 1.1.0 and any loading error. Retain the setup log and backup record. |
+| Plugin load not confirmed | Check Jellyfin's fresh startup log for VSR Everywhere 1.2.0 and any loading error. Retain the setup log and backup record. |
 
 ## Playback
 
@@ -27,7 +27,7 @@ Start with **Open setup log** in the wizard. Setup tests processing before chang
 | RAM traffic with GPU processing | Veyra uses RAM pipes. Nonzero lookahead also transfers frames through RAM for FFmpeg encoding. |
 | Disk cache in memory mode | A session can fall back to disk when RAM cannot be reserved. Check the log and available memory. |
 
-Only 8-bit SDR input up to 1080p enters this processing path. Other sources use normal Jellyfin playback. [Settings and limits](configuration.md).
+8-bit and 10-bit SDR input up to 1080p enters this processing path. Other sources use normal Jellyfin playback. [Settings and limits](configuration.md).
 
 ## Recovery and removal
 

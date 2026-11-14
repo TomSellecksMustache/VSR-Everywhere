@@ -4,12 +4,13 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <JellyfinVersion Condition="'$(JellyfinVersion)' == ''">12.1.0</JellyfinVersion>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/Jellyfin.Plugin.VsrEverywhere/Jellyfin.Plugin.VsrEverywhere.csproj" />
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <!-- The real Jellyfin host supplies these; this standalone check needs them at runtime. -->
-    <PackageReference Include="Jellyfin.Controller" Version="12.1.0" />
-    <PackageReference Include="Jellyfin.Model" Version="12.1.0" />
+    <PackageReference Include="Jellyfin.Controller" Version="$(JellyfinVersion)" />
+    <PackageReference Include="Jellyfin.Model" Version="$(JellyfinVersion)" />
   </ItemGroup>
 </Project>

@@ -9,7 +9,7 @@ function New-SetupJob($Target, [bool]$AllDevices, [string]$Folder) {
     $root = New-SetupStorageRoot $Folder
     $path = Join-Path $root ('jobs\' + [Guid]::NewGuid().ToString('N'))
     $null = New-Item -ItemType Directory -Force -Path $path
-    @{ Product = 'VSR Everywhere'; Version = '1.1.0'; DataPath = $Target.DataPath;
+    @{ Product = 'VSR Everywhere'; Version = '1.2.0'; DataPath = $Target.DataPath;
        ServerPath = $Target.ServerPath; AllDevices = $AllDevices; InstallFolder = $Folder } |
         ConvertTo-Json | Set-Content -LiteralPath (Join-Path $path 'plan.json') -Encoding UTF8
     return $path
@@ -44,7 +44,7 @@ Add-Type -AssemblyName System.Drawing
 $script:pageIndex = 0; $script:target = $null; $script:engine = $null; $script:job = ''; $script:installing = $false
 $script:exitCode = 2; $script:result = $null
 $form = New-Object Windows.Forms.Form
-$form.Text = 'VSR Everywhere 1.1.0 Setup'
+$form.Text = 'VSR Everywhere 1.2.0 Setup'
 $form.ClientSize = New-Object Drawing.Size(760, 550)
 $form.StartPosition = 'CenterScreen'; $form.FormBorderStyle = 'FixedSingle'; $form.MaximizeBox = $false
 $form.AutoScaleMode = 'Dpi'; $form.BackColor = [Drawing.Color]::White
@@ -65,7 +65,7 @@ function Add-Link($Parent, [string]$Text, [string]$Url, [int]$X, [int]$Y, [int]$
     $Parent.Controls.Add($link); return $link
 }
 $null = Add-Label $form 'VSR Everywhere' 24 18 650 38 22 -Bold
-$null = Add-Label $form '1.1.0  |  Windows setup' 26 61 650 26 10
+$null = Add-Label $form '1.2.0  |  Windows setup' 26 61 650 26 10
 $divider = New-Object Windows.Forms.Label
 $divider.Location = New-Object Drawing.Point(0, 98); $divider.Size = New-Object Drawing.Size(760, 1); $divider.BackColor = [Drawing.Color]::Gainsboro
 $form.Controls.Add($divider)
@@ -78,7 +78,7 @@ for ($i = 0; $i -lt 5; $i++) {
 $null = Add-Label $pages[0] 'Better video, with setup taken care of.' 0 0 700 34 16 -Bold
 $null = Add-Label $pages[0] "Setup finds your Jellyfin server, downloads the required components, and checks that NVIDIA VSR and video encoding work.`r`n`r`nIt then configures the plugin and briefly restarts Jellyfin. Your media library stays in place." 0 48 680 126
 $null = Add-Label $pages[0] 'You will need' 0 185 650 26 11 -Bold
-$null = Add-Label $pages[0] "Jellyfin 12.1 on this PC, Windows 10/11 x64, and a supported NVIDIA GPU with driver 570.65 or newer.`r`n`r`nAn internet connection and at least 25 GB free on your chosen drive. GPU library downloads can total several gigabytes." 0 216 680 98
+$null = Add-Label $pages[0] "An initialized Jellyfin server on this PC, Windows 10/11 x64, and a supported NVIDIA GPU with driver 570.65 or newer.`r`n`r`nAn internet connection and room for the runtime on your chosen drive. GPU library downloads can total several gigabytes." 0 216 680 98
 $null = Add-Link $pages[0] 'NVIDIA component license terms' 'https://www.nvidia.com/en-us/agreements/enterprise-software/nvidia-software-license-agreement/' 0 333 290
 $null = Add-Link $pages[0] 'Jellyfin downloads' 'https://jellyfin.org/downloads/windows/' 348 333 200
 
@@ -189,14 +189,14 @@ function Update-StorageNote {
     try {
         $root = Get-SetupStorageRoot $installBox.Text
         $drive = New-Object IO.DriveInfo([IO.Path]::GetPathRoot($root))
-        $storageNote.Text = $root + "`r`n" + [Math]::Round($drive.AvailableFreeSpace / 1GB, 1) + ' GB free. A fresh installation needs 25 GB.'
+        $storageNote.Text = $root + "`r`n" + [Math]::Round($drive.AvailableFreeSpace / 1GB, 1) + ' GB free. Downloads and runtime files use this folder.'
         $storageNote.ForeColor = [Drawing.Color]::Black
     } catch { $storageNote.Text = $_.Exception.Message; $storageNote.ForeColor = [Drawing.Color]::Firebrick }
 }
 $installBox.add_TextChanged({ Update-StorageNote })
 $installBrowse.add_Click({
     $dialog = New-Object Windows.Forms.FolderBrowserDialog
-    $dialog.Description = 'Choose a drive or folder with 25 GB free. Setup creates a VsrEverywhere subfolder.'
+    $dialog.Description = 'Choose a drive or folder for downloads and the runtime. Setup creates a VsrEverywhere subfolder.'
     $dialog.SelectedPath = $installBox.Text
     if ($dialog.ShowDialog() -eq 'OK') { $installBox.Text = $dialog.SelectedPath }
     $dialog.Dispose()
@@ -217,7 +217,7 @@ $timer.add_Tick({
     if ($Preview) {
         $script:installing = $false; $timer.Stop()
         $finishTitle.Text = 'Setup preview complete'
-        $finishText.Text = 'This is a preview of VSR Everywhere 1.1.0 setup. No downloads, installation, or server changes were made.'
+        $finishText.Text = 'This is a preview of VSR Everywhere 1.2.0 setup. No downloads, installation, or server changes were made.'
         $openJellyfin.Visible = $false; $openLog.Visible = $false
         Show-SetupPage 4
         return
@@ -237,11 +237,16 @@ $timer.add_Tick({
         if (-not $script:engine.HasExited) { return }
         $timer.Stop(); $script:installing = $false
         $resultPath = Join-Path $script:job 'result.json'
-        if (Test-Path -LiteralPath $resultPath) { $script:result = Get-Content -LiteralPath $resultPath -Raw | ConvertFrom-Json }
-        else { $script:result = [pscustomobject]@{ Success = $false; Message = 'Setup stopped unexpectedly. See the log for details.'; BackupPath = ''; Url = '' } }
+        $script:result = $null
+        try { if (Test-Path -LiteralPath $resultPath) { $script:result = Get-Content -LiteralPath $resultPath -Raw | ConvertFrom-Json } } catch { }
+        if (-not $script:result) {
+            $failure = $script:engineError.GetAwaiter().GetResult()
+            if (-not $failure) { $failure = 'Setup stopped unexpectedly. See the log for details.' }
+            $script:result = [pscustomobject]@{ Success = $false; Message = (Get-SetupFailureMessage (New-Object Exception($failure))); BackupPath = ''; Url = '' }
+        }
         if ($script:result.Success) {
             $script:exitCode = 0
-            $finishText.Text = "VSR Everywhere 1.1.0 is installed and loaded by Jellyfin.`r`n`r`nNVIDIA VSR, HEVC video, AAC audio, and HLS checks passed.`r`n`r`nYour device and resolution settings are ready to review in Jellyfin."
+            $finishText.Text = "VSR Everywhere 1.2.0 is installed and loaded by Jellyfin.`r`n`r`nNVIDIA VSR, HEVC video, AAC audio, and HLS checks passed.`r`n`r`nYour device and resolution settings are ready to review in Jellyfin."
         } else {
             $finishTitle.Text = 'Setup could not finish'
             $finishText.Text = $script:result.Message
@@ -270,8 +275,9 @@ $next.add_Click({
                     $psi = New-Object Diagnostics.ProcessStartInfo
                     $psi.FileName = Join-Path $env:WINDIR 'System32\WindowsPowerShell\v1.0\powershell.exe'
                     $psi.Arguments = (@('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', (Join-Path $PSScriptRoot 'Install-Engine.ps1'), '-JobPath', $script:job) | ForEach-Object { ConvertTo-NativeArgument $_ }) -join ' '
-                    $psi.UseShellExecute = $false; $psi.CreateNoWindow = $true
+                    $psi.UseShellExecute = $false; $psi.CreateNoWindow = $true; $psi.RedirectStandardError = $true
                     $script:engine = [Diagnostics.Process]::Start($psi)
+                    $script:engineError = $script:engine.StandardError.ReadToEndAsync()
                 }
                 $timer.Start()
             }
@@ -296,7 +302,7 @@ if ($Preview) {
 }
 foreach ($target in $script:targets) { $null = $serverList.Items.Add($target.DisplayName) }
 if ($script:targets.Count) { $serverList.SelectedIndex = 0 }
-else { $advanced.Checked = $true; $detectionError.Text = 'No initialized Jellyfin 12.1 server was found. Choose its folders, or install Jellyfin first.' }
+else { $advanced.Checked = $true; $detectionError.Text = 'No initialized Jellyfin server was found. Choose its folders, or install Jellyfin first.' }
 Show-SetupPage 0
 $null = $form.ShowDialog()
 $timer.Stop(); $timer.Dispose(); $form.Dispose()

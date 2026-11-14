@@ -13,6 +13,14 @@ from vsr_startup import Startup
 
 
 class StartupChecks(unittest.TestCase):
+    def test_shutdown_with_vsr_disabled_keeps_other_models_clean(self):
+        models = Mock()
+        state = Startup(types.SimpleNamespace(), Fraction(24), lambda: (None, models))
+        state.future = Future()
+        state.future.set_result((None, models))
+        state.close()
+        models.close.assert_called_once()
+
     def test_preview_keeps_playing_during_load_and_switches_on_a_gop_boundary(self):
         entered, release = threading.Event(), threading.Event()
         effect = Mock()

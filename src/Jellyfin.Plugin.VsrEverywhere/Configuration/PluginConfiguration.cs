@@ -21,6 +21,7 @@ public sealed class PluginConfiguration : BasePluginConfiguration
     public int StreamHeight { get; set; } = 2160;
 
     public bool Enabled { get; set; } = false;
+    public bool EnableVsr { get; set; } = true;
     public bool EnableAllDevices { get; set; } = false;
     public string Backend { get; set; } = "nvidia";
     public bool EnableNeuralRendering { get; set; } = OperatingSystem.IsWindows();

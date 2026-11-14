@@ -1,4 +1,4 @@
-# VSR Everywhere 1.1.0 - third-party components
+# VSR Everywhere 1.2.0 - third-party components
 
 The original VSR Everywhere integration and setup code is licensed under the [MIT License](LICENSE). GPU libraries, AI models, Python, and the video encoder are downloaded separately during setup. Their licenses remain with the respective publishers. The project license does not apply to sample footage or comparison images derived from it.
 

@@ -10,11 +10,12 @@ static void Check(bool condition, string message)
 }
 
 var assembly = typeof(BridgeSession).Assembly;
-Check(assembly.GetName().Version == new Version(1, 1, 0, 0), "Expected version 1.1.0.0");
+Check(assembly.GetName().Version == new Version(1, 2, 0, 0), "Expected version 1.2.0.0");
 Check(assembly.GetName().Name == "Jellyfin.Plugin.VsrEverywhere", "Configuration-compatible assembly identity changed");
 Check(assembly.GetCustomAttribute<AssemblyProductAttribute>()?.Product == "VSR Everywhere", "Wrong product name");
 Check(Plugin.PluginId == new Guid("7ca129d0-7454-41c7-aad6-55250b1a7b5b"), "Plugin ID changed");
 EnhancementChecks.Run();
+DeviceCompatibilityChecks.Run();
 using (var resource = assembly.GetManifestResourceStream("Jellyfin.Plugin.VsrEverywhere.Configuration.configPage.html")!)
 using (var reader = new StreamReader(resource))
 {
@@ -55,7 +56,7 @@ foreach (var (pw, ph, sw, sh) in cases)
         CacheMode = "disk",
         PythonPath = args.FirstOrDefault() ?? "python", ProcessingWidth = pw, ProcessingHeight = ph,
         StreamWidth = sw, StreamHeight = sh, SegmentType = "mpegts",
-        EnabledDeviceIds = ["retained-device"]
+        EnabledDeviceIds = ["retained-device"], EnableVsr = pw != 1920
     };
     var root = Path.Combine(AppContext.BaseDirectory, "checks", Guid.NewGuid().ToString("N"));
     using var session = new BridgeSession("test-token", "source.mp4", root, cfg, NullLogger.Instance);
@@ -70,6 +71,7 @@ foreach (var (pw, ph, sw, sh) in cases)
     Check(Value("--stream-width") == sw.ToString() && Value("--stream-height") == sh.ToString(), "Stream size was clamped or changed during launch");
     Check(Value("--segment-type") == "mpegts", "Audio/segment mode changed");
     Check(command.Contains("--frame-interpolation") == cfg.EnableFrameInterpolation, "Interpolation setting was not passed to the worker");
+    Check(command.Contains("--no-vsr") == !cfg.EnableVsr, "VSR setting was not passed to the worker");
     Check(cfg.EnabledDeviceIds.SequenceEqual(new[] { "retained-device" }), "Device approvals changed");
 }
 Console.WriteLine("PASS: compiled plugin identity/version, embedded settings, and actual worker arguments (5K/4K, 8K/8K, 1080p/8K, 8K/1080p).");

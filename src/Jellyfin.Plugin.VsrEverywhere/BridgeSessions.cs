@@ -275,6 +275,7 @@ public sealed partial class BridgeSession : IDisposable
                 "--rolling-rewind-minutes", rewindMinutes.ToString()
             }) psi.ArgumentList.Add(a);
             if (_cfg.NvencSpatialAq) psi.ArgumentList.Add("--nvenc-spatial-aq");
+            if (!_cfg.EnableVsr) psi.ArgumentList.Add("--no-vsr");
             if (_cfg.NvencTemporalAq) psi.ArgumentList.Add("--nvenc-temporal-aq");
             if (_neuralRendering) psi.ArgumentList.Add("--neural-rendering");
             psi.ArgumentList.Add("--content-profile");

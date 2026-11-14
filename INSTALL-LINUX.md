@@ -4,32 +4,34 @@ This installer is for a native Jellyfin systemd service. It installs plain NVIDI
 
 ## Requirements
 
-- A running, initialized Jellyfin 12.1.x systemd service under a non-root account.
+- A running, initialized Jellyfin systemd service under a non-root account.
 - x86-64 Linux with glibc 2.28 or newer. The package targets compatible Debian/Ubuntu and RPM-based systems.
 - An NVIDIA GPU with VSR and HEVC Main 10 support. Streaming quality modes need Ampere or newer.
 - A supported NVIDIA driver: 570.190+, 580.82+, 590.44+, or a newer branch.
-- Jellyfin FFmpeg/FFprobe, internet access, and 25 GiB free for a fresh runtime.
+- Jellyfin FFmpeg/FFprobe, internet access, and room for the private runtime.
 - `bash`, `curl` or `wget`, `tar`, `base64`, `sha256sum`, `realpath`, `stat`, and `flock`.
 
 ARM, Alpine/musl, Docker, and non-systemd installations are outside this package. Automated checks run on Ubuntu 24.04 and Rocky Linux 9. Native Linux GPU playback still needs hardware validation; this is not a claim of support for every distribution.
 
+The plugin targets the Jellyfin 10.10 API and .NET 8. Setup checks actual plugin loading instead of requiring one server version. API checks cover 10.10, 10.11, and 12.1, but this does not guarantee every server build. There is no fixed disk-space gate; an actual space failure explains how to retry.
+
 ## Install
 
-Download [Install-VSREverywhere-1.1.0-Linux.sh](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/download/v1.1.0/Install-VSREverywhere-1.1.0-Linux.sh), then run:
+Download [Install-VSREverywhere-1.2.0-Linux.sh](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/download/v1.2.0/Install-VSREverywhere-1.2.0-Linux.sh), then run:
 
 ```bash
-sudo bash ./Install-VSREverywhere-1.1.0-Linux.sh
+sudo bash ./Install-VSREverywhere-1.2.0-Linux.sh
 ```
 
 Accept the detected service settings or supply your own. To put the runtime on another mount:
 
 ```bash
-sudo bash ./Install-VSREverywhere-1.1.0-Linux.sh --install-dir /srv/vsr-everywhere
+sudo bash ./Install-VSREverywhere-1.2.0-Linux.sh --install-dir /srv/vsr-everywhere
 ```
 
 Use a root-owned path whose parents are not writable by other users. Downloads, runtime files, logs, and backups go there. The script includes the plugin and downloads a private Python runtime and pinned GPU libraries, checking their hashes. System Python is not used for GPU packages.
 
-Fresh installs use 4K processing/delivery, HIGH quality, strength 0.75, 20 Mbps, p4, lookahead 0, MPEG-TS/AAC, RAM caching, and one session. HIGH supports Turing hardware too. Existing settings are kept where compatible. A verified existing runtime can be reused without another 25 GiB free.
+Fresh installs use 4K processing/delivery, HIGH quality, strength 0.75, 20 Mbps, p4, lookahead 0, MPEG-TS/AAC, RAM caching, and one session. HIGH supports Turing hardware too. Existing settings are kept where compatible. A verified existing runtime can be reused without downloading the same runtime again.
 
 ## Options
 

@@ -58,7 +58,10 @@ jobs:
       - name: Installer settings, deployment, and rollback fixtures
         run: python3 -m unittest discover -s tests -p 'test_linux_*.py' -v
       - name: Plugin, RAM cache, process control, and Linux cgroup checks
-        run: dotnet run --project tests/PluginChecks/PluginChecks.csproj -c Release -- python3
+        run: |
+          for api in 10.10.0 10.11.5 12.1.0; do
+            dotnet run --project tests/PluginChecks/PluginChecks.csproj -c Release -p:JellyfinVersion="$api" -- python3
+          done
       - name: Build and verify the Linux distribution
         run: |
           python3 tools/build_linux.py --no-restore
