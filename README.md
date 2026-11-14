@@ -24,17 +24,17 @@ The NVIDIA **1.0.0** release remains the latest and recommended default download
 
 ## See the difference
 
-**Left: original with Lanczos scaling. Right: this branch's encoded output with Veyra NR, NVIDIA VSR, Auto HDR, and adaptive interpolation enabled.** These use the original frame selections and crop positions at matching source presentation times.
+**Left to right: Original (Lanczos) / VSR / NR+VSR.** These use the same source frames and crop positions as the earlier comparisons. Both enhanced columns use the same processing and encoder settings; only the third enables Veyra neural rendering.
 
 ### Animation
 
-![The Venture Bros. — original and DLSS-branch detail comparison](docs/assets/comparisons/dlss/venture-bros-scene-1-detail.webp)
+![The Venture Bros. — Original (Lanczos), VSR, and NR+VSR on the same frame](docs/assets/comparisons/dlss/venture-bros-scene-1-detail.webp)
 
 ### Live action
 
-![Doctor Who — original and DLSS-branch detail comparison](docs/assets/comparisons/dlss/doctor-who-scene-2-detail.webp)
+![Doctor Who — Original (Lanczos), VSR, and NR+VSR on the same frame](docs/assets/comparisons/dlss/doctor-who-scene-2-detail.webp)
 
-These examples use **ULTRA, strength 1, 5K processing, and 4K delivery**, with the animation or live-action NR profile. HDR output is tone-mapped to SDR for GitHub. Interpolated frames may be synthesized; stills cannot demonstrate motion quality or actual HDR display range. Open an image to inspect the detail.
+These examples use **ULTRA, strength 1, 5K processing, and 4K delivery**, with the animation or live-action NR profile in the third column. **HDR and interpolation are disabled** to isolate the enhancements on the exact original frames. All three columns are SDR. Open an image for the full-size, lossless detail crops; stills do not demonstrate motion quality.
 
 [View all eight comparisons and the capture method](docs/comparisons.md), including Futurama and Xena.
 

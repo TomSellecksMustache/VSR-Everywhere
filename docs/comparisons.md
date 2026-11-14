@@ -1,14 +1,14 @@
-# DLSS-branch screenshot comparisons
+# Original / VSR / NR+VSR comparisons
 
 [Overview](../README.md) · [Documentation](README.md) · [Settings](configuration.md)
 
-**Left: original with Lanczos scaling. Right: actual `testing-dlss` HEVC output with Veyra neural rendering, NVIDIA VSR, Auto HDR, and adaptive interpolation enabled.**
+**Left to right: Original (Lanczos) / VSR / NR+VSR.** The enhanced columns are real `testing-dlss` HEVC output, with neural rendering disabled for VSR and enabled for NR+VSR.
 
-These are the same eight source selections, timestamps, and crop positions used on `main`. The left-side picture pixels are unchanged. The right side was regenerated through this branch's worker at the matching source presentation time; interpolation may synthesize that frame between enhanced anchors.
+These are the same eight source selections, timestamps, and crop positions used on `main` and in the earlier DLSS comparisons. Original-column picture pixels are unchanged. Both enhanced columns were regenerated through this branch's shared server renderer, with identical settings apart from NR.
 
-The encoded output is HDR10. For GitHub display, the right-side images are converted to SDR using FFmpeg's Mobius tone mapping with a 1000-nit input peak and 100-nit reference. Brightness and color differences include that conversion. These previews cannot reproduce an HDR display's range or demonstrate interpolation in motion. [Exact capture settings, hashes, and interpolation anchors](assets/comparisons/dlss/capture.json).
+**HDR and interpolation are disabled in both enhanced columns.** All images are BT.709 SDR, without tone mapping or synthesized intermediate frames. This isolates NR's effect on the same source frame; it does not demonstrate HDR playback or motion quality. [Exact capture settings, frame identity, and hashes](assets/comparisons/dlss/capture.json).
 
-The overview images show the whole picture, resized to 1600 pixels wide for the page. Detail images are unresized 1280 × 960 crops from each 4K canvas, placed side by side. GitHub may shrink an image to fit the page; open it to inspect the original size. The WebP detail assets preserve the PNG crop pixels losslessly.
+The overview images show all three whole frames, resized to a combined width of 1600 pixels for the page. Detail images contain three unresized 1280 × 960 crops from the matching 4K canvases. GitHub may shrink an image to fit the page; open it to inspect the original size. The WebP detail assets preserve every column's PNG crop pixels losslessly.
 
 ## Doctor Who — 720p live action
 
@@ -54,7 +54,7 @@ The overview images show the whole picture, resized to 1600 pixels wide for the 
 
 ## Xena — 480p live action
 
-**The provided source was 10-bit SDR.** It was converted to an 8-bit SDR intermediate before either side was generated. These images do not demonstrate native 10-bit input support. The original video was unchanged.
+**The provided source was 10-bit SDR.** It was converted to an 8-bit SDR intermediate before any column was generated. These images do not demonstrate native 10-bit input support. The original video was unchanged.
 
 ### Scene 1 · 14:45.49
 
@@ -80,26 +80,26 @@ The overview images show the whole picture, resized to 1600 pixels wide for the 
 | NVENC preset / tune | p7 / hq |
 | Lookahead / CQ | 12 / 1 |
 | Spatial AQ / temporal AQ | On / off |
-| Neural rendering | Veyra experimental NR, enabled |
+| Neural rendering | Off in VSR; Veyra experimental NR on in NR+VSR |
 | NR profile | Animation for Futurama / The Venture Bros.; live action for Doctor Who / Xena |
-| Auto HDR | Enabled, 1000-nit peak |
-| Adaptive interpolation | Enabled; output retains source FPS |
+| Auto HDR | Off in both enhanced columns |
+| Adaptive interpolation | Off; every source frame is enhanced |
 | Output frame rate | 24000/1001, matching these sources |
-| Web preview | HDR tone-mapped to SDR with Mobius |
+| Web preview | BT.709 SDR, without tone mapping |
 | GPU used | NVIDIA GeForce RTX 4070 Ti SUPER |
 
 This is a high-quality comparison profile, not the new-install default. Lookahead 12 selects the compatible FFmpeg encoder path. NVIDIA VSR enhancement still runs on the GPU, but this path transfers enhanced frames through system memory before encoding.
 
-## How the pairs were made
+## How the three-way comparisons were made
 
-1. The original lossless 8-bit sample clips were reused, rather than seeking again into the videos. They contain the two original intervals from each title. Xena retains the explicit bit-depth conversion described above.
+1. The original lossless 8-bit sample clips were reused. They contain the two original intervals from each title. Xena retains the explicit bit-depth conversion described above.
 2. Each clip contains 48 frames. Source frames 16 and 40 were checked pixel-for-pixel against the original native PNG captures before rendering.
-3. The branch's real worker encoded each clip with NR, VSR, HDR, and adaptive interpolation enabled. The content profile was selected explicitly for this controlled capture; normal playback resolves it from Jellyfin title metadata.
-4. Frames 16 and 40 were extracted from the encoded HEVC output, checked against the original presentation clock, and tone-mapped for this SDR web page. The original Lanczos canvases were reused unchanged.
-5. The same overview dimensions and unresized 1280 × 960 crops were used. Every detail panel's left-side picture pixels were checked against the previous branch image; every right side was checked to contain new output. Lossless WebP conversion preserves the crop pixels. No additional sharpening was applied to the exported stills.
+3. The branch's real worker encoded each clip twice, with VSR and NR+VSR. Both runs use the server's frame-processing path and GPU delivery resize. Offline capture omits the playback startup preview so that the short samples show fully enhanced output. HDR and interpolation are off. The NR content profile was selected explicitly for this controlled capture; normal playback resolves it from Jellyfin title metadata.
+4. Frames 16 and 40 were extracted from both HEVC outputs and checked against the original presentation clock. The original Lanczos canvases were reused unchanged. No HDR tone mapping was applied.
+5. The same unresized 1280 × 960 crop rectangles were used in all three columns. Original-column picture pixels were checked against the earlier comparison, and all three columns were checked for distinct output. Lossless WebP conversion preserves every crop pixel. No additional sharpening was applied to the exported stills.
 
-The repository contains 16 branch-specific WebP images under `docs/assets/comparisons/dlss/`. The [capture record](assets/comparisons/dlss/capture.json) records source and asset hashes, profiles, exact crop rectangles, and interpolation anchors for all eight scenes. The original SDR comparison assets remain available for reference.
+The repository contains 16 branch-specific three-way WebP images under `docs/assets/comparisons/dlss/`. The [capture record](assets/comparisons/dlss/capture.json) records source, encoded-output, frame, and asset hashes; profiles; and exact crop rectangles for all eight scenes. The original two-column SDR comparison assets remain available for reference.
 
-To reproduce these captures with the prepared GPU runtime and the original comparison files, run `python tools/capture_dlss_comparisons.py --comparisons "path/to/comparison shots"`. The script verifies source identity, all 48 output frames, source FPS, HDR signaling, original-side pixels, and lossless crops before writing the capture record. The HDR preview conversion follows [FFmpeg's tone-mapping requirements](https://github.com/FFmpeg/FFmpeg/blob/master/doc/filters.texi#tonemap).
+To reproduce these captures with the prepared GPU runtime and the original comparison files, run `python tools/capture_dlss_comparisons.py --comparisons "path/to/comparison shots"`. The script verifies source identity, all 48 output frames in each variant, source FPS, SDR signaling, NR toggles, original-column pixels, and lossless crops before writing the capture record.
 
 These stills do not measure temporal artifacts, sustained throughput, or long-session A/V drift. Sample footage belongs to its respective rights holders.
