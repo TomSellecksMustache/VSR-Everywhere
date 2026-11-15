@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.3.0
+
+- Crop stable encoded black bars from the enhanced stream. Keep one crop through startup and seeks, with a full-picture fallback when detection is uncertain.
+- Fit stream output to the picture's aspect ratio without adding a black canvas. Report the actual output size and HEVC format to the player.
+- Keep existing VSR, Veyra, and interpolation defaults. The crop change supports 8-bit and 10-bit SDR input.
+
 ## 1.2.0
 
 - Accept 8-bit and 10-bit SDR sources up to 1080p. HDR sources keep normal Jellyfin playback.

@@ -10,8 +10,8 @@ using System.Management.Automation.Runspaces;
 
 [assembly: AssemblyTitle("VSR Everywhere Setup")]
 [assembly: AssemblyProduct("VSR Everywhere")]
-[assembly: AssemblyVersion("1.2.0.0")]
-[assembly: AssemblyFileVersion("1.2.0.0")]
+[assembly: AssemblyVersion("1.3.0.0")]
+[assembly: AssemblyFileVersion("1.3.0.0")]
 internal static class SetupBootstrap
 {
     private static string Quote(string value)
@@ -76,7 +76,7 @@ internal static class SetupBootstrap
         }
         catch (Exception error)
         {
-            MessageBox.Show(error.Message, "VSR Everywhere 1.2.0 Setup", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBox.Show(error.Message, "VSR Everywhere 1.3.0 Setup", MessageBoxButtons.OK, MessageBoxIcon.Error);
             return 1;
         }
     }

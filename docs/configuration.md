@@ -4,7 +4,9 @@ Open VSR Everywhere in Jellyfin's plugin settings. Settings apply to new playbac
 
 ## Resolution
 
-Processing resolution is the size VSR works at. Stream resolution is what the player receives. They can be different. The image keeps its aspect ratio, with padding where needed.
+Processing resolution is the size VSR works at. Stream resolution is the maximum size sent to the player. They can be different. Output fits the picture's aspect ratio inside that limit without adding a black canvas.
+
+The stream automatically crops stable encoded black bars. It checks several points before playback and keeps one crop through the startup pass, enhancement, and seeks. Uncertain borders stay in the picture. Your source file stays unchanged. A player can still show borders when the picture and display have different shapes.
 
 | Preset | Size |
 | --- | --- |

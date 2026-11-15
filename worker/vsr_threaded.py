@@ -6,6 +6,7 @@ import threading
 import time
 
 from vsr_colour import rgb_to_yuv420
+from vsr_crop import FrameCrop
 
 
 class _Stopped(Exception):
@@ -25,6 +26,8 @@ def write_all(pipe, data):
 
 def run_threaded(container, video_stream, create_effect, torch, np, geometry, args, process, stats, progress):
     width, height = video_stream.codec_context.width, video_stream.codec_context.height
+    crop_frame = FrameCrop(getattr(args, 'crop', None), width, height)
+    width, height = crop_frame.width, crop_frame.height
     inputs = [torch.empty((height, width, 3), dtype=torch.uint8, pin_memory=True) for _ in range(3)]
     outputs = [torch.empty((geometry.vsr_height * 3 // 2, geometry.vsr_width), dtype=torch.uint8,
                            pin_memory=True) for _ in range(3)]
@@ -69,7 +72,7 @@ def run_threaded(container, video_stream, create_effect, torch, np, geometry, ar
             if args.start_time and frame.time is not None and frame.time < args.start_time:
                 put(free, slot)
                 continue
-            np.copyto(inputs[slot].numpy(), frame.to_ndarray(format='rgb24'))
+            np.copyto(inputs[slot].numpy(), crop_frame(frame).to_ndarray(format='rgb24'))
             stats.add('decode', (time.perf_counter() - start) * 1000)
             put(decoded, slot)
             produced += 1

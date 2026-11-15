@@ -26,6 +26,7 @@ from vsr_metrics import StageMetrics, process_resources
 from vsr_capabilities import probe_codec
 from vsr_threaded import write_all
 from vsr_server import RunCancelled, cfr_frames, cfr_origin
+from vsr_crop import FrameCrop
 
 TARGET_W, TARGET_H = 3840, 2160  # default HEVC delivery canvas
 QUALITY = ("STREAMING_MEDIUM", "STREAMING_ULTRA", "HIGH", "MEDIUM", "LOW", "ULTRA",
@@ -104,7 +105,8 @@ def build_ffmpeg_command(ffmpeg: str, source: str, dest: str, width: int, height
         raise ValueError("invalid NVENC lookahead/CQ")
     # VSR output frames are RGB. Their CPU transfer is a CPU transfer step between the enhancement and encoding stages.
     fps_str = f"{fps.numerator}/{fps.denominator}"
-    vf = f"setsar={sar.numerator}/{sar.denominator},scale={stream_width}:{stream_height}:force_original_aspect_ratio=decrease:flags=lanczos," \
+    vf = f"setsar={sar.numerator}/{sar.denominator},scale=w='max(2,round(min({stream_width},{stream_height}*dar)/2)*2)':" \
+         f"h='max(2,round(min({stream_height},{stream_width}/dar)/2)*2)':flags=lanczos," \
          f"pad={stream_width}:{stream_height}:(ow-iw)/2:(oh-ih)/2,setsar=1,format=p010le"
     if raw_pixel_format not in {"rgb24", "nv12", "p010le"}:
         raise ValueError("invalid raw pixel format")
@@ -223,6 +225,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--processing-height", type=int, default=2160)
     p.add_argument("--stream-width", type=int, default=3840)
     p.add_argument("--stream-height", type=int, default=2160)
+    p.add_argument("--crop", help="Fixed source rectangle x:y:width:height for this session")
     p.add_argument("--rolling-rewind-minutes", type=int, default=0)
     p.add_argument("--probe", action="store_true", help="Print GPU/SDK capabilities and exit")
     p.add_argument("--pipeline", choices=["gpu", "legacy"], default="gpu")
@@ -242,7 +245,7 @@ def run(args: argparse.Namespace, retained=None, initialize_only=False, control=
     if not (0 <= args.seconds <= 36000 and args.start_time >= 0):
         raise ValueError("invalid timeline")
     if not (1280 <= args.processing_width <= 7680 and 720 <= args.processing_height <= 4320
-            and 640 <= args.stream_width <= 7680 and 360 <= args.stream_height <= 4320
+            and 16 <= args.stream_width <= 7680 and 16 <= args.stream_height <= 4320
             and all(d % 2 == 0 for d in (args.processing_width, args.processing_height,
                                            args.stream_width, args.stream_height))
             and 0 <= args.rolling_rewind_minutes <= 60):
@@ -285,14 +288,16 @@ def run(args: argparse.Namespace, retained=None, initialize_only=False, control=
         if width > 1920 or height > 1080:
             raise RuntimeError("Initial version accepts <=1920x1080 video; leave 4K originals unchanged")
         sar = stream.sample_aspect_ratio or Fraction(1, 1)
-        g = geometry(width, height, sar.numerator, sar.denominator,
-                     args.processing_width, args.processing_height)
         source_format = getattr(stream.codec_context, 'format', None)
         source_depth = max((c.bits for c in getattr(source_format, 'components', ())), default=8)
         if source_depth > 10:
             raise RuntimeError("Only 8-bit and 10-bit SDR sources are supported")
         if stream.codec_context.color_trc not in (None, 0, 1, 2):
             raise RuntimeError("Non-SDR color transfer; use standard Jellyfin playback")
+        crop_frame = FrameCrop(getattr(args, 'crop', None), width, height)
+        width, height = crop_frame.width, crop_frame.height
+        g = geometry(width, height, sar.numerator, sar.denominator,
+                     args.processing_width, args.processing_height)
         fps = Fraction(stream.average_rate or getattr(stream, 'guessed_rate', None)
                        or getattr(stream, 'base_rate', None) or 24).limit_denominator(1001)
         if not (1 <= fps <= 120):
@@ -453,6 +458,7 @@ def run(args: argparse.Namespace, retained=None, initialize_only=False, control=
                 first_source = first_output
                 source_frames = cfr_frames(container, stream, source_fps, first_source,
                     math.ceil(duration * float(source_fps)), frame_origin=retained.get('frame_origin') if retained else None)
+                source_frames = ((crop_frame(frame), slot) for frame, slot in source_frames)
                 frames = iter(source_pairs(source_frames, first_output, math.ceil(duration * float(fps)), lambda: enhancements.stride))
             else:
                 frames = iter(cfr_frames(container, stream, fps, start_segment * gop,
@@ -479,7 +485,7 @@ def run(args: argparse.Namespace, retained=None, initialize_only=False, control=
                     continue
                 if not advanced:
                     from vsr_colour import frame_rgb
-                    rgb, maximum = frame_rgb(frame)
+                    rgb, maximum = frame_rgb(crop_frame(frame))
                     stats.add("decode", (time.perf_counter() - decode_start) * 1000)
                     with stats.gpu("upload", torch):
                         tensor = torch.from_numpy(rgb).to("cuda:0").permute(2, 0, 1).float().div(maximum).contiguous()

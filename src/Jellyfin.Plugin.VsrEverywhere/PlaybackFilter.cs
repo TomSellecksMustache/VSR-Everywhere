@@ -172,7 +172,8 @@ public sealed class PlaybackFilter : IAsyncActionFilter
             var videoMbps = EnhancementProfiles.DeliveryMbps(cfg.VideoMbps, registeredAppName);
             if (videoMbps != cfg.VideoMbps)
                 _logger.LogInformation("VSR Everywhere delivery bitrate limited to {Mbps} Mbps for this client", videoMbps);
-            var token = _sessions.Register(source.Path, cfg, profile, hdr, videoMbps);
+            var crop = await StreamingCrop.Detect(source.Path, v, cfg, _logger, context.HttpContext.RequestAborted).ConfigureAwait(false);
+            var token = _sessions.Register(source.Path, cfg, profile, hdr, videoMbps, crop);
             if (token is null)
             {
                 _logger.LogWarning("VsrEverywhere TRACE source rejected: session registry unavailable");
@@ -184,13 +185,7 @@ public sealed class PlaybackFilter : IAsyncActionFilter
             source.TranscodingContainer = cfg.SegmentType == "mpegts" ? "ts" : "mp4";
             source.TranscodingSubProtocol = MediaStreamProtocol.hls;
             source.TranscodingUrl = $"/VsrEverywhere/hls/{token}/index.m3u8";
-            if (hdr)
-            {
-                v.ColorPrimaries = "bt2020";
-                v.ColorTransfer = "smpte2084";
-                v.ColorSpace = "bt2020nc";
-                v.BitDepth = 10;
-            }
+            crop.Describe(v, hdr);
             _logger.LogWarning("VsrEverywhere TRACE SUCCESS: VSR HLS source created for matching client");
             return;
         }

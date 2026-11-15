@@ -11,7 +11,7 @@ import tarfile
 
 root = Path(__file__).resolve().parents[2]
 dist = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else root / 'dist'
-script = dist / 'Install-VSREverywhere-1.2.0-Linux.sh'
+script = dist / 'Install-VSREverywhere-1.3.0-Linux.sh'
 raw = script.read_bytes()
 header, encoded = raw.split(b'\n__VSR_PAYLOAD__\n', 1)
 payload = base64.b64decode(encoded, validate=False)
@@ -35,11 +35,11 @@ with tarfile.open(fileobj=io.BytesIO(payload), mode='r:gz') as archive:
         assert read(name) == source.read_bytes(), 'Stale Linux source: ' + name
     for worker in (root / 'worker').glob('*.py'):
         assert read('plugin/worker/' + worker.name) == worker.read_bytes(), 'Stale worker: ' + worker.name
-    assert json.loads(read('plugin/meta.json'))['version'] == '1.2.0.0'
+    assert json.loads(read('plugin/meta.json'))['version'] == '1.3.0.0'
     assert json.loads(read('plugin/meta.json'))['targetAbi'] == '10.10.0.0'
     assert json.loads(read('runtime.json'))['targetAbi'] == '10.10.0.0'
     assert read('plugin/Jellyfin.Plugin.VsrEverywhere.dll') == (root / 'src/Jellyfin.Plugin.VsrEverywhere/bin/Release/net8.0/Jellyfin.Plugin.VsrEverywhere.dll').read_bytes()
-with tarfile.open(dist / 'VSR-Everywhere-1.2.0-Linux.tar.gz', 'r:gz') as archive:
+with tarfile.open(dist / 'VSR-Everywhere-1.3.0-Linux.tar.gz', 'r:gz') as archive:
     member = archive.getmember(script.name)
     assert member.mode == 0o755
     assert archive.extractfile(member).read() == raw
@@ -48,8 +48,8 @@ bash = shutil.which('bash') or shutil.which('bash.exe')
 if bash:
     subprocess.run([bash, '-n', script.as_posix()], check=True)
     result = subprocess.run([bash, script.as_posix(), '--help'], check=True, capture_output=True, text=True)
-    assert 'VSR Everywhere 1.2.0' in result.stdout
-for line in (dist / 'VSR-Everywhere-1.2.0-Linux-SHA256SUMS.txt').read_text().splitlines():
+    assert 'VSR Everywhere 1.3.0' in result.stdout
+for line in (dist / 'VSR-Everywhere-1.3.0-Linux-SHA256SUMS.txt').read_text().splitlines():
     expected, name = line.split('  ', 1)
     assert sha256((dist / name).read_bytes()).hexdigest() == expected
 print('PASS: Linux script syntax/help, archive modes, embedded payload hashes, pinned runtime, current DLL/workers, MIT notices, and checksums.')

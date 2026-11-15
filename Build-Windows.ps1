@@ -44,7 +44,7 @@ $metadata = [ordered]@{
     status = 'Active'
     targetAbi = '10.10.0.0'
     description = 'NVIDIA Video Super Resolution with selectable 1080p to 8K processing and HEVC streaming for selected Jellyfin devices.'
-    changelog = 'Neural rendering, automatic content profiles, source-rate interpolation, and improved startup and color handling. Auto HDR remains experimental.'
+    changelog = 'Automatic black-bar cropping, source-aspect output, and matching playback metadata. Existing enhancement defaults are unchanged. Auto HDR remains experimental.'
 }
 [IO.File]::WriteAllText((Join-Path $dist 'meta.json'), ($metadata | ConvertTo-Json -Depth 5), (New-Object Text.UTF8Encoding($false)))
 $zip = Join-Path $outputRoot "VSR-Everywhere-$version-plugin.zip"

@@ -15,8 +15,8 @@ def fit_rgb(rgb, width, height, sar):
         return rgb
     displayed_width = source_width * float(sar)
     scale = min(width / displayed_width, height / source_height)
-    active_width = min(width, max(2, int(displayed_width * scale) // 2 * 2))
-    active_height = min(height, max(2, int(source_height * scale) // 2 * 2))
+    active_width = min(width, max(2, round(displayed_width * scale / 2) * 2))
+    active_height = min(height, max(2, round(source_height * scale / 2) * 2))
     resized = F.interpolate(rgb.unsqueeze(0), size=(active_height, active_width),
                             mode='bicubic', align_corners=False)[0]
     left, top = (width - active_width) // 2, (height - active_height) // 2

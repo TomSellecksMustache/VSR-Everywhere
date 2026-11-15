@@ -8,7 +8,7 @@ $OutputDirectory = [IO.Path]::GetFullPath($OutputDirectory)
 $allowedRoot = [IO.Path]::GetFullPath((Join-Path $root 'dist')).TrimEnd('\')
 if ($OutputDirectory -ne $allowedRoot -and -not $OutputDirectory.StartsWith($allowedRoot + '\', [StringComparison]::OrdinalIgnoreCase)) { throw 'Build output must stay inside this project dist folder.' }
 if (-not $SkipPluginBuild) { & (Join-Path $root 'Build-Windows.ps1') -OutputDirectory $OutputDirectory; if ($LASTEXITCODE -ne 0) { throw 'Plugin build failed.' } }
-$version = '1.2.0'
+$version = '1.3.0'
 $source = Join-Path $root 'installer'
 $build = Join-Path $source ('build\release-' + [Guid]::NewGuid().ToString('N'))
 $null = New-Item -ItemType Directory -Force -Path $build

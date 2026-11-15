@@ -10,7 +10,7 @@ static void Check(bool condition, string message)
 }
 
 var assembly = typeof(BridgeSession).Assembly;
-Check(assembly.GetName().Version == new Version(1, 2, 0, 0), "Expected version 1.2.0.0");
+Check(assembly.GetName().Version == new Version(1, 3, 0, 0), "Expected version 1.3.0.0");
 Check(assembly.GetName().Name == "Jellyfin.Plugin.VsrEverywhere", "Configuration-compatible assembly identity changed");
 Check(assembly.GetCustomAttribute<AssemblyProductAttribute>()?.Product == "VSR Everywhere", "Wrong product name");
 Check(Plugin.PluginId == new Guid("7ca129d0-7454-41c7-aad6-55250b1a7b5b"), "Plugin ID changed");
@@ -75,5 +75,6 @@ foreach (var (pw, ph, sw, sh) in cases)
     Check(cfg.EnabledDeviceIds.SequenceEqual(new[] { "retained-device" }), "Device approvals changed");
 }
 Console.WriteLine("PASS: compiled plugin identity/version, embedded settings, and actual worker arguments (5K/4K, 8K/8K, 1080p/8K, 8K/1080p).");
+await CropChecks.Run(args.FirstOrDefault() ?? "python");
 await MemoryChecks.Run(args.FirstOrDefault() ?? "python");
 if (args.Length > 1) await TransportChecks.Run(args[0], Path.GetFullPath(args[1]));

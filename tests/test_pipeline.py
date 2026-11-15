@@ -14,7 +14,7 @@ from vsr_metrics import StageMetrics
 
 
 class ContractChecks(unittest.TestCase):
-    def test_legacy_commands_are_exactly_the_preserved_baseline(self):
+    def test_legacy_commands_match_the_reviewed_sar_corrected_baseline(self):
         cases = json.loads((ROOT / 'tests/fixtures/legacy_commands.json').read_text())
         for case in cases:
             with self.subTest(case=case['kwargs']):

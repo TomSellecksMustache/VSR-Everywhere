@@ -36,9 +36,9 @@ class WorkerChecks(unittest.TestCase):
                     self.assertEqual(cmd[cmd.index("-video_size") + 1],
                                      f"{processing[0]}x{processing[1]}")
                     vf = cmd[cmd.index("-vf") + 1]
-                    self.assertIn(f"scale={delivery[0]}:{delivery[1]}:", vf)
+                    self.assertIn(f"scale=w='max(2,round(min({delivery[0]},{delivery[1]}*dar)/2)*2)'", vf)
+                    self.assertIn(f"h='max(2,round(min({delivery[1]},{delivery[0]}/dar)/2)*2)'", vf)
                     self.assertIn(f"pad={delivery[0]}:{delivery[1]}:", vf)
-                    self.assertIn("force_original_aspect_ratio=decrease", vf)
                     self.assertEqual(cmd[cmd.index("-profile:v") + 1], "main10")
                     self.assertEqual(cmd[cmd.index("-c:a") + 1], "aac")
                     self.assertIn("title=VSR Everywhere", cmd)

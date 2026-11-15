@@ -4,14 +4,15 @@ NVIDIA Video Super Resolution for Jellyfin servers.
 
 This plugin processes video on your server and sends the result to your Jellyfin player. Your original files stay as they are. The player needs to support the stream you choose, but it does not need its own AI upscaler.
 
-[**Download the Windows installer — 1.2.0**](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/download/v1.2.0/VSR-Everywhere-1.2.0-Setup.exe) · [All downloads](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/tag/v1.2.0)
+[**Download the Windows installer — 1.3.0**](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/download/v1.3.0/VSR-Everywhere-1.3.0-Setup.exe) · [All downloads](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/tag/v1.3.0)
 
-**Linux:** [Download the server installer](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/download/v1.2.0/Install-VSREverywhere-1.2.0-Linux.sh) · [Linux setup](INSTALL-LINUX.md)
+**Linux:** [Download the server installer](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/download/v1.3.0/Install-VSREverywhere-1.3.0-Linux.sh) · [Linux setup](INSTALL-LINUX.md)
 
 ## What it does
 
 - Upscales eligible video with NVIDIA VSR.
 - Lets you choose processing and stream resolutions separately, from 1080p to 8K.
+- Crops stable black bars from the stream and fits output to the picture's aspect ratio.
 - Adds optional Veyra neural rendering on Windows. Automatic mode uses plain VSR for animation and NR+VSR for live action.
 - Uses interpolation to help processing keep up. The delivered frame rate still matches the source.
 - Keeps working frames in GPU memory and encoded stream segments in RAM, with disk fallback.

@@ -37,6 +37,7 @@ internal static class PlaybackChecks
         var address = app.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>()!.Addresses.Single();
         using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(40) };
         var advanced = Environment.GetEnvironmentVariable("VSR_TEST_ADVANCED") == "1";
+        var cropped = Environment.GetEnvironmentVariable("VSR_TEST_CROP") == "1";
         var production = Environment.GetEnvironmentVariable("VSR_TEST_PRODUCTION") == "1";
         var sourceProbe = new ProcessStartInfo(Path.Combine(Path.GetDirectoryName(ffmpeg)!, "ffprobe.exe"))
             { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true };
@@ -61,6 +62,7 @@ internal static class PlaybackChecks
             };
             if (kind == "mpegts") { cfg.ProcessingWidth = 5120; cfg.ProcessingHeight = 2880; }
             if (advanced) { cfg.ProcessingWidth = 1280; cfg.ProcessingHeight = 720; cfg.StreamWidth = 640; cfg.StreamHeight = 360; }
+            if (cropped) { cfg.ProcessingWidth = 1280; cfg.ProcessingHeight = 720; cfg.StreamWidth = 1280; cfg.StreamHeight = 720; }
             if (production)
             {
                 cfg.ContentProfile = "live_action";
@@ -68,7 +70,11 @@ internal static class PlaybackChecks
                 cfg.VsrQuality = "ULTRA"; cfg.VsrStrength = 1; cfg.VideoMbps = 40;
                 cfg.NvencPreset = "p7"; cfg.NvencTune = "hq"; cfg.NvencLookahead = 12; cfg.NvencCq = 1; cfg.NvencTemporalAq = true;
             }
-            var token = sessions.Register(source, cfg, production ? "live_action" : advanced ? "animation" : "unknown", advanced)!;
+            var crop = cropped ? await StreamingCrop.Detect(source,
+                new MediaBrowser.Model.Entities.MediaStream { Width = 640, Height = 480, AspectRatio = "4:3" },
+                cfg, logging.CreateLogger("Crop"), CancellationToken.None) : null;
+            if (cropped) Check(crop == new StreamingCrop(0, 60, 640, 360, 1280, 720), "Playback fixture crop detection");
+            var token = sessions.Register(source, cfg, production ? "live_action" : advanced ? "animation" : "unknown", advanced, null, crop)!;
             var session = sessions.Find(token)!;
             var url = address + "/VsrEverywhere/hls/" + token + "/";
             var output = Path.Combine(AppContext.BaseDirectory, "checks", "playback-" + kind + "-" + Guid.NewGuid().ToString("N"));
@@ -84,8 +90,8 @@ internal static class PlaybackChecks
             if (kind == "fmp4") await File.WriteAllBytesAsync(Path.Combine(output, "init.mp4"), await client.GetByteArrayAsync(url + "init.mp4"));
             var worker = (Process)typeof(BridgeSession).GetField("_worker", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(session)!;
             var pid = worker.Id;
-            var middle = advanced ? names.Length - 1 : Math.Min(1200, names.Length / 2);
-            if (advanced)
+            var middle = advanced || cropped ? names.Length - 1 : Math.Min(1200, names.Length / 2);
+            if (advanced || cropped)
             {
                 clock.Restart();
                 double firstResponse = 0;
@@ -116,7 +122,7 @@ internal static class PlaybackChecks
             }
             using (var missing = await client.GetAsync(url + "seg_999999." + (kind == "fmp4" ? "m4s" : "ts")))
                 Check(missing.StatusCode == HttpStatusCode.NotFound, "Out-of-range segment must return 404");
-            var samples = advanced ? new[] { Enumerable.Range(0, Math.Min(6, names.Length)).ToArray(), new[] { middle } } : [new[] { middle }];
+            var samples = advanced || cropped ? new[] { Enumerable.Range(0, Math.Min(6, names.Length)).ToArray(), new[] { middle } } : [new[] { middle }];
             foreach (var sampleIndices in samples)
             {
                 var sample = "#EXTM3U\n#EXT-X-VERSION:7\n#EXT-X-TARGETDURATION:3\n#EXT-X-MEDIA-SEQUENCE:" + sampleIndices[0] + "\n"
@@ -137,9 +143,16 @@ internal static class PlaybackChecks
                     var video = data.RootElement.GetProperty("streams").EnumerateArray().First(stream => stream.GetProperty("codec_type").GetString() == "video");
                     Check(video.GetProperty("codec_name").GetString() == "hevc" && video.GetProperty("profile").GetString() == "Main 10", "GPU seek must remain HEVC Main 10");
                     Check(video.GetProperty("color_space").GetString() == (advanced ? "bt2020nc" : "bt709"), "Seek color VUI changed");
-                    if (advanced)
+                    if (cropped)
                     {
-                        Check(video.GetProperty("color_transfer").GetString() == "smpte2084", "HDR seek lost PQ signaling");
+                        Check(video.GetProperty("width").GetInt32() == crop!.StreamWidth && video.GetProperty("height").GetInt32() == crop.StreamHeight,
+                            "Startup, enhancement and seeks must retain the fitted crop dimensions");
+                        Check(data.RootElement.GetProperty("streams").EnumerateArray().Any(stream => stream.GetProperty("codec_type").GetString() == "audio"
+                            && stream.GetProperty("codec_name").GetString() == "aac"), "Cropped playback lost AAC audio");
+                    }
+                    if (advanced) Check(video.GetProperty("color_transfer").GetString() == "smpte2084", "HDR seek lost PQ signaling");
+                    if (advanced || cropped)
+                    {
                         Check(video.GetProperty("r_frame_rate").GetString() == sourceRate, "Output frame rate differs from source");
                         var timestamps = data.RootElement.GetProperty("frames").EnumerateArray()
                             .Where(frame => frame.GetProperty("media_type").GetString() == "video")

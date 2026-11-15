@@ -73,6 +73,9 @@ public sealed class BridgeSessions : IDisposable
         _active.Clear();
     }
     public string? Register(string source, PluginConfiguration cfg, string contentProfile = "unknown", bool hdr = false, int? maxVideoMbps = null)
+        => Register(source, cfg, contentProfile, hdr, maxVideoMbps, null);
+
+    internal string? Register(string source, PluginConfiguration cfg, string contentProfile, bool hdr, int? maxVideoMbps, StreamingCrop? crop)
     {
         foreach (var (key, old) in _active)
         {
@@ -101,7 +104,7 @@ public sealed class BridgeSessions : IDisposable
         var memoryBudget = cfg.CacheMode == "disk" ? 0 : VsrMemoryBudget.Calculate(cfg.MemoryBudgetMb, VsrMemoryBudget.Available());
         if (memoryBudget > 0 && _memory.Register(token, memoryBudget, onDemand: true))
         {
-            var memorySession = new BridgeSession(token, source, "", cfg, _logger, _memory, contentProfile, hdr, maxVideoMbps);
+            var memorySession = new BridgeSession(token, source, "", cfg, _logger, _memory, contentProfile, hdr, maxVideoMbps, crop);
             if (_active.TryAdd(token, memorySession))
             {
                 _logger.LogInformation("VSR Everywhere cache mode=memory global budget={BudgetMb} MB", _memory.BudgetBytes / VsrMemoryBudget.MiB);
@@ -139,7 +142,7 @@ public sealed class BridgeSessions : IDisposable
         // Cache root was already validated above.
         var root = Path.Combine(Path.GetFullPath(cacheRoot), token);
         // All worker outputs are generated in the token-specific cache, never beside the media file.
-        var session = new BridgeSession(token, source, root, cfg, _logger, null, contentProfile, hdr, maxVideoMbps);
+        var session = new BridgeSession(token, source, root, cfg, _logger, null, contentProfile, hdr, maxVideoMbps, crop);
         _logger.LogInformation("VSR Everywhere cache mode=disk");
         return _active.TryAdd(token, session) ? token : null;
     }
@@ -152,6 +155,7 @@ public sealed partial class BridgeSession : IDisposable
     private readonly bool _hdr;
     private readonly bool _neuralRendering;
     private readonly int _videoMbps;
+    private readonly StreamingCrop? _crop;
     private readonly ILogger _logger;
     private readonly SemaphoreSlim _startLock = new(1, 1);
     private Process? _worker;
@@ -175,12 +179,13 @@ public sealed partial class BridgeSession : IDisposable
     public BridgeSession(string token, string source, string root, PluginConfiguration cfg, ILogger logger)
         : this(token, source, root, cfg, logger, null) { }
     internal BridgeSession(string token, string source, string root, PluginConfiguration cfg, ILogger logger, MemoryHlsStore? memory,
-        string contentProfile = "unknown", bool hdr = false, int? maxVideoMbps = null)
+        string contentProfile = "unknown", bool hdr = false, int? maxVideoMbps = null, StreamingCrop? crop = null)
     {
         Token = token;
         Source = source;
         Root = root;
         _cfg = cfg;
+        _crop = crop;
         _contentProfile = contentProfile is "animation" or "live_action" ? contentProfile : "unknown";
         _neuralRendering = OperatingSystem.IsWindows() && EnhancementProfiles.UseNeuralRendering(cfg.EnableNeuralRendering, cfg.ContentProfile, _contentProfile);
         _hdr = hdr && cfg.EnableAutoHdr;
@@ -270,10 +275,15 @@ public sealed partial class BridgeSession : IDisposable
             foreach (var a in new[] {
                 "--processing-width", Math.Clamp(_cfg.ProcessingWidth, 1280, 7680).ToString(),
                 "--processing-height", Math.Clamp(_cfg.ProcessingHeight, 720, 4320).ToString(),
-                "--stream-width", Math.Clamp(_cfg.StreamWidth, 640, 7680).ToString(),
-                "--stream-height", Math.Clamp(_cfg.StreamHeight, 360, 4320).ToString(),
+                "--stream-width", (_crop?.StreamWidth ?? Math.Clamp(_cfg.StreamWidth, 640, 7680)).ToString(),
+                "--stream-height", (_crop?.StreamHeight ?? Math.Clamp(_cfg.StreamHeight, 360, 4320)).ToString(),
                 "--rolling-rewind-minutes", rewindMinutes.ToString()
             }) psi.ArgumentList.Add(a);
+            if (_crop is not null)
+            {
+                psi.ArgumentList.Add("--crop");
+                psi.ArgumentList.Add($"{_crop.X}:{_crop.Y}:{_crop.Width}:{_crop.Height}");
+            }
             if (_cfg.NvencSpatialAq) psi.ArgumentList.Add("--nvenc-spatial-aq");
             if (!_cfg.EnableVsr) psi.ArgumentList.Add("--no-vsr");
             if (_cfg.NvencTemporalAq) psi.ArgumentList.Add("--nvenc-temporal-aq");
