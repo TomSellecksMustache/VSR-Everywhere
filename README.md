@@ -4,9 +4,9 @@ NVIDIA Video Super Resolution for Jellyfin servers.
 
 This plugin processes video on your server and sends the result to your Jellyfin player. Your original files stay as they are. The player needs to support the stream you choose, but it does not need its own AI upscaler.
 
-[**Download the Windows installer — 1.3.0**](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/download/v1.3.0/VSR-Everywhere-1.3.0-Setup.exe) · [All downloads](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/tag/v1.3.0)
+[**Download the Windows installer — 1.3.1**](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/download/v1.3.1/VSR-Everywhere-1.3.1-Setup.exe) · [All downloads](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/tag/v1.3.1)
 
-**Linux:** [Download the server installer](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/download/v1.3.0/Install-VSREverywhere-1.3.0-Linux.sh) · [Linux setup](INSTALL-LINUX.md)
+**Linux:** [Download the server installer](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/download/v1.3.1/Install-VSREverywhere-1.3.1-Linux.sh) · [Linux setup](INSTALL-LINUX.md)
 
 ## What it does
 

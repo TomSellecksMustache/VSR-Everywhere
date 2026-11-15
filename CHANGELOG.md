@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.1
+
+- Include decoding and cropping time in the adaptive enhancement budget so larger inputs keep enough processing headroom.
+- Account for interpolation cost separately and avoid increasing frame generation when enhancing each original frame is faster.
+
 ## 1.3.0
 
 - Crop stable encoded black bars from the enhanced stream. Keep one crop through startup and seeks, with a full-picture fallback when detection is uncertain.

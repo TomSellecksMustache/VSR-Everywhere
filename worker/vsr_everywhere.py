@@ -472,7 +472,8 @@ def run(args: argparse.Namespace, retained=None, initialize_only=False, control=
                 except StopIteration:
                     break
                 if advanced:
-                    stats.add("decode", (time.perf_counter() - decode_start) * 1000)
+                    decode_ms = (time.perf_counter() - decode_start) * 1000
+                    stats.add("decode", decode_ms)
                     if control is not None:
                         control.wait_for_slot(frame[3], gop, run_id)
                     frame_start = time.perf_counter()
@@ -517,7 +518,7 @@ def run(args: argparse.Namespace, retained=None, initialize_only=False, control=
                 pipe_bytes += len(payload)
                 stats.resolve()
                 if advanced:
-                    enhancements.observe((time.perf_counter() - frame_start) * 1000)
+                    enhancements.observe(decode_ms + (time.perf_counter() - frame_start) * 1000)
                 processed += 1
                 if processed % 60 == 0:
                     elapsed = time.monotonic() - start_wall

@@ -43,19 +43,59 @@ class TemporalChecks(unittest.TestCase):
         self.assertIs(smooth[-1][0], frames[-1][0])
         self.assertEqual(smooth[-1][2], 0)
 
-    def test_stride_adapts_to_render_budget_without_changing_rate(self):
+    def workload(self, anchor, generation, fixed, *, enabled=True, frames=480):
         from types import SimpleNamespace
         from vsr_enhancements import Enhancements
         state = Enhancements.__new__(Enhancements)
-        state.args = SimpleNamespace(frame_interpolation=True)
-        state.fps, state.anchor_ms, state.base_ms = 24, 60, 0
-        state.outputs, state.stride, state.render_ms = 0, 1, 0
-        for _ in range(24): state.observe(15)
-        self.assertEqual(state.stride, 3)
-        state.anchor_ms = 4
-        for _ in range(40): state.observe(2)
-        self.assertEqual(state.stride, 1)
+        state.args = SimpleNamespace(frame_interpolation=enabled)
+        state.fps, state.stride = 24, 2 if enabled else 1
+        state.anchor_ms = state.base_ms = state.generation_ms = 0
+        state.outputs = state.render_ms = state.generated_ms = 0
+        cache, records = set(), []
+        for _, _, alpha, slot, a, b in source_pairs(((object(), slot) for slot in range(frames)), 0, frames, lambda: state.stride):
+            cache.intersection_update((a, b))
+            state.render_ms = state.generated_ms = 0
+            for sample in (a, b) if alpha else (a,):
+                if sample not in cache:
+                    cost = anchor(slot) if callable(anchor) else anchor
+                    cache.add(sample)
+                    state.render_ms += cost
+                    state.anchor_ms = state.anchor_ms * .75 + cost * .25 if state.anchor_ms else cost
+            if alpha:
+                state.generated_ms = generation
+                state.generation_ms = state.generation_ms * .75 + generation * .25 if state.generation_ms else generation
+            work = fixed + state.render_ms + state.generated_ms
+            state.observe(work)
+            records.append((slot, state.stride, work))
+        self.assertEqual([record[0] for record in records], list(range(frames)))
         self.assertEqual(state.fps, 24)
+        return state, records
+
+    def test_expensive_interpolation_does_not_make_overload_worse(self):
+        for generation in (30, 60):
+            with self.subTest(generation=generation):
+                state, records = self.workload(20, generation, 6)
+                self.assertEqual(state.stride, 1)
+                self.assertEqual({record[1] for record in records[-96:]}, {1})
+                self.assertEqual(sum(record[2] for record in records[-96:]) / 96, 26)
+
+    def test_full_processing_budget_settles_without_sampling_oscillation(self):
+        state, records = self.workload(60, 5, 12)
+        self.assertEqual(state.stride, 3)
+        self.assertEqual({record[1] for record in records[-96:]}, {3})
+        self.assertLess(sum(record[2] for record in records[-96:]) / 96, 1000 / 24)
+
+    def test_cheaper_scenes_restore_every_original_frame(self):
+        state, records = self.workload(lambda slot: 60 if slot < 240 else 15, 5, 12)
+        self.assertIn(3, {record[1] for record in records[:240]})
+        self.assertEqual(state.stride, 1)
+        self.assertEqual({record[1] for record in records[-96:]}, {1})
+
+    def test_disabled_interpolation_does_not_skip_enhancement_work(self):
+        state, records = self.workload(60, 5, 12, enabled=False)
+        self.assertEqual(state.stride, 1)
+        self.assertEqual({record[1] for record in records}, {1})
+        self.assertTrue(all(record[2] == 72 for record in records))
 
 
 if __name__ == '__main__':

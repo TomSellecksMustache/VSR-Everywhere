@@ -12,7 +12,7 @@ Setup downloads Python, CUDA/PyTorch libraries, NVIDIA VFX, the video encoder, V
 
 ## Install with the wizard
 
-1. Download [VSR-Everywhere-1.3.0-Setup.exe](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/download/v1.3.0/VSR-Everywhere-1.3.0-Setup.exe).
+1. Download [VSR-Everywhere-1.3.1-Setup.exe](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/download/v1.3.1/VSR-Everywhere-1.3.1-Setup.exe).
 2. Open it and approve administrator access.
 3. Confirm the detected Jellyfin server. For a custom location, select its data folder and `jellyfin.exe`.
 4. Choose a folder for the runtime and downloads. Setup creates a `VsrEverywhere` subfolder there; the large downloads do not need to go on the system drive.
@@ -27,7 +27,7 @@ For upgrades, choose the same runtime folder. Existing compatible settings and d
 
 ## PowerShell option
 
-Download the matching [Windows ZIP](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/download/v1.3.0/VSR-Everywhere-1.3.0-Windows.zip) and [PowerShell installer](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/download/v1.3.0/Install-VSREverywhere.ps1) into one folder. Leave the ZIP intact, then run:
+Download the matching [Windows ZIP](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/download/v1.3.1/VSR-Everywhere-1.3.1-Windows.zip) and [PowerShell installer](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/download/v1.3.1/Install-VSREverywhere.ps1) into one folder. Leave the ZIP intact, then run:
 
 ```powershell
 powershell.exe -NoProfile -Sta -ExecutionPolicy Bypass -File .\Install-VSREverywhere.ps1
@@ -58,6 +58,6 @@ Some system-drive space is still needed for the bootstrap and Microsoft runtime.
 
 If deployment or startup checks fail, setup attempts to restore the previous plugin and settings and restart Jellyfin. Keep the setup log and backup record if recovery is needed. Microsoft runtime updates are separate from plugin rollback.
 
-The [manual plugin ZIP](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/download/v1.3.0/VSR-Everywhere-1.3.0-plugin.zip) is for an existing working runtime. Use the wizard for a new install.
+The [manual plugin ZIP](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/download/v1.3.1/VSR-Everywhere-1.3.1-plugin.zip) is for an existing working runtime. Use the wizard for a new install.
 
 [Settings](docs/configuration.md) · [Troubleshooting and removal](docs/troubleshooting.md)

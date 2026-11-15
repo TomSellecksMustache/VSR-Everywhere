@@ -392,7 +392,7 @@ function Start-SelectedJellyfin($Target) {
 
 function Wait-VsrPlugin([string]$DataPath, [datetime]$Since, [int]$Seconds = 90) {
     $deadline = [DateTime]::UtcNow.AddSeconds($Seconds)
-    $pattern = '(?m)^\[(?<timestamp>[^\]]+)\][^\r\n]*Loaded plugin:\s*"?VSR Everywhere"?\s+"?1\.3\.0(?:\.0)?"?\s*$'
+    $pattern = '(?m)^\[(?<timestamp>[^\]]+)\][^\r\n]*Loaded plugin:\s*"?VSR Everywhere"?\s+"?1\.3\.1(?:\.0)?"?\s*$'
     do {
         # An open Jellyfin log can keep its old file timestamp until the server exits.
         foreach ($file in @(Get-ChildItem -LiteralPath (Join-Path $DataPath 'log') -Filter '*.log' -File -ErrorAction SilentlyContinue | Where-Object { $_.Name -notlike 'FFmpeg.*' } | Sort-Object LastWriteTimeUtc -Descending | Select-Object -First 3)) {
@@ -404,7 +404,7 @@ function Wait-VsrPlugin([string]$DataPath, [datetime]$Since, [int]$Seconds = 90)
         }
         Start-Sleep -Milliseconds 500
     } while ([DateTime]::UtcNow -lt $deadline)
-    throw ('Jellyfin did not confirm loading VSR Everywhere 1.3.0. Check ' + (Join-Path $DataPath 'log') + ' for startup errors. Setup will restore the previous files.')
+    throw ('Jellyfin did not confirm loading VSR Everywhere 1.3.1. Check ' + (Join-Path $DataPath 'log') + ' for startup errors. Setup will restore the previous files.')
 }
 
 function Install-VsrPluginFiles([string]$DataPath, [string]$PayloadPath, [string]$BackupPath, $Configuration, [scriptblock]$Verify) {
@@ -417,7 +417,7 @@ function Install-VsrPluginFiles([string]$DataPath, [string]$PayloadPath, [string
     $oldConfig = Join-Path $BackupPath 'configuration.xml'
     $hadConfig = Test-Path -LiteralPath $snapshot.ConfigPath -PathType Leaf
     if ($hadConfig) { Copy-Item -LiteralPath $snapshot.ConfigPath -Destination $oldConfig }
-    $record = @{ Product = 'VSR Everywhere'; Version = '1.3.0'; DataPath = $DataPath; PluginPath = $snapshot.PluginPath;
+    $record = @{ Product = 'VSR Everywhere'; Version = '1.3.1'; DataPath = $DataPath; PluginPath = $snapshot.PluginPath;
         OriginalConfigPath = $snapshot.ConfigPath; ConfigPath = $configPath; HadConfig = $hadConfig }
     $record | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $BackupPath 'restore.json') -Encoding UTF8
     $pluginMoved = $false; $newPlugin = $false; $configWritten = $false

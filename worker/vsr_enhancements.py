@@ -7,7 +7,6 @@ import struct
 import subprocess
 import tempfile
 import time
-import math
 
 from vsr_threaded import write_all
 
@@ -101,6 +100,7 @@ class Enhancements:
         self.stride = 2 if args.frame_interpolation and args.neural_rendering else 1
         self.fps = float(source_fps)
         self.anchor_ms = self.base_ms = 0
+        self.generation_ms = self.generated_ms = 0
         self.outputs = 0
         self.render_ms = 0
         try:
@@ -162,7 +162,7 @@ class Enhancements:
     def frame(self, pair, fps, effect, sar, stream_ptr, stats):
         import torch
         left, right, alpha, _, a, b = pair
-        self.render_ms = 0
+        self.render_ms = self.generated_ms = 0
         # Release old GPU frames before creating the next source pair.
         for key in list(self.cache):
             if key not in (a, b):
@@ -173,25 +173,30 @@ class Enhancements:
             if self.interpolator is None:
                 raise RuntimeError('Requested interpolation was not initialized')
             current = self.render(right, b, fps, effect, sar, stream_ptr, stats)
+            started = time.perf_counter()
             with stats.gpu('frame_generation', torch):
                 result = torch.from_dlpack(self.interpolator.run_at_timestep(
                     previous, current, float(alpha), stream_ptr=stream_ptr).image).clone()
+            self.generated_ms = (time.perf_counter() - started) * 1000
+            self.generation_ms = self.generation_ms * .75 + self.generated_ms * .25 if self.generation_ms else self.generated_ms
             self.generated += 1
         return unpack_hdr(result) if self.hdr else result
 
     def observe(self, elapsed_ms):
         if not self.args.frame_interpolation:
             return
-        base = max(0, elapsed_ms - self.render_ms)
+        base = max(0, elapsed_ms - self.render_ms - self.generated_ms)
         self.base_ms = self.base_ms * .8 + base * .2 if self.base_ms else base
         self.outputs += 1
         if self.outputs >= 8 and self.outputs % 4 == 0:
-            available = 1000 / self.fps * .9 - self.base_ms - 2
-            desired = min(4, max(1, math.ceil(self.anchor_ms / max(available, 1))))
-            if desired > self.stride:
-                self.stride += 1
-            elif desired < self.stride and self.base_ms + self.anchor_ms / max(1, self.stride - 1) < 1000 / self.fps * .8:
-                self.stride -= 1
+            interval = 1000 / self.fps
+            # More sampling saves anchor work but adds interpolation work.
+            costs = [self.base_ms + self.anchor_ms / stride + self.generation_ms * (stride - 1) / stride
+                     for stride in range(1, 5)]
+            fits = [stride for stride in range(1, 5) if costs[stride - 1] <= interval * .9 - 2]
+            desired = fits[0] if fits else min(range(1, 5), key=lambda stride: costs[stride - 1])
+            if desired > self.stride or (desired < self.stride and (not fits or costs[desired - 1] < interval * .8)):
+                self.stride = desired
 
     def close(self):
         self.cache.clear()
