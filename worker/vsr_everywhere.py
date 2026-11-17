@@ -200,12 +200,8 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--memory-output", action="store_true", help="Upload HLS to the plugin's loopback memory store")
     p.add_argument("--serve", action="store_true", help="Keep VSR loaded and accept seek commands on stdin")
     p.add_argument("--backend", default="nvidia", choices=["nvidia", "vsr"])
-    p.add_argument("--neural-rendering", action="store_true")
-    p.add_argument("--content-profile", choices=['animation', 'live_action', 'unknown'], default='unknown')
     p.add_argument("--auto-hdr", action="store_true")
     p.add_argument("--frame-interpolation", action="store_true")
-    runtime_filter = Path(sys.executable).resolve().parent / 'veyra' / 'VsrVeyraFilter.exe'
-    p.add_argument("--veyra-filter", default=str(runtime_filter if runtime_filter.is_file() else Path(__file__).resolve().parent / 'veyra' / 'VsrVeyraFilter.exe'))
     p.add_argument("--ffmpeg", default="ffmpeg")
     p.add_argument("--ffprobe", default="ffprobe")
     p.add_argument("--video-mbps", type=int, default=18)
@@ -304,7 +300,7 @@ def run(args: argparse.Namespace, retained=None, initialize_only=False, control=
             raise RuntimeError("Unsupported input framerate")
         source_fps = fps
         from vsr_temporal import source_pairs
-        advanced = args.neural_rendering or args.auto_hdr or args.frame_interpolation or args.serve or getattr(args, 'no_vsr', False)
+        advanced = args.auto_hdr or args.frame_interpolation or args.serve or getattr(args, 'no_vsr', False)
         duration = 0
         if initialize_only or advanced:
             duration = float(stream.duration * stream.time_base) if stream.duration is not None else float(container.duration or 0) / 1_000_000
@@ -356,8 +352,8 @@ def run(args: argparse.Namespace, retained=None, initialize_only=False, control=
                     warm_stream = torch.cuda.default_stream(device=0)
                     with torch.cuda.stream(warm_stream):
                         warm_effect = create_effect(warm_stream.cuda_stream)
-                        stage = 'NR/HDR/interpolation model loading'
-                        warm_enhancements = Enhancements(args, width, height, source_fps)
+                        stage = 'HDR/interpolation model loading'
+                        warm_enhancements = Enhancements(args, source_fps)
                         frame = av.VideoFrame.from_ndarray(np.zeros((height, width, 3), dtype=np.uint8), format='rgb24')
                         alpha = Fraction(1, 2) if args.frame_interpolation else Fraction(0)
                         stage = 'first enhanced frame'
@@ -392,7 +388,7 @@ def run(args: argparse.Namespace, retained=None, initialize_only=False, control=
             from vsr_enhancements import Enhancements
             enhancements = retained.get('enhancements') if retained is not None else None
             if enhancements is None:
-                enhancements = Enhancements(args, width, height, source_fps)
+                enhancements = Enhancements(args, source_fps)
                 if retained is not None:
                     retained['enhancements'] = enhancements
             enhancements.reset()
@@ -422,8 +418,7 @@ def run(args: argparse.Namespace, retained=None, initialize_only=False, control=
                                     "spatial_aq": args.nvenc_spatial_aq,
                                     "temporal_aq": args.nvenc_temporal_aq},
                           "fps": float(fps),
-                          "source_fps": float(source_fps), "neural_rendering": args.neural_rendering,
-                          "content_profile": args.content_profile, "hdr": args.auto_hdr,
+                          "source_fps": float(source_fps), "hdr": args.auto_hdr,
                           "frame_interpolation": args.frame_interpolation,
                           "pipeline": pipeline,
                           "legacy_schedule": "threaded" if threaded else "serial",

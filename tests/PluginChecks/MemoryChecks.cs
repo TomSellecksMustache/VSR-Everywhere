@@ -188,7 +188,7 @@ internal static class MemoryChecks
     {
         using var sessions = new BridgeSessions(NullLogger<BridgeSessions>.Instance);
         var cfg = new PluginConfiguration { CacheMode = "memory", MemoryBudgetMb = 8, PythonPath = python, SegmentType = "mpegts", VideoMbps = 60 };
-        var token = sessions.Register("test-source.mp4", cfg, contentProfile: "animation", maxVideoMbps: 40)!;
+        var token = sessions.Register("test-source.mp4", cfg, maxVideoMbps: 40)!;
         var session = sessions.Find(token)!;
         Check(session.IsMemory && session.Root == "", "Memory registration creates no cache directory");
         var middleware = new BridgeMiddleware(_ => throw new Exception("Unexpected route"), NullLogger<BridgeMiddleware>.Instance);
@@ -238,7 +238,6 @@ internal static class MemoryChecks
             var command = result.RootElement.GetProperty("args").EnumerateArray().Select(value => value.GetString()!).ToArray();
             Check(command.Contains("--memory-output"), "Memory launch flag");
             Check(command.Contains("--serve"), "Memory worker persists across seeks");
-            Check(!command.Contains("--neural-rendering"), "Automatic animation uses VSR without NR");
             Check(command[Array.IndexOf(command, "--video-mbps") + 1] == "40" && cfg.VideoMbps == 60,
                 "Client bitrate limit reaches the worker without changing saved settings");
             Check(command[Array.IndexOf(command, "--output") + 1] == $"http://127.0.0.1:8096/jellyfin/VsrEverywhere/ingest/{token}/0/index.m3u8", "Ingest output uses actual loopback port and path base");

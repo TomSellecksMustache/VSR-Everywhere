@@ -28,9 +28,7 @@ def main():
     p.add_argument("--stream-height", default=2160, type=int)
     p.add_argument("--quality", default="STREAMING_MEDIUM")
     p.add_argument("--nvenc-lookahead", type=int, default=0)
-    p.add_argument("--neural-rendering", action='store_true')
     p.add_argument("--no-vsr", action='store_true')
-    p.add_argument("--veyra-filter")
     p.add_argument("--auto-hdr", action='store_true')
     p.add_argument("--frame-interpolation", action='store_true')
     p.add_argument("--report", required=True)
@@ -62,14 +60,10 @@ def main():
                "--stream-width", str(args.stream_width), "--stream-height", str(args.stream_height)]
         if args.frame_interpolation:
             cmd += ['--frame-interpolation']
-        if args.neural_rendering:
-            cmd += ['--neural-rendering']
         if args.no_vsr:
             cmd += ['--no-vsr']
         if args.auto_hdr:
             cmd += ['--auto-hdr']
-        if args.veyra_filter:
-            cmd += ['--veyra-filter', args.veyra_filter]
         result = subprocess.run(cmd, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=300)
         print(result.stdout, flush=True)
         if result.returncode:
@@ -95,7 +89,7 @@ def main():
         report = {"success": True, "gpu": gpu, "torch": torch.__version__, "python": sys.version,
                   "processing": [args.processing_width, args.processing_height],
                   "stream": [video["width"], video["height"]], "videoCodec": "hevc", "audioCodec": "aac",
-                  "nvencLookahead": args.nvenc_lookahead, "neuralRendering": args.neural_rendering,
+                  "nvencLookahead": args.nvenc_lookahead,
                   "autoHdr": args.auto_hdr, "frameInterpolation": args.frame_interpolation,
                   "sourceFps": '24/1', "outputFps": video['r_frame_rate']}
         Path(args.report).write_text(json.dumps(report, indent=2), encoding="utf-8")

@@ -1,6 +1,6 @@
 {
   "product": "VSR Everywhere",
-  "version": "1.3.1",
+  "version": "1.4.0",
   "pythonVersion": "3.14.7",
   "minimumDriver": "570.65",
   "targetAbi": "10.10.0.0",
@@ -109,12 +109,6 @@
       "kind": "wheel"
     }
   ],
-  "veyra": {
-    "file": "Veyra-2.1.5-NVIDIA-win64-portable.zip",
-    "url": "https://github.com/Likely7/Veyra-NRVideo/releases/download/v2.1.5/Veyra-2.1.5-NVIDIA-win64-portable.zip",
-    "sha256": "f78a3dca2868f90c775413ae407361f92facf9230a5e509a043f0b18e5bd80ca",
-    "sourceCommit": "8332c8a8382242096a2699d3ba4dd52ad47bbd74"
-  },
   "visualCppUrl": "https://aka.ms/vc14/vc_redist.x64.exe",
   "ffmpeg": {
     "file": "jellyfin-ffmpeg_8.1.3-1_portable_win64-clang-gpl.zip",

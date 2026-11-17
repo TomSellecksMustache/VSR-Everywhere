@@ -57,15 +57,13 @@ internal static class PlaybackChecks
                 FfprobePath = Path.Combine(Path.GetDirectoryName(ffmpeg)!, "ffprobe.exe"),
                 CacheMode = "memory", MemoryBudgetMb = 512, CacheDirectory = cache,
                 SegmentType = kind, SeekLookaheadSeconds = 2, SeekCatchupSeconds = 0,
-                EnableNeuralRendering = advanced, EnableAutoHdr = advanced, EnableFrameInterpolation = advanced,
-                ContentProfile = advanced ? "animation" : "auto"
+                EnableAutoHdr = advanced, EnableFrameInterpolation = advanced
             };
             if (kind == "mpegts") { cfg.ProcessingWidth = 5120; cfg.ProcessingHeight = 2880; }
             if (advanced) { cfg.ProcessingWidth = 1280; cfg.ProcessingHeight = 720; cfg.StreamWidth = 640; cfg.StreamHeight = 360; }
             if (cropped) { cfg.ProcessingWidth = 1280; cfg.ProcessingHeight = 720; cfg.StreamWidth = 1280; cfg.StreamHeight = 720; }
             if (production)
             {
-                cfg.ContentProfile = "live_action";
                 cfg.ProcessingWidth = 5120; cfg.ProcessingHeight = 2880; cfg.StreamWidth = 3840; cfg.StreamHeight = 2160;
                 cfg.VsrQuality = "ULTRA"; cfg.VsrStrength = 1; cfg.VideoMbps = 40;
                 cfg.NvencPreset = "p7"; cfg.NvencTune = "hq"; cfg.NvencLookahead = 12; cfg.NvencCq = 1; cfg.NvencTemporalAq = true;
@@ -74,7 +72,7 @@ internal static class PlaybackChecks
                 new MediaBrowser.Model.Entities.MediaStream { Width = 640, Height = 480, AspectRatio = "4:3" },
                 cfg, logging.CreateLogger("Crop"), CancellationToken.None) : null;
             if (cropped) Check(crop == new StreamingCrop(0, 60, 640, 360, 1280, 720), "Playback fixture crop detection");
-            var token = sessions.Register(source, cfg, production ? "live_action" : advanced ? "animation" : "unknown", advanced, null, crop)!;
+            var token = sessions.Register(source, cfg, advanced, null, crop)!;
             var session = sessions.Find(token)!;
             var url = address + "/VsrEverywhere/hls/" + token + "/";
             var output = Path.Combine(AppContext.BaseDirectory, "checks", "playback-" + kind + "-" + Guid.NewGuid().ToString("N"));

@@ -13,9 +13,8 @@
 <hr>
 <h3>Features</h3>
 <div class="checkboxContainer"><label class="emby-checkbox-label"><input id="EnableVsr" type="checkbox" is="emby-checkbox"><span>VSR</span></label></div>
-<div class="checkboxContainer"><label class="emby-checkbox-label"><input id="EnableNeuralRendering" type="checkbox" is="emby-checkbox"><span>Veyra</span></label></div>
 <div class="checkboxContainer"><label class="emby-checkbox-label"><input id="EnableFrameInterpolation" type="checkbox" is="emby-checkbox"><span>Interpolation</span></label></div>
-<p class="fieldDescription">Veyra and interpolation currently require Windows.</p>
+<p class="fieldDescription">Interpolation currently requires Windows.</p>
 <h3>Processing and delivery resolution</h3>
 <div class="selectContainer"><label class="selectLabel" for="ProcessingResolution">VSR processing resolution</label><select id="ProcessingResolution" is="emby-select">
 <option value="1920x1080">1080p (1920 × 1080)</option>
@@ -35,7 +34,6 @@
 </select></div>
 <details><summary>Advanced settings</summary>
 <h3>Feature options</h3>
-<div class="selectContainer"><label class="selectLabel" for="ContentProfile">Content profile</label><select id="ContentProfile" is="emby-select"><option value="auto">Automatic (VSR for animation)</option><option value="animation">Animation (NR profile override)</option><option value="live_action">Live action</option></select></div>
 <div class="checkboxContainer"><label class="emby-checkbox-label"><input id="EnableAutoHdr" type="checkbox" is="emby-checkbox"><span>NVIDIA Auto HDR (HDR10 players)</span></label></div>
 <h3>VSR image enhancement</h3>
 <div class="selectContainer"><label class="selectLabel" for="VsrQuality">NVIDIA VSR processing mode</label><select id="VsrQuality" is="emby-select">
@@ -96,7 +94,7 @@
     const page = document.querySelector('#VsrEverywherePage');
     const status = page.querySelector('#VsrDevicesStatus');
     const list = page.querySelector('#VsrDevicesList');
-    const fields = ['Enabled','EnableVsr','EnableAllDevices','Backend','EnableNeuralRendering','ContentProfile','EnableAutoHdr','EnableFrameInterpolation','PythonPath','FfmpegPath','FfprobePath','CacheMode','MemoryBudgetMb','CacheDirectory','CacheMaxGb','CacheMinFreeGb','CacheIdleMinutes','EnableRollingCache','RollingRewindMinutes','VideoMbps','VsrQuality','VsrStrength','NvencPreset','NvencTune','NvencLookahead','NvencSpatialAq','NvencTemporalAq','NvencCq','SegmentType','MaxSessions','SessionMinutes'];
+    const fields = ['Enabled','EnableVsr','EnableAllDevices','Backend','EnableAutoHdr','EnableFrameInterpolation','PythonPath','FfmpegPath','FfprobePath','CacheMode','MemoryBudgetMb','CacheDirectory','CacheMaxGb','CacheMinFreeGb','CacheIdleMinutes','EnableRollingCache','RollingRewindMinutes','VideoMbps','VsrQuality','VsrStrength','NvencPreset','NvencTune','NvencLookahead','NvencSpatialAq','NvencTemporalAq','NvencCq','SegmentType','MaxSessions','SessionMinutes'];
     const resolutionFields = ['Processing', 'Stream'];
     let approvedIds = new Set();
     let retrievedDevices = [];
@@ -210,7 +208,7 @@
                 const control = page.querySelector('#' + key);
                 if (!control) continue;
                 if (control.type === 'checkbox') control.checked = !!(cfg[key] ?? (key === 'EnableFrameInterpolation' || key === 'EnableVsr'));
-                else control.value = cfg[key] ?? ({ CacheMode: 'memory', MemoryBudgetMb: 0, ContentProfile: 'auto' }[key] ?? '');
+                else control.value = cfg[key] ?? ({ CacheMode: 'memory', MemoryBudgetMb: 0 }[key] ?? '');
             }
             loadResolutions(cfg);
             effectiveMemoryBudgetMb = Number(cfg.EffectiveMemoryBudgetMb) || 0;

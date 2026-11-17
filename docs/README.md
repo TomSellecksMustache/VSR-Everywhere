@@ -3,7 +3,7 @@
 - [Windows setup](../INSTALL-WINDOWS.md)
 - [Linux server setup](../INSTALL-LINUX.md)
 - [Settings](configuration.md)
-- [Neural rendering, interpolation, and HDR](enhancements.md)
+- [Interpolation and HDR](enhancements.md)
 - [Image comparisons](comparisons.md)
 - [Troubleshooting and removal](troubleshooting.md)
 - [Building and testing](development.md)

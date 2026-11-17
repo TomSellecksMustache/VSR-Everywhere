@@ -96,10 +96,10 @@ class LinuxSetupChecks(unittest.TestCase):
     def test_fresh_startup(self):
         stamp = '2026-11-13 13:00:00.000 +00:00'
         since = setup.datetime(2026, 11, 13, 12, 59, 59, tzinfo=setup.timezone.utc).timestamp()
-        line = f'[{stamp}] [INF] Loaded plugin: "VSR Everywhere" "1.3.1.0"'
+        line = f'[{stamp}] [INF] Loaded plugin: "VSR Everywhere" "1.4.0.0"'
         self.assertTrue(setup.fresh_log_loaded(line, since))
         self.assertFalse(setup.fresh_log_loaded(line, since + 2))
-        self.assertFalse(setup.fresh_log_loaded(line.replace('1.3.1.0', '1.3.1.1'), since))
+        self.assertFalse(setup.fresh_log_loaded(line.replace('1.4.0.0', '1.4.0.1'), since))
         self.assertFalse(setup.fresh_log_loaded(line.replace(stamp, '13:00:00'), since))
 
     def test_transaction_success(self):
@@ -190,7 +190,7 @@ class LinuxSetupChecks(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             logs = Path(temporary)
             stamp = setup.datetime.now(setup.timezone.utc)
-            (logs / 'log_today.log').write_text(f'[{stamp.isoformat()}] [INF] Loaded plugin: "VSR Everywhere" "1.3.1.0"\n')
+            (logs / 'log_today.log').write_text(f'[{stamp.isoformat()}] [INF] Loaded plugin: "VSR Everywhere" "1.4.0.0"\n')
             with mock.patch.object(setup, 'run', side_effect=RuntimeError('Journal disabled')):
                 setup.wait_loaded('jellyfin.service', logs, stamp.timestamp() - 1)
 

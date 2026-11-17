@@ -72,10 +72,10 @@ public sealed class BridgeSessions : IDisposable
         foreach (var session in _active.Values) session.Dispose();
         _active.Clear();
     }
-    public string? Register(string source, PluginConfiguration cfg, string contentProfile = "unknown", bool hdr = false, int? maxVideoMbps = null)
-        => Register(source, cfg, contentProfile, hdr, maxVideoMbps, null);
+    public string? Register(string source, PluginConfiguration cfg, bool hdr = false, int? maxVideoMbps = null)
+        => Register(source, cfg, hdr, maxVideoMbps, null);
 
-    internal string? Register(string source, PluginConfiguration cfg, string contentProfile, bool hdr, int? maxVideoMbps, StreamingCrop? crop)
+    internal string? Register(string source, PluginConfiguration cfg, bool hdr, int? maxVideoMbps, StreamingCrop? crop)
     {
         foreach (var (key, old) in _active)
         {
@@ -104,7 +104,7 @@ public sealed class BridgeSessions : IDisposable
         var memoryBudget = cfg.CacheMode == "disk" ? 0 : VsrMemoryBudget.Calculate(cfg.MemoryBudgetMb, VsrMemoryBudget.Available());
         if (memoryBudget > 0 && _memory.Register(token, memoryBudget, onDemand: true))
         {
-            var memorySession = new BridgeSession(token, source, "", cfg, _logger, _memory, contentProfile, hdr, maxVideoMbps, crop);
+            var memorySession = new BridgeSession(token, source, "", cfg, _logger, _memory, hdr, maxVideoMbps, crop);
             if (_active.TryAdd(token, memorySession))
             {
                 _logger.LogInformation("VSR Everywhere cache mode=memory global budget={BudgetMb} MB", _memory.BudgetBytes / VsrMemoryBudget.MiB);
@@ -142,7 +142,7 @@ public sealed class BridgeSessions : IDisposable
         // Cache root was already validated above.
         var root = Path.Combine(Path.GetFullPath(cacheRoot), token);
         // All worker outputs are generated in the token-specific cache, never beside the media file.
-        var session = new BridgeSession(token, source, root, cfg, _logger, null, contentProfile, hdr, maxVideoMbps, crop);
+        var session = new BridgeSession(token, source, root, cfg, _logger, null, hdr, maxVideoMbps, crop);
         _logger.LogInformation("VSR Everywhere cache mode=disk");
         return _active.TryAdd(token, session) ? token : null;
     }
@@ -151,9 +151,7 @@ public sealed class BridgeSessions : IDisposable
 public sealed partial class BridgeSession : IDisposable
 {
     private readonly PluginConfiguration _cfg;
-    private readonly string _contentProfile;
     private readonly bool _hdr;
-    private readonly bool _neuralRendering;
     private readonly int _videoMbps;
     private readonly StreamingCrop? _crop;
     private readonly ILogger _logger;
@@ -179,15 +177,13 @@ public sealed partial class BridgeSession : IDisposable
     public BridgeSession(string token, string source, string root, PluginConfiguration cfg, ILogger logger)
         : this(token, source, root, cfg, logger, null) { }
     internal BridgeSession(string token, string source, string root, PluginConfiguration cfg, ILogger logger, MemoryHlsStore? memory,
-        string contentProfile = "unknown", bool hdr = false, int? maxVideoMbps = null, StreamingCrop? crop = null)
+        bool hdr = false, int? maxVideoMbps = null, StreamingCrop? crop = null)
     {
         Token = token;
         Source = source;
         Root = root;
         _cfg = cfg;
         _crop = crop;
-        _contentProfile = contentProfile is "animation" or "live_action" ? contentProfile : "unknown";
-        _neuralRendering = OperatingSystem.IsWindows() && EnhancementProfiles.UseNeuralRendering(cfg.EnableNeuralRendering, cfg.ContentProfile, _contentProfile);
         _hdr = hdr && cfg.EnableAutoHdr;
         _videoMbps = Math.Min(Math.Clamp(cfg.VideoMbps, 4, 60), Math.Clamp(maxVideoMbps ?? 60, 4, 60));
         _logger = logger;
@@ -287,15 +283,12 @@ public sealed partial class BridgeSession : IDisposable
             if (_cfg.NvencSpatialAq) psi.ArgumentList.Add("--nvenc-spatial-aq");
             if (!_cfg.EnableVsr) psi.ArgumentList.Add("--no-vsr");
             if (_cfg.NvencTemporalAq) psi.ArgumentList.Add("--nvenc-temporal-aq");
-            if (_neuralRendering) psi.ArgumentList.Add("--neural-rendering");
-            psi.ArgumentList.Add("--content-profile");
-            psi.ArgumentList.Add(_contentProfile);
             if (_cfg.EnableFrameInterpolation) psi.ArgumentList.Add("--frame-interpolation");
             if (_hdr) psi.ArgumentList.Add("--auto-hdr");
             _logger.LogInformation("VSR Everywhere profile quality={Quality} strength={Strength} preset={Preset} tune={Tune} " +
-                "lookahead={Lookahead} spatialAQ={SpatialAq} temporalAQ={TemporalAq} cq={CQ} bitrate={Mbps} nr={NeuralRendering} content={ContentProfile}",
+                "lookahead={Lookahead} spatialAQ={SpatialAq} temporalAQ={TemporalAq} cq={CQ} bitrate={Mbps}",
                 vsrQuality, vsrStrength, preset, tune, lookahead, _cfg.NvencSpatialAq,
-                _cfg.NvencTemporalAq, cq, _videoMbps, _neuralRendering, _contentProfile);
+                _cfg.NvencTemporalAq, cq, _videoMbps);
 
             try
             {

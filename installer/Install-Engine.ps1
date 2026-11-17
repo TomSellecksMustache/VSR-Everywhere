@@ -13,7 +13,7 @@ try {
     if (-not (Test-SetupAdministrator)) { throw 'Run setup as administrator.' }
     $plan = Get-Content -LiteralPath (Join-Path $JobPath 'plan.json') -Raw | ConvertFrom-Json
     $manifest = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'downloads.lock.json') -Raw | ConvertFrom-Json
-    if ($plan.Product -ne 'VSR Everywhere' -or $plan.Version -ne '1.3.1') { throw 'The setup plan does not match this release.' }
+    if ($plan.Product -ne 'VSR Everywhere' -or $plan.Version -ne '1.4.0') { throw 'The setup plan does not match this release.' }
     if (-not [Environment]::Is64BitOperatingSystem -or $env:PROCESSOR_ARCHITECTURE -eq 'ARM64') { throw 'This release requires Windows 10 or 11 on an x64 computer.' }
     Write-SetupStatus $JobPath 'prepare' 'Checking Jellyfin and NVIDIA hardware...' 2
     $target = Get-JellyfinTarget -DataPath $plan.DataPath -ServerPath $plan.ServerPath
@@ -33,7 +33,7 @@ try {
     $downloads = Join-Path $root 'downloads'
     $manifestPath = Join-Path $PSScriptRoot 'downloads.lock.json'
     $lockHash = (Get-FileHash -LiteralPath $manifestPath -Algorithm SHA256).Hash.ToLowerInvariant()
-    $runtime = Join-Path $root ('runtimes\1.3.1-' + $lockHash.Substring(0, 12))
+    $runtime = Join-Path $root ('runtimes\1.4.0-' + $lockHash.Substring(0, 12))
     $marker = Join-Path $runtime 'vsr-runtime.json'
     $reuse = $false
     if (Test-Path -LiteralPath $marker) {
@@ -94,22 +94,12 @@ try {
     $python = Join-Path $runtime 'python.exe'
     $ffmpeg = Join-Path $encoder 'ffmpeg.exe'; $ffprobe = Join-Path $encoder 'ffprobe.exe'
     $configuration = New-PluginConfiguration $snapshot.Config $python $ffmpeg $ffprobe $cache ([bool]$plan.AllDevices)
-    Write-SetupStatus $JobPath 'download' 'Downloading Veyra experimental neural-rendering runtime...' 69
-    $null = Get-VerifiedDownload $manifest.veyra $downloads $JobPath
-    $veyra = Join-Path $runtime 'veyra'
-    $prepareArgs = @((Join-Path $PSScriptRoot 'prepare_veyra.py'), '--manifest', $manifestPath, '--downloads', $downloads,
-        '--target', $veyra, '--component', (Join-Path $payload 'worker\veyra'))
-    if ((Invoke-SetupProcess $python $prepareArgs $JobPath 600) -ne 0) { throw 'Veyra could not be prepared. Jellyfin has not been changed. See the setup log.' }
-    Grant-SetupAccess $veyra $account 'RX'
-    Grant-SetupAccess (Join-Path $veyra 'runtime_local') $account 'M'
     Write-SetupStatus $JobPath 'test' 'Testing NVIDIA VSR, HEVC video, and audio...' 74
     $testArgs = @((Join-Path $PSScriptRoot 'Test-Runtime.py'), '--worker', (Join-Path $payload 'worker\vsr_everywhere.py'),
         '--ffmpeg', $ffmpeg, '--ffprobe', $ffprobe, '--report', (Join-Path $JobPath 'runtime-test.json'),
         '--quality', (Get-XmlValue $configuration 'VsrQuality'),
         '--processing-width', (Get-XmlValue $configuration 'ProcessingWidth'), '--processing-height', (Get-XmlValue $configuration 'ProcessingHeight'),
         '--stream-width', (Get-XmlValue $configuration 'StreamWidth'), '--stream-height', (Get-XmlValue $configuration 'StreamHeight'))
-    $testArgs += @('--veyra-filter', (Join-Path $veyra 'VsrVeyraFilter.exe'))
-    if ((Get-XmlValue $configuration 'EnableNeuralRendering') -eq 'true') { $testArgs += '--neural-rendering' }
     if ((Get-XmlValue $configuration 'EnableVsr' 'true') -eq 'false') { $testArgs += '--no-vsr' }
     if ((Get-XmlValue $configuration 'EnableAutoHdr') -eq 'true') { $testArgs += '--auto-hdr' }
     if ((Get-XmlValue $configuration 'EnableFrameInterpolation' 'true') -eq 'true') { $testArgs += '--frame-interpolation' }
@@ -136,7 +126,7 @@ try {
     $null = Install-VsrPluginFiles $target.DataPath $payload $backup $configuration $verify
     $installed = $true; $stopped = $false
     $result.Success = $true; $result.Restarted = $true
-    $result.Message = 'VSR Everywhere 1.3.1 is installed, tested, and loaded by Jellyfin.'
+    $result.Message = 'VSR Everywhere 1.4.0 is installed, tested, and loaded by Jellyfin.'
     Write-SetupStatus $JobPath 'done' $result.Message 100
 } catch [OperationCanceledException] {
     $result.Cancelled = $true; $result.Message = $_.Exception.Message

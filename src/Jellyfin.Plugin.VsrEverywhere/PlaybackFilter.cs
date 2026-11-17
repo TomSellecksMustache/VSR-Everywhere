@@ -1,7 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
 using MediaBrowser.Controller.Net;
-using MediaBrowser.Controller.Library;
-using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Model.Dlna;
 using Jellyfin.Data.Enums;
 using MediaBrowser.Model.Dto;
@@ -138,26 +136,6 @@ public sealed class PlaybackFilter : IAsyncActionFilter
                 _logger.LogWarning("VsrEverywhere TRACE source rejected: unsupported dimensions, bit depth, or HDR input");
                 continue;
             }
-            var profile = "unknown";
-            try
-            {
-                var itemValue = context.ActionArguments.FirstOrDefault(pair => pair.Key.Equals("itemId", StringComparison.OrdinalIgnoreCase)).Value
-                    ?? context.RouteData.Values["itemId"];
-                if (Guid.TryParse(itemValue?.ToString(), out var itemId))
-                {
-                    var item = context.HttpContext.RequestServices.GetRequiredService<ILibraryManager>().GetItemById(itemId);
-                    var series = (item as Episode)?.Series;
-                    var labels = (item?.Genres ?? []).Concat(item?.Tags ?? [])
-                        .Concat(series?.Genres ?? []).Concat(series?.Tags ?? []);
-                    profile = EnhancementProfiles.Classify(cfg.ContentProfile, item?.Name ?? series?.Name, labels);
-                }
-                else profile = EnhancementProfiles.Classify(cfg.ContentProfile, null, []);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning("VSR Everywhere content metadata unavailable: {ExceptionType}", ex.GetType().Name);
-                profile = EnhancementProfiles.Classify(cfg.ContentProfile, null, []);
-            }
             var deviceProfile = context.ActionArguments.Values.Where(value => value is not null)
                 .Select(value => value!.GetType().GetProperty("DeviceProfile")?.GetValue(value)).OfType<DeviceProfile>().FirstOrDefault();
             var profileSource = deviceProfile is null ? "registered device" : "playback request";
@@ -165,15 +143,14 @@ public sealed class PlaybackFilter : IAsyncActionFilter
                 .GetCapabilities(registeredDeviceId)?.DeviceProfile;
             var supportsHdr = EnhancementProfiles.SupportsHdr10(deviceProfile);
             var hdr = cfg.EnableAutoHdr && supportsHdr;
-            if (!cfg.EnableVsr && !(OperatingSystem.IsWindows() && EnhancementProfiles.UseNeuralRendering(cfg.EnableNeuralRendering, cfg.ContentProfile, profile))
-                && !cfg.EnableFrameInterpolation && !hdr) continue;
+            if (!cfg.EnableVsr && !cfg.EnableFrameInterpolation && !hdr) continue;
             _logger.LogInformation("VSR Everywhere HDR requested={Requested} clientHdr10={ClientHdr10} profile={ProfileSource} output={Range}",
                 cfg.EnableAutoHdr, supportsHdr, deviceProfile is null ? "missing" : profileSource, hdr ? "HDR10" : "SDR");
             var videoMbps = EnhancementProfiles.DeliveryMbps(cfg.VideoMbps, registeredAppName);
             if (videoMbps != cfg.VideoMbps)
                 _logger.LogInformation("VSR Everywhere delivery bitrate limited to {Mbps} Mbps for this client", videoMbps);
             var crop = await StreamingCrop.Detect(source.Path, v, cfg, _logger, context.HttpContext.RequestAborted).ConfigureAwait(false);
-            var token = _sessions.Register(source.Path, cfg, profile, hdr, videoMbps, crop);
+            var token = _sessions.Register(source.Path, cfg, hdr, videoMbps, crop);
             if (token is null)
             {
                 _logger.LogWarning("VsrEverywhere TRACE source rejected: session registry unavailable");

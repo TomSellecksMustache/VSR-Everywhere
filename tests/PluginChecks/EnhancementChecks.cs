@@ -6,18 +6,6 @@ internal static class EnhancementChecks
     internal static void Run()
     {
         static void Check(bool value) { if (!value) throw new Exception("Enhancement profile check failed"); }
-        Check(EnhancementProfiles.Classify("auto", "Avatar", ["Animation", "Fantasy"]) == "animation");
-        Check(EnhancementProfiles.Classify("auto", "Avatar", ["Science Fiction"]) == "live_action");
-        Check(EnhancementProfiles.Classify("auto", "Unknown title", []) == "unknown");
-        Check(EnhancementProfiles.Classify("animation", "Any title", ["Drama"]) == "animation");
-        Check(EnhancementProfiles.Classify("live_action", "Any title", ["Anime"]) == "live_action");
-        Check(!EnhancementProfiles.UseNeuralRendering(true, "auto", "animation"));
-        Check(EnhancementProfiles.UseNeuralRendering(true, "auto", "live_action"));
-        Check(EnhancementProfiles.UseNeuralRendering(true, "auto", "unknown"));
-        Check(EnhancementProfiles.UseNeuralRendering(true, "animation", "animation"));
-        Check(EnhancementProfiles.UseNeuralRendering(true, "live_action", "live_action"));
-        Check(!EnhancementProfiles.UseNeuralRendering(false, "live_action", "live_action"));
-        Check(!EnhancementProfiles.UseNeuralRendering(true, "invalid", "animation"));
         Check(!EnhancementProfiles.SupportsHdr10(null));
         Check(EnhancementProfiles.DeliveryMbps(60, "Jellyfin Roku") == 40);
         Check(EnhancementProfiles.DeliveryMbps(18, "Roku") == 18);
@@ -32,6 +20,6 @@ internal static class EnhancementChecks
         range.Condition = ProfileConditionType.Equals;
         profile.CodecProfiles[0].Codec = "h264";
         Check(!EnhancementProfiles.SupportsHdr10(profile));
-        Console.WriteLine("PASS: content profiles, overrides, unknown titles, and explicit HDR10 capability checks.");
+        Console.WriteLine("PASS: delivery bitrate limits and explicit HDR10 capability checks.");
     }
 }

@@ -6,27 +6,24 @@
 | --- | --- |
 | `src/Jellyfin.Plugin.VsrEverywhere/` | Jellyfin integration, settings, sessions, HLS endpoints, and memory cache. |
 | `worker/` | Video processing, encoding, startup, and interpolation. |
-| `native/veyra/` | The separate Windows Veyra filter. |
 | `installer/` | Windows and Linux setup code and dependency locks. |
 | `tests/` | Worker, settings, cache, and playback checks. |
 | `tools/` | Package builders and comparison tools. |
 | `dist/` | Generated release files, excluded from Git. |
 
-The direct path is decode/upload, optional NR, VSR, resize/color conversion, optional HDR/interpolation, NVENC, then HLS with AAC audio. Linux omits the Windows enhancement stages. Lookahead above 0 uses FFmpeg encoding with frame transfers through RAM. Compressed HLS segments use the shared RAM cache or disk fallback.
-
-Veyra is a separate process. It retains model state across frames and resets history on seeks. The worker corrects its sRGB output to BT.709 before VSR. See [enhancements](enhancements.md) for the playback behavior.
+The direct path is decode/upload, VSR, resize/color conversion, optional HDR/interpolation, NVENC, then HLS with AAC audio. Linux omits the Windows enhancement stages. Lookahead above 0 uses FFmpeg encoding with frame transfers through RAM. Compressed HLS segments use the shared RAM cache or disk fallback.
 
 ## Windows build
 
-Use Windows x64, .NET 10 SDK (the plugin targets .NET 8), Visual Studio 2022 C++ Build Tools, CMake 3.24+, a Windows SDK with DXC, Git, and internet access.
+Use Windows x64, .NET 10 SDK (the plugin targets .NET 8), Git and internet access.
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Build-Installer.ps1
 ```
 
-This builds the plugin, Veyra component, EXE, Windows ZIP, PowerShell entry point, plugin ZIP, and source ZIP in `dist/`. It does not install anything into Jellyfin. `Build-Windows.ps1` builds only the plugin package. `Build-Installer.ps1 -SkipPluginBuild` reuses the plugin output, so only use it after building the current plugin.
+This builds the plugin, EXE, Windows ZIP, PowerShell entry point, plugin ZIP, and source ZIP in `dist/`. It does not install anything into Jellyfin. `Build-Windows.ps1` builds only the plugin package. `Build-Installer.ps1 -SkipPluginBuild` reuses the plugin output, so only use it after building the current plugin.
 
-The dependency lock is `installer/downloads.lock.json`. `Build-Veyra.ps1` pins the upstream source and SDKs, checks downloads, and includes the GPL license and corresponding source with the native filter. [Native build details](../native/veyra/README.md).
+The Windows dependency lock is `installer/downloads.lock.json`.
 
 ## Linux build
 
@@ -37,7 +34,7 @@ python3 tools/build_linux.py
 python3 installer/linux/test_package.py
 ```
 
-The output is a terminal installer, a tarball with the same installer and guides, and checksums in `dist/`. The Linux build does not need the Windows native filter.
+The output is a terminal installer, a tarball with the same installer and guides, and checksums in `dist/`.
 
 ## Checks
 

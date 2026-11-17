@@ -4,16 +4,15 @@ NVIDIA Video Super Resolution for Jellyfin servers.
 
 This plugin processes video on your server and sends the result to your Jellyfin player. Your original files stay as they are. The player needs to support the stream you choose, but it does not need its own AI upscaler.
 
-[**Download the Windows installer — 1.3.1**](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/download/v1.3.1/VSR-Everywhere-1.3.1-Setup.exe) · [All downloads](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/tag/v1.3.1)
+[**Download the Windows installer — 1.4.0**](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/download/v1.4.0/VSR-Everywhere-1.4.0-Setup.exe) · [All downloads](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/tag/v1.4.0)
 
-**Linux:** [Download the server installer](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/download/v1.3.1/Install-VSREverywhere-1.3.1-Linux.sh) · [Linux setup](INSTALL-LINUX.md)
+**Linux:** [Download the server installer](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/download/v1.4.0/Install-VSREverywhere-1.4.0-Linux.sh) · [Linux setup](INSTALL-LINUX.md)
 
 ## What it does
 
 - Upscales eligible video with NVIDIA VSR.
 - Lets you choose processing and stream resolutions separately, from 1080p to 8K.
 - Crops stable black bars from the stream and fits output to the picture's aspect ratio.
-- Adds optional Veyra neural rendering on Windows. Automatic mode uses plain VSR for animation and NR+VSR for live action.
 - Uses interpolation to help processing keep up. The delivered frame rate still matches the source.
 - Keeps working frames in GPU memory and encoded stream segments in RAM, with disk fallback.
 - Lets you enable it for all devices or select individual Jellyfin devices.
@@ -24,9 +23,8 @@ This plugin processes video on your server and sends the result to your Jellyfin
 - The input path accepts 8-bit or 10-bit SDR video up to 1080p. Other sources use normal Jellyfin playback.
 - It does not turn a low-quality source into a perfect one. Strong settings can change texture or introduce artifacts.
 - It does not guarantee real-time playback at every resolution or on every GPU.
-- It does not provide NVIDIA's official DLSS 5 game integration. The neural-rendering option uses Veyra's experimental community runtime.
 - Auto HDR is experimental, off by default, and does not reliably activate HDR on players yet.
-- Linux has plain VSR. Neural rendering, Auto HDR, and interpolation are Windows features.
+- Linux has plain VSR. Auto HDR and interpolation are Windows features.
 
 ## Install
 
@@ -42,17 +40,17 @@ Start with the default settings. Higher processing resolutions and stronger qual
 
 ## See the difference
 
-**Original (Lanczos) / VSR / NR+VSR**, using the same source frame and crop in each column.
+**Original (Lanczos) / VSR**, using the same source frame and crop on each side.
 
 ### Animation
 
-![The Venture Bros. — Original (Lanczos), VSR, and NR+VSR](docs/assets/comparisons/dlss/venture-bros-scene-1-detail.webp)
+![The Venture Bros. — Original (Lanczos) and VSR](docs/assets/comparisons/venture-bros-scene-1-detail.webp)
 
 ### Live action
 
-![Doctor Who — Original (Lanczos), VSR, and NR+VSR](docs/assets/comparisons/dlss/doctor-who-scene-2-detail.webp)
+![Doctor Who — Original (Lanczos) and VSR](docs/assets/comparisons/doctor-who-scene-2-detail.webp)
 
-These use ULTRA, strength 1, 5K processing, and 4K output. HDR and interpolation are off. NR is forced on in the third column for comparison; automatic animation playback uses plain VSR. Open the images to see the full-size crops.
+These use ULTRA, strength 1, 5K processing, and 4K output. HDR and interpolation are off. Open the images to see the full-size crops.
 
 [All eight comparisons and how they were made](docs/comparisons.md)
 
@@ -66,4 +64,4 @@ The separate [testing build](https://github.com/TomSellecksMustache/VSR-Everywhe
 
 [Documentation](docs/README.md) · [Enhancements](docs/enhancements.md) · [Build from source](docs/development.md) · [Changelog](CHANGELOG.md)
 
-Project code is [MIT licensed](LICENSE). Veyra is a separate GPL component. Other dependencies keep their own licenses; see [third-party notices](THIRD_PARTY_NOTICES.md). Sample footage belongs to its respective rights holders.
+Project code is [MIT licensed](LICENSE). Other dependencies keep their own licenses; see [third-party notices](THIRD_PARTY_NOTICES.md). Sample footage belongs to its respective rights holders.

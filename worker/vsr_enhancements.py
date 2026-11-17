@@ -1,87 +1,5 @@
-"""Optional resident Veyra NR, NVIDIA HDR, and fractional frame interpolation."""
-from concurrent.futures import ThreadPoolExecutor, TimeoutError
-from pathlib import Path
-import json
-import os
-import struct
-import subprocess
-import tempfile
+"""Resident NVIDIA HDR and fractional frame interpolation."""
 import time
-
-from vsr_threaded import write_all
-
-
-def read_exact(pipe, size):
-    result = bytearray()
-    while len(result) < size:
-        part = pipe.read(size - len(result))
-        if not part:
-            raise RuntimeError('Veyra filter closed its output pipe')
-        result.extend(part)
-    return result
-
-
-class VeyraFilter:
-    def __init__(self, width, height, profile, executable):
-        if os.name != 'nt':
-            raise RuntimeError('Veyra neural rendering requires Windows and DirectX 12')
-        self.width, self.height = width, height
-        self.reset = True
-        self.log = tempfile.TemporaryFile()
-        self.reader = ThreadPoolExecutor(max_workers=1, thread_name_prefix='veyra-read')
-        self.proc = None
-        try:
-            executable = Path(executable).resolve(strict=True)
-            self.proc = subprocess.Popen([str(executable), str(width), str(height), profile],
-                                         cwd=executable.parent, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                                         stderr=self.log, bufsize=0, creationflags=0x08000000)
-            ready = self._read(lambda: json.loads(self.proc.stdout.readline(4096)), 120)
-            if ready != {'event': 'ready', 'format': 'rgba8-srgb'}:
-                raise RuntimeError('Unexpected Veyra filter handshake')
-        except BaseException:
-            self.close()
-            raise
-
-    def _read(self, action, timeout=60):
-        try:
-            return self.reader.submit(action).result(timeout=timeout)
-        except (TimeoutError, RuntimeError, ValueError) as exc:
-            self.log.seek(0)
-            detail = self.log.read()[-2000:].decode(errors='replace')
-            raise RuntimeError('Veyra filter failed or timed out: ' + detail) from exc
-
-    def run(self, frame, slot, fps):
-        import numpy as np
-        # The native ingress contract is limited-range BT.709 NV12.
-        nv12 = frame.reformat(format='nv12', dst_colorspace='ITU709').to_ndarray()
-        payload = np.ascontiguousarray(nv12).tobytes()
-        if len(payload) != self.width * self.height * 3 // 2:
-            raise RuntimeError('Unexpected Veyra NV12 frame size')
-        header = struct.pack('<IIIId', 0x56535246, len(payload), int(self.reset), slot, float(slot / fps * 1000))
-        write_all(self.proc.stdin, header)
-        write_all(self.proc.stdin, payload)
-        self.reset = False
-
-        def receive():
-            magic, size = struct.unpack('<II', read_exact(self.proc.stdout, 8))
-            if magic != 0x56535252 or size != self.width * self.height * 4:
-                raise RuntimeError('Invalid Veyra output frame header')
-            return read_exact(self.proc.stdout, size)
-
-        data = self._read(receive)
-        return np.frombuffer(data, dtype=np.uint8).reshape(self.height, self.width, 4)[..., :3].copy()
-
-    def close(self):
-        if self.proc is not None:
-            if self.proc.poll() is None:
-                self.proc.kill()
-            self.proc.wait(timeout=10)
-            for pipe in (self.proc.stdin, self.proc.stdout):
-                if pipe is not None:
-                    pipe.close()
-            self.proc = None
-        self.reader.shutdown(wait=True, cancel_futures=True)
-        self.log.close()
 
 
 def unpack_hdr(packed):
@@ -92,20 +10,18 @@ def unpack_hdr(packed):
 
 
 class Enhancements:
-    def __init__(self, args, width, height, source_fps):
-        self.nr = self.hdr = self.interpolator = None
+    def __init__(self, args, source_fps):
+        self.hdr = self.interpolator = None
         self.args = args
         self.cache = {}
         self.generated = 0
-        self.stride = 2 if args.frame_interpolation and args.neural_rendering else 1
+        self.stride = 1
         self.fps = float(source_fps)
         self.anchor_ms = self.base_ms = 0
         self.generation_ms = self.generated_ms = 0
         self.outputs = 0
         self.render_ms = 0
         try:
-            if args.neural_rendering:
-                self.nr = VeyraFilter(width, height, args.content_profile, args.veyra_filter)
             if args.auto_hdr:
                 from nvvfx import TrueHDR
                 self.hdr = TrueHDR(luminance=1000)
@@ -125,28 +41,17 @@ class Enhancements:
     def reset(self):
         self.cache.clear()
         self.generated = 0
-        if self.nr:
-            self.nr.reset = True
 
-    def render(self, frame, slot, fps, effect, sar, stream_ptr, stats):
+    def render(self, frame, slot, effect, sar, stream_ptr, stats):
         import torch
         from vsr_gpu import fit_rgb
         if slot in self.cache:
             return self.cache[slot]
         started = time.perf_counter()
-        if self.nr:
-            with stats.cpu('neural_rendering'):
-                rgb = self.nr.run(frame, slot, fps)
-                maximum = 255
-        else:
-            from vsr_colour import frame_rgb
-            rgb, maximum = frame_rgb(frame)
+        from vsr_colour import frame_rgb
+        rgb, maximum = frame_rgb(frame)
         with stats.gpu('upload', torch):
             tensor = torch.from_numpy(rgb).to('cuda:0').permute(2, 0, 1).float().div_(maximum).contiguous()
-        if self.nr:
-            from vsr_colour import srgb_to_bt709
-            with stats.gpu('nr_colour', torch):
-                tensor = srgb_to_bt709(tensor)
         with stats.gpu('vsr', torch):
             enhanced = torch.from_dlpack(effect.run(tensor, stream_ptr=stream_ptr).image).clone() if effect is not None else tensor
             enhanced = fit_rgb(enhanced, self.args.stream_width, self.args.stream_height, sar).clamp_(0, 1).contiguous()
@@ -167,12 +72,12 @@ class Enhancements:
         for key in list(self.cache):
             if key not in (a, b):
                 del self.cache[key]
-        previous = self.render(left, a, fps, effect, sar, stream_ptr, stats)
+        previous = self.render(left, a, effect, sar, stream_ptr, stats)
         result = previous
         if alpha:
             if self.interpolator is None:
                 raise RuntimeError('Requested interpolation was not initialized')
-            current = self.render(right, b, fps, effect, sar, stream_ptr, stats)
+            current = self.render(right, b, effect, sar, stream_ptr, stats)
             started = time.perf_counter()
             with stats.gpu('frame_generation', torch):
                 result = torch.from_dlpack(self.interpolator.run_at_timestep(
@@ -200,7 +105,7 @@ class Enhancements:
 
     def close(self):
         self.cache.clear()
-        for name in ('interpolator', 'hdr', 'nr'):
+        for name in ('interpolator', 'hdr'):
             resource = getattr(self, name)
             if resource is not None:
                 resource.close()

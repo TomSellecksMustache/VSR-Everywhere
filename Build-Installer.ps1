@@ -8,13 +8,13 @@ $OutputDirectory = [IO.Path]::GetFullPath($OutputDirectory)
 $allowedRoot = [IO.Path]::GetFullPath((Join-Path $root 'dist')).TrimEnd('\')
 if ($OutputDirectory -ne $allowedRoot -and -not $OutputDirectory.StartsWith($allowedRoot + '\', [StringComparison]::OrdinalIgnoreCase)) { throw 'Build output must stay inside this project dist folder.' }
 if (-not $SkipPluginBuild) { & (Join-Path $root 'Build-Windows.ps1') -OutputDirectory $OutputDirectory; if ($LASTEXITCODE -ne 0) { throw 'Plugin build failed.' } }
-$version = '1.3.1'
+$version = '1.4.0'
 $source = Join-Path $root 'installer'
 $build = Join-Path $source ('build\release-' + [Guid]::NewGuid().ToString('N'))
 $null = New-Item -ItemType Directory -Force -Path $build
 $payload = Join-Path $build 'payload'
 $null = New-Item -ItemType Directory -Force -Path $payload
-foreach ($name in @('Installer.Core.psm1', 'Install-Engine.ps1', 'SetupWizard.ps1', 'vendor_runtime.py', 'prepare_veyra.py', 'Test-Runtime.py', 'downloads.lock.json')) {
+foreach ($name in @('Installer.Core.psm1', 'Install-Engine.ps1', 'SetupWizard.ps1', 'vendor_runtime.py', 'Test-Runtime.py', 'downloads.lock.json')) {
     Copy-Item -LiteralPath (Join-Path $source $name) -Destination (Join-Path $payload $name)
 }
 foreach ($name in @('INSTALL-WINDOWS.md', 'THIRD_PARTY_NOTICES.md', 'LICENSE')) { Copy-Item -LiteralPath (Join-Path $root $name) -Destination (Join-Path $payload $name) }
@@ -54,7 +54,7 @@ $stream = [IO.File]::Create($sourceZip)
 $archive = New-Object IO.Compression.ZipArchive($stream, [IO.Compression.ZipArchiveMode]::Create)
 try {
     $files = @(Get-ChildItem -LiteralPath $root -File | Where-Object { $_.Name -notlike 'HANDOFF-*' -and ($_.Extension -in @('.ps1', '.md') -or $_.Name -in @('NuGet.Config', '.gitignore', 'LICENSE')) })
-    foreach ($folder in @('src', 'worker', 'tests', 'installer', 'tools', 'docs', 'native')) {
+    foreach ($folder in @('src', 'worker', 'tests', 'installer', 'tools', 'docs')) {
         $files += @(Get-ChildItem -LiteralPath (Join-Path $root $folder) -File -Recurse | Where-Object {
             $_.FullName -notmatch '[\\/](bin|obj|build|work|__pycache__|jobs)[\\/]' -and
             ($_.Extension -in @('.cs', '.csproj', '.html', '.py', '.cpp', '.h', '.cmake', '.patch', '.txt', '.cjs', '.ps1', '.psm1', '.in', '.json', '.manifest', '.md', '.webp') -or $_.Name -eq 'LICENSE')

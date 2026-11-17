@@ -84,7 +84,7 @@ internal static class CropChecks
             {
                 CacheMode = memory ? "memory" : "disk", PythonPath = python,
                 ProcessingWidth = 5120, ProcessingHeight = 2880, StreamWidth = 7680, StreamHeight = 4320,
-                EnableNeuralRendering = false, EnableAutoHdr = false, EnableFrameInterpolation = false,
+                EnableAutoHdr = false, EnableFrameInterpolation = false,
                 EnabledDeviceIds = ["retained-device"], SegmentType = "mpegts",
             };
             var saved = Snapshot(configuration);

@@ -1,16 +1,6 @@
-# Neural rendering, interpolation, and HDR
+# Interpolation and HDR
 
-These features are included in the Windows build. Linux uses the existing VSR path.
-
-## Neural rendering
-
-The optional NR stage uses [Veyra-NRVideo](https://github.com/Likely7/Veyra-NRVideo) before NVIDIA VSR. It uses Veyra's experimental community runtime, including its compatibility path for RTX 30/40 hardware. It is not NVIDIA's official DLSS 5 game integration.
-
-Automatic mode reads the current title's Jellyfin metadata, including genres and tags. Animation uses plain VSR, which tends to preserve flat colors and outlines better. Live action uses NR+VSR when NR is enabled. Unknown titles use the conservative NR profile. There is no external title lookup or AI-service call.
-
-The Animation and Live action overrides force their NR profile when NR is enabled. Add an Animation genre or tag in Jellyfin if automatic selection misses a title. Disabling NR leaves plain VSR.
-
-NR returns sRGB pixels. The worker converts them back to BT.709 before VSR so shadows and colors stay consistent with the video path. This follows the [sRGB](https://www.w3.org/Graphics/Color/srgb) and [BT.709](https://registry.color.org/rgb-registry/bt709) transfer functions; it does not add a saturation or contrast filter.
+These optional features are included in the Windows build. Linux uses the existing VSR path.
 
 ## Interpolation
 
@@ -34,7 +24,7 @@ The server can encode BT.2020/PQ video, but this does not reliably activate HDR 
 
 ## Memory use
 
-Veyra runs as a separate process and transfers frames through RAM pipes. It does not cache uncompressed video on disk. Enhancement and interpolation tensors use GPU memory. Encoded HLS segments use the plugin's shared RAM cache, with disk fallback.
+Enhancement and interpolation tensors use GPU memory. Encoded HLS segments use the plugin's shared RAM cache, with disk fallback.
 
 Lookahead above 0 uses FFmpeg encoding and copies enhanced P010 frames through RAM. Lookahead 0 can use the direct GPU encoder path.
 

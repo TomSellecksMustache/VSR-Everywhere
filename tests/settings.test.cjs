@@ -51,7 +51,7 @@ assert(!html.includes("Selection uses that device's Jellyfin registration ID"));
 assert(!controls.ProcessingWidth && !controls.StreamWidth);
 assert(html.includes('<title>VSR Everywhere</title>'));
 assert(html.indexOf('id="RefreshVsrDevices"') < html.indexOf('id="EnableVsr"'));
-assert(html.indexOf('id="EnableVsr"') < html.indexOf('id="EnableNeuralRendering"'));
+assert(html.indexOf('id="EnableVsr"') < html.indexOf('id="EnableFrameInterpolation"'));
 assert(html.indexOf('id="EnableFrameInterpolation"') < html.indexOf('id="ProcessingResolution"'));
 assert(html.indexOf('id="StreamResolution"') < html.indexOf('<details>'));
 assert(html.indexOf('<details>') < html.indexOf('id="NvencPreset"'));
@@ -66,7 +66,7 @@ let config = {
     NvencPreset: 'p5', NvencTune: 'hq', NvencLookahead: 12, NvencSpatialAq: true,
     NvencTemporalAq: false, NvencCq: 0, SegmentType: 'mpegts', MaxSessions: 1,
     SessionMinutes: 180, FutureSetting: 'keep me',
-    EnableNeuralRendering: false, ContentProfile: 'auto', EnableAutoHdr: false, EnableFrameInterpolation: true
+    EnableAutoHdr: false, EnableFrameInterpolation: true
 };
 const pluginId = '7ca129d0-7454-41c7-aad6-55250b1a7b5b';
 vm.runInNewContext(script, {
@@ -102,15 +102,9 @@ const save = () => controls.VsrEverywhereForm.listeners.submit({ preventDefault(
     assert.equal(controls.EnableVsr.checked, true, 'Existing installations must keep VSR enabled');
     await save();
     assert.equal(config.EnableVsr, true);
-    controls.ContentProfile.value = 'animation';
-    controls.EnableNeuralRendering.checked = true;
     controls.EnableAutoHdr.checked = true;
     await save(); await load();
-    assert.equal(config.ContentProfile, 'animation');
-    assert.equal(config.EnableNeuralRendering, true);
     assert.equal(config.EnableAutoHdr, true);
-    assert.equal(controls.ContentProfile.value, 'animation');
-    assert.equal(controls.EnableNeuralRendering.checked, true);
     assert.equal(controls.EnableAutoHdr.checked, true);
     assert.equal(controls.DiskCacheFields.hidden, false);
     assert.equal(controls.MemoryCacheFields.hidden, true);
@@ -171,11 +165,9 @@ const save = () => controls.VsrEverywhereForm.listeners.submit({ preventDefault(
     assert.equal(config.MemoryBudgetMb, 0);
     assert.equal(config.CacheDirectory, original.CacheDirectory);
     console.log('PASS: all 36 resolution pairs, device approvals, saved sizes, memory/disk controls, budget display and compatible defaults.');
-    delete config.ContentProfile; delete config.EnableFrameInterpolation;
+    delete config.EnableFrameInterpolation;
     await load();
-    assert.equal(controls.ContentProfile.value, 'auto');
     assert.equal(controls.EnableFrameInterpolation.checked, true);
     await save();
-    assert.equal(config.ContentProfile, 'auto');
     assert.equal(config.EnableFrameInterpolation, true);
 })().catch(error => { console.error(error); process.exitCode = 1; });

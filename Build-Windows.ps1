@@ -7,7 +7,6 @@ if (-not $OutputDirectory) { $OutputDirectory = Join-Path $root 'dist' }
 $outputRoot = [IO.Path]::GetFullPath($OutputDirectory)
 $allowedRoot = [IO.Path]::GetFullPath((Join-Path $root 'dist')).TrimEnd('\')
 if ($outputRoot -ne $allowedRoot -and -not $outputRoot.StartsWith($allowedRoot + '\', [StringComparison]::OrdinalIgnoreCase)) { throw 'Build output must stay inside this project dist folder.' }
-& (Join-Path $root 'Build-Veyra.ps1')
 $project = Join-Path $root 'src\Jellyfin.Plugin.VsrEverywhere\Jellyfin.Plugin.VsrEverywhere.csproj'
 $cfg = Join-Path $root 'NuGet.Config'
 $dll = Join-Path $root 'src\Jellyfin.Plugin.VsrEverywhere\bin\Release\net8.0\Jellyfin.Plugin.VsrEverywhere.dll'
@@ -35,7 +34,6 @@ Copy-Item -LiteralPath $dll -Destination (Join-Path $dist 'Jellyfin.Plugin.VsrEv
 foreach ($name in @('LICENSE', 'THIRD_PARTY_NOTICES.md')) { Copy-Item -LiteralPath (Join-Path $root $name) -Destination (Join-Path $dist $name) }
 New-Item -ItemType Directory -Force -Path (Join-Path $dist 'worker') | Out-Null
 Get-ChildItem -LiteralPath (Join-Path $root 'worker') -Filter '*.py' -File | Copy-Item -Destination (Join-Path $dist 'worker') -Force
-Copy-Item -LiteralPath (Join-Path $root 'installer\build\veyra-component') -Destination (Join-Path $dist 'worker\veyra') -Recurse
 $metadata = [ordered]@{
     category = 'General'
     guid = '7ca129d0-7454-41c7-aad6-55250b1a7b5b'
@@ -44,7 +42,7 @@ $metadata = [ordered]@{
     status = 'Active'
     targetAbi = '10.10.0.0'
     description = 'NVIDIA Video Super Resolution with selectable 1080p to 8K processing and HEVC streaming for selected Jellyfin devices.'
-    changelog = 'Improved adaptive pacing for larger inputs and busy scenes by accounting for decoding and interpolation costs. Source frame rate and enhancement defaults stay unchanged.'
+    changelog = 'Simplified NVIDIA VSR processing and installation, with source-rate interpolation, automatic cropping, and RAM caching retained.'
 }
 [IO.File]::WriteAllText((Join-Path $dist 'meta.json'), ($metadata | ConvertTo-Json -Depth 5), (New-Object Text.UTF8Encoding($false)))
 $zip = Join-Path $outputRoot "VSR-Everywhere-$version-plugin.zip"

@@ -1,10 +1,6 @@
-# VSR Everywhere 1.2.0 - third-party components
+# VSR Everywhere - third-party components
 
 The original VSR Everywhere integration and setup code is licensed under the [MIT License](LICENSE). GPU libraries, AI models, Python, and the video encoder are downloaded separately during setup. Their licenses remain with the respective publishers. The project license does not apply to sample footage or comparison images derived from it.
-
-The Windows package includes a separate **GPL-3.0 Veyra command-line filter**, built from Likely7/Veyra-NRVideo commit `8332c8a8382242096a2699d3ba4dd52ad47bbd74` and the adapter in `native/veyra`. Its GPL license and complete corresponding-source ZIP accompany the executable. Veyra's upstream notices are retained in that source ZIP and its downloaded runtime. This component is not covered by the project's MIT license.
-
-Veyra's experimental ShortFuse neural-rendering compatibility runtime contains community-modified NVIDIA components. Setup downloads the pinned upstream 2.1.5 NVIDIA package; these binaries/models are not committed to this repository or republished in its installer. Their availability does not change their publishers' licensing terms. This is experimental community neural rendering, not an official NVIDIA DLSS 5 video product.
 
 - Python: https://www.python.org/psf/license/
 - Linux portable Python distribution: https://github.com/astral-sh/python-build-standalone (its bundled license notices are retained in the private runtime).
