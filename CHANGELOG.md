@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.4.1
+
+- Check for stable GitHub releases and install compatible plugin updates from the settings page. Keep settings and activate the update after restarting Jellyfin.
+- Verify update checksums and runtime compatibility; link runtime changes to the full installer.
+
 ## 1.4.0
 
 - Use NVIDIA VSR as the sole upscaler, without an extra preprocessing stage or colour adjustment.

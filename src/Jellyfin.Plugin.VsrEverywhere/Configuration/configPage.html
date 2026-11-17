@@ -86,6 +86,13 @@
 <p class="fieldDescription">Unsupported sources use standard Jellyfin playback.</p>
 <button type="submit" is="emby-button" class="raised button-submit block emby-button"><span>Save configuration</span></button>
 </form>
+<hr>
+<h3>Updates</h3>
+<p class="fieldDescription">Check stable GitHub releases. Restart Jellyfin after installing an update.</p>
+<button id="CheckVsrUpdate" type="button" is="emby-button" class="raised emby-button">Check for updates</button>
+<button id="InstallVsrUpdate" type="button" is="emby-button" class="raised emby-button" hidden>Install update</button>
+<p id="VsrUpdateStatus" role="status" aria-live="polite"></p>
+<a id="VsrUpdateRelease" target="_blank" rel="noopener noreferrer" hidden>Open release</a>
 </div></div>
 <script>
 (function () {
@@ -99,6 +106,38 @@
     let approvedIds = new Set();
     let retrievedDevices = [];
     let loadedConfig = false;
+    const checkUpdate = page.querySelector('#CheckVsrUpdate');
+    const installUpdate = page.querySelector('#InstallVsrUpdate');
+    const updateStatus = page.querySelector('#VsrUpdateStatus');
+    const updateRelease = page.querySelector('#VsrUpdateRelease');
+    let updateState = null;
+    let updateBusy = false;
+    installUpdate.hidden = updateRelease.hidden = true;
+
+    async function runUpdate(install) {
+        if (updateBusy || (install && !updateState?.canInstall)) return;
+        updateBusy = checkUpdate.disabled = installUpdate.disabled = true;
+        updateStatus.textContent = install ? 'Downloading and installing update…' : 'Checking GitHub…';
+        try {
+            const url = ApiClient.getUrl('VsrEverywhere/Updates');
+            updateState = install ? await ApiClient.ajax({ type: 'POST', url, dataType: 'json' }) : await ApiClient.getJSON(url);
+            updateStatus.textContent = updateState.message;
+            installUpdate.hidden = !updateState.canInstall || !updateState.updateAvailable || updateState.restartRequired;
+            installUpdate.textContent = 'Install ' + updateState.latestVersion;
+            updateRelease.href = updateState.releaseUrl;
+            updateRelease.hidden = false;
+        } catch (error) {
+            if (!install) { updateState = null; installUpdate.hidden = updateRelease.hidden = true; }
+            let message = error.responseJSON?.message;
+            if (!message && typeof error.json === 'function') {
+                try { message = (await error.json()).message; } catch { }
+            }
+            updateStatus.textContent = message || 'Update failed. Check administrator access, internet access, and the Jellyfin log, then retry.';
+        } finally { updateBusy = checkUpdate.disabled = installUpdate.disabled = false; }
+    }
+
+    checkUpdate.addEventListener('click', () => runUpdate(false));
+    installUpdate.addEventListener('click', () => runUpdate(true));
     let effectiveMemoryBudgetMb = 0;
 
     function updateCacheMode() {

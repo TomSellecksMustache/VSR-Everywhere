@@ -10,12 +10,13 @@ static void Check(bool condition, string message)
 }
 
 var assembly = typeof(BridgeSession).Assembly;
-Check(assembly.GetName().Version == new Version(1, 4, 0, 0), "Expected version 1.4.0.0");
+Check(assembly.GetName().Version == new Version(1, 4, 1, 0), "Expected version 1.4.1.0");
 Check(assembly.GetName().Name == "Jellyfin.Plugin.VsrEverywhere", "Configuration-compatible assembly identity changed");
 Check(assembly.GetCustomAttribute<AssemblyProductAttribute>()?.Product == "VSR Everywhere", "Wrong product name");
 Check(Plugin.PluginId == new Guid("7ca129d0-7454-41c7-aad6-55250b1a7b5b"), "Plugin ID changed");
 EnhancementChecks.Run();
 DeviceCompatibilityChecks.Run();
+await UpdateChecks.Run();
 using (var resource = assembly.GetManifestResourceStream("Jellyfin.Plugin.VsrEverywhere.Configuration.configPage.html")!)
 using (var reader = new StreamReader(resource))
 {

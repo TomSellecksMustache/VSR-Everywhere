@@ -6,7 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>Jellyfin.Plugin.VsrEverywhere</AssemblyName>
     <RootNamespace>Jellyfin.Plugin.VsrEverywhere</RootNamespace>
-    <Version>1.4.0</Version>
+    <Version>1.4.1</Version>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <Title>VSR Everywhere</Title>
     <Product>VSR Everywhere</Product>
@@ -21,5 +21,8 @@
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <EmbeddedResource Include="Configuration/configPage.html" />
+    <EmbeddedResource Include="../../installer/downloads.lock.json" LogicalName="VsrEverywhere.Update.windows.json" />
+    <EmbeddedResource Include="../../installer/linux/runtime.json" LogicalName="VsrEverywhere.Update.linux.json" />
+    <EmbeddedResource Include="../../installer/linux/requirements.lock.txt" LogicalName="VsrEverywhere.Update.linux-requirements.txt" />
   </ItemGroup>
 </Project>

@@ -17,16 +17,16 @@ The plugin targets the Jellyfin 10.10 API and .NET 8. Setup checks actual plugin
 
 ## Install
 
-Download [Install-VSREverywhere-1.4.0-Linux.sh](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/download/v1.4.0/Install-VSREverywhere-1.4.0-Linux.sh), then run:
+Download [Install-VSREverywhere-1.4.1-Linux.sh](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/download/v1.4.1/Install-VSREverywhere-1.4.1-Linux.sh), then run:
 
 ```bash
-sudo bash ./Install-VSREverywhere-1.4.0-Linux.sh
+sudo bash ./Install-VSREverywhere-1.4.1-Linux.sh
 ```
 
 Accept the detected service settings or supply your own. To put the runtime on another mount:
 
 ```bash
-sudo bash ./Install-VSREverywhere-1.4.0-Linux.sh --install-dir /srv/vsr-everywhere
+sudo bash ./Install-VSREverywhere-1.4.1-Linux.sh --install-dir /srv/vsr-everywhere
 ```
 
 Use a root-owned path whose parents are not writable by other users. Downloads, runtime files, logs, and backups go there. The script includes the plugin and downloads a private Python runtime and pinned GPU libraries, checking their hashes. System Python is not used for GPU packages.

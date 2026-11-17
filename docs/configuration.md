@@ -54,6 +54,14 @@ Older segments can be evicted. Seeking to an uncached section generates it on de
 
 If memory cannot be reserved, a session can fall back to disk. Disk mode uses the configured cache folder, space limits, and idle cleanup. Start with one concurrent session.
 
+## Updates
+
+Use **Check for updates** at the bottom of this page to check the latest stable GitHub release. Preview releases and unbuilt commits are excluded.
+
+If a compatible update is available, **Install** downloads and verifies the plugin package through Jellyfin's updater. Your settings and current playback stay in place. Restart Jellyfin when you are ready to activate the update.
+
+Updates that need different video runtime dependencies link to the full installer instead. Update controls require a Jellyfin administrator.
+
 ## Devices and source support
 
 The installer enables all devices on a new install. Turn that off and select registered devices to limit access. Existing saved selections are kept during upgrades where available.

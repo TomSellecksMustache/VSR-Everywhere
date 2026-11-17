@@ -30,7 +30,7 @@ class Element {
     addEventListener(event, handler) { this.listeners[event] = handler; }
 }
 const controls = {};
-for (const match of html.matchAll(/<(input|select|div|form|button|p)\b([^>]*\bid="([^"]+)"[^>]*)>/g)) {
+for (const match of html.matchAll(/<(input|select|div|form|button|p|a)\b([^>]*\bid="([^"]+)"[^>]*)>/g)) {
     const el = controls[match[3]] = new Element(match[1]);
     el.type = match[2].match(/\btype="([^"]+)"/)?.[1] || el.type;
     if (match[1] === 'select') {
@@ -69,13 +69,28 @@ let config = {
     EnableAutoHdr: false, EnableFrameInterpolation: true
 };
 const pluginId = '7ca129d0-7454-41c7-aad6-55250b1a7b5b';
+let updateReply = { currentVersion: '1.4.1', latestVersion: '1.4.1', canInstall: false, updateAvailable: false,
+    restartRequired: false, message: 'Up to date.', releaseUrl: 'https://github.com/TomSellecksMustache/VSR-Everywhere/releases/tag/v1.4.1' };
+let updateError = null, installError = null, updateWait = null, updateChecks = 0, updateInstalls = 0;
 vm.runInNewContext(script, {
     document: { querySelector: () => controls.VsrEverywherePage, createElement: tag => new Element(tag) },
     ApiClient: {
         getPluginConfiguration: async id => { assert.equal(id, pluginId); return structuredClone(config); },
         updatePluginConfiguration: async (id, cfg) => { assert.equal(id, pluginId); config = structuredClone(cfg); return {}; },
         getUrl: name => name,
-        getJSON: async () => ({ Items: [{ Id: 'device-1', Name: 'Living Room', AppName: 'Roku' }] })
+        getJSON: async url => {
+            if (url === 'Devices') return { Items: [{ Id: 'device-1', Name: 'Living Room', AppName: 'Roku' }] };
+            assert.equal(url, 'VsrEverywhere/Updates'); updateChecks++;
+            if (updateWait) await updateWait;
+            if (updateError) throw updateError;
+            return structuredClone(updateReply);
+        },
+        ajax: async request => {
+            assert.equal(request.type, 'POST'); assert.equal(request.url, 'VsrEverywhere/Updates');
+            assert.equal(request.dataType, 'json'); updateInstalls++;
+            if (installError) throw installError;
+            return structuredClone(updateReply);
+        }
     },
     Dashboard: { showLoadingMsg() {}, hideLoadingMsg() {}, processPluginConfigurationUpdateResult() {} },
     console: { error(...args) { throw new Error(args.join(' ')); } }
@@ -170,4 +185,48 @@ const save = () => controls.VsrEverywhereForm.listeners.submit({ preventDefault(
     assert.equal(controls.EnableFrameInterpolation.checked, true);
     await save();
     assert.equal(config.EnableFrameInterpolation, true);
+    const savedSettings = structuredClone(config);
+    const checkUpdate = () => controls.CheckVsrUpdate.listeners.click();
+    const installUpdate = () => controls.InstallVsrUpdate.listeners.click();
+    assert.equal(updateChecks, 0, 'Opening/saving settings must not check GitHub automatically');
+    assert.equal(updateInstalls, 0);
+    assert.equal(controls.InstallVsrUpdate.hidden, true);
+    await checkUpdate();
+    assert.equal(controls.VsrUpdateStatus.textContent, 'Up to date.');
+    assert.equal(controls.InstallVsrUpdate.hidden, true);
+    updateReply = { ...updateReply, latestVersion: '1.5.0', canInstall: true, updateAvailable: true,
+        message: 'Version 1.5.0 is available.' };
+    await checkUpdate();
+    assert.equal(controls.InstallVsrUpdate.hidden, false);
+    assert.equal(controls.InstallVsrUpdate.textContent, 'Install 1.5.0');
+    assert.equal(updateInstalls, 0, 'Checking must not install');
+    updateError = { responseJSON: { message: 'GitHub is temporarily unavailable.' } };
+    await checkUpdate();
+    assert.equal(controls.VsrUpdateStatus.textContent, updateError.responseJSON.message);
+    assert.equal(controls.InstallVsrUpdate.hidden, true, 'Failed check must hide stale update availability');
+    assert.equal(controls.CheckVsrUpdate.disabled, false);
+    updateError = null;
+    let releaseCheck;
+    updateWait = new Promise(resolve => { releaseCheck = resolve; });
+    const pending = checkUpdate();
+    const startedChecks = updateChecks;
+    assert.equal(controls.CheckVsrUpdate.disabled, true);
+    assert.equal(controls.InstallVsrUpdate.disabled, true);
+    await checkUpdate();
+    assert.equal(updateChecks, startedChecks, 'Concurrent clicks must not repeat requests');
+    releaseCheck(); await pending; updateWait = null;
+    installError = new Response(JSON.stringify({ message: 'No disk space. Free space and retry.' }), { status: 503 });
+    await installUpdate();
+    assert.equal(controls.VsrUpdateStatus.textContent, 'No disk space. Free space and retry.');
+    assert.equal(controls.InstallVsrUpdate.disabled, false);
+    assert.equal(controls.InstallVsrUpdate.hidden, false, 'Failed install must remain retryable');
+    installError = null;
+    updateReply = { ...updateReply, canInstall: false, updateAvailable: false, restartRequired: true,
+        message: 'Installed. Restart Jellyfin when ready.' };
+    await installUpdate();
+    assert.equal(updateInstalls, 2);
+    assert.equal(controls.InstallVsrUpdate.hidden, true);
+    assert.equal(controls.VsrUpdateStatus.textContent, updateReply.message);
+    assert.deepEqual(config, savedSettings, 'Update controls must not modify playback/device settings');
+    console.log('PASS: manual update checks, explicit installation, disabled duplicate clicks, failed-check/install recovery, restart status and unchanged settings.');
 })().catch(error => { console.error(error); process.exitCode = 1; });

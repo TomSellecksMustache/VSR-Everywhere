@@ -37,6 +37,9 @@ def build(no_restore=False, output_directory=None):
         'plugin/Jellyfin.Plugin.VsrEverywhere.dll': dll.read_bytes(),
         'plugin/LICENSE': (root / 'LICENSE').read_bytes(),
         'plugin/THIRD_PARTY_NOTICES.md': (root / 'THIRD_PARTY_NOTICES.md').read_bytes(),
+        'plugin/update/windows.json': (root / 'installer/downloads.lock.json').read_bytes(),
+        'plugin/update/linux.json': (linux / 'runtime.json').read_bytes(),
+        'plugin/update/linux-requirements.txt': (linux / 'requirements.lock.txt').read_bytes(),
     }
     files.update({'plugin/worker/' + path.name: path.read_bytes() for path in sorted((root / 'worker').glob('*.py'))})
     metadata = dict(category='General', guid='7ca129d0-7454-41c7-aad6-55250b1a7b5b', name='VSR Everywhere',
