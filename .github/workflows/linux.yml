@@ -50,6 +50,7 @@ jobs:
           assert sha256(archive.read_bytes()).hexdigest() == spec['sha256']
           subprocess.run(['tar', '-xzf', str(archive), '-C', str(target)], check=True)
           with open(os.environ['GITHUB_PATH'], 'a') as output:
+              output.write('/usr/bin\n/bin\n')
               output.write(str(target / 'python/bin') + '\n')
           PY
       - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
