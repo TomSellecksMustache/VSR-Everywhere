@@ -9,7 +9,7 @@ function New-SetupJob($Target, [bool]$AllDevices, [string]$Folder) {
     $root = New-SetupStorageRoot $Folder
     $path = Join-Path $root ('jobs\' + [Guid]::NewGuid().ToString('N'))
     $null = New-Item -ItemType Directory -Force -Path $path
-    @{ Product = 'VSR Everywhere'; Version = '1.4.1'; DataPath = $Target.DataPath;
+    @{ Product = 'VSR Everywhere'; Version = '1.4.2'; DataPath = $Target.DataPath;
        ServerPath = $Target.ServerPath; AllDevices = $AllDevices; InstallFolder = $Folder } |
         ConvertTo-Json | Set-Content -LiteralPath (Join-Path $path 'plan.json') -Encoding UTF8
     return $path
@@ -44,7 +44,7 @@ Add-Type -AssemblyName System.Drawing
 $script:pageIndex = 0; $script:target = $null; $script:engine = $null; $script:job = ''; $script:installing = $false
 $script:exitCode = 2; $script:result = $null
 $form = New-Object Windows.Forms.Form
-$form.Text = 'VSR Everywhere 1.4.1 Setup'
+$form.Text = 'VSR Everywhere 1.4.2 Setup'
 $form.ClientSize = New-Object Drawing.Size(760, 550)
 $form.StartPosition = 'CenterScreen'; $form.FormBorderStyle = 'FixedSingle'; $form.MaximizeBox = $false
 $form.AutoScaleMode = 'Dpi'; $form.BackColor = [Drawing.Color]::White
@@ -65,7 +65,7 @@ function Add-Link($Parent, [string]$Text, [string]$Url, [int]$X, [int]$Y, [int]$
     $Parent.Controls.Add($link); return $link
 }
 $null = Add-Label $form 'VSR Everywhere' 24 18 650 38 22 -Bold
-$null = Add-Label $form '1.4.1  |  Windows setup' 26 61 650 26 10
+$null = Add-Label $form '1.4.2  |  Windows setup' 26 61 650 26 10
 $divider = New-Object Windows.Forms.Label
 $divider.Location = New-Object Drawing.Point(0, 98); $divider.Size = New-Object Drawing.Size(760, 1); $divider.BackColor = [Drawing.Color]::Gainsboro
 $form.Controls.Add($divider)
@@ -217,7 +217,7 @@ $timer.add_Tick({
     if ($Preview) {
         $script:installing = $false; $timer.Stop()
         $finishTitle.Text = 'Setup preview complete'
-        $finishText.Text = 'This is a preview of VSR Everywhere 1.4.1 setup. No downloads, installation, or server changes were made.'
+        $finishText.Text = 'This is a preview of VSR Everywhere 1.4.2 setup. No downloads, installation, or server changes were made.'
         $openJellyfin.Visible = $false; $openLog.Visible = $false
         Show-SetupPage 4
         return
@@ -246,7 +246,7 @@ $timer.add_Tick({
         }
         if ($script:result.Success) {
             $script:exitCode = 0
-            $finishText.Text = "VSR Everywhere 1.4.1 is installed and loaded by Jellyfin.`r`n`r`nNVIDIA VSR, HEVC video, AAC audio, and HLS checks passed.`r`n`r`nYour device and resolution settings are ready to review in Jellyfin."
+            $finishText.Text = "VSR Everywhere 1.4.2 is installed and loaded by Jellyfin.`r`n`r`nNVIDIA VSR, HEVC video, AAC audio, and HLS checks passed.`r`n`r`nYour device and resolution settings are ready to review in Jellyfin."
         } else {
             $finishTitle.Text = 'Setup could not finish'
             $finishText.Text = $script:result.Message

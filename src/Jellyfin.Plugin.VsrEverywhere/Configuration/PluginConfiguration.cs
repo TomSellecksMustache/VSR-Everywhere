@@ -22,6 +22,7 @@ public sealed class PluginConfiguration : BasePluginConfiguration
 
     public bool Enabled { get; set; } = false;
     public bool EnableVsr { get; set; } = true;
+    public bool ProcessAbove800p { get; set; } = false;
     public bool EnableAllDevices { get; set; } = false;
     public string Backend { get; set; } = "nvidia";
     public bool EnableAutoHdr { get; set; } = false;

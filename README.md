@@ -4,9 +4,9 @@ NVIDIA Video Super Resolution for Jellyfin servers.
 
 This plugin processes video on your server and sends the result to your Jellyfin player. Your original files stay as they are. The player needs to support the stream you choose, but it does not need its own AI upscaler.
 
-[**Download the Windows installer — 1.4.1**](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/download/v1.4.1/VSR-Everywhere-1.4.1-Setup.exe) · [All downloads](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/tag/v1.4.1)
+[**Download the Windows installer — 1.4.2**](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/download/v1.4.2/VSR-Everywhere-1.4.2-Setup.exe) · [All downloads](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/tag/v1.4.2)
 
-**Linux:** [Download the server installer](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/download/v1.4.1/Install-VSREverywhere-1.4.1-Linux.sh) · [Linux setup](INSTALL-LINUX.md)
+**Linux:** [Download the server installer](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/download/v1.4.2/Install-VSREverywhere-1.4.2-Linux.sh) · [Linux setup](INSTALL-LINUX.md)
 
 ## What it does
 
@@ -21,7 +21,7 @@ This plugin processes video on your server and sends the result to your Jellyfin
 ## What it doesn't do
 
 - It does not replace Jellyfin, install a graphics driver, or change your media files.
-- The input path accepts 8-bit or 10-bit SDR video up to 1080p. Other sources use normal Jellyfin playback.
+- The input path accepts 8-bit or 10-bit SDR video up to 800p by default. Enable **Process inputs above 800p** to include sources up to 1080p. Other sources use normal Jellyfin playback.
 - It does not turn a low-quality source into a perfect one. Strong settings can change texture or introduce artifacts.
 - It does not guarantee real-time playback at every resolution or on every GPU.
 - Auto HDR is experimental, off by default, and does not reliably activate HDR on players yet.

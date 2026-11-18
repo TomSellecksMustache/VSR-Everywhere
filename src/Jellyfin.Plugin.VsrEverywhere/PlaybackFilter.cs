@@ -131,7 +131,7 @@ public sealed class PlaybackFilter : IAsyncActionFilter
                 continue;
             }
             var v = source.VideoStream;
-            if (!SupportsInput(v))
+            if (!SupportsInput(v, cfg.ProcessAbove800p))
             {
                 _logger.LogWarning("VsrEverywhere TRACE source rejected: unsupported dimensions, bit depth, or HDR input");
                 continue;
@@ -169,11 +169,12 @@ public sealed class PlaybackFilter : IAsyncActionFilter
         _logger.LogWarning("VsrEverywhere TRACE finished: no eligible media sources");
     }
 
-    internal static bool SupportsInput(MediaBrowser.Model.Entities.MediaStream video)
+    internal static bool SupportsInput(MediaBrowser.Model.Entities.MediaStream video, bool processAbove800p)
     {
         var transfer = video.GetType().GetProperty("ColorTransfer")?.GetValue(video)?.ToString()?.ToLowerInvariant();
         var range = video.GetType().GetProperty("VideoRangeType")?.GetValue(video)?.ToString()?.ToLowerInvariant() ?? "";
         return video.Width is > 0 and <= 1920 && video.Height is > 0 and <= 1080
+            && (processAbove800p || video.Height <= 800)
             && video.BitDepth is not > 10 && transfer is not ("smpte2084" or "arib-std-b67" or "pq" or "hlg")
             && !range.Contains("hdr") && !range.Contains("hlg") && !range.Contains("dovi") && !range.Contains("dolby");
     }

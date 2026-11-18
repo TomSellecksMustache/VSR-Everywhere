@@ -57,7 +57,7 @@ assert(html.indexOf('id="StreamResolution"') < html.indexOf('<details>'));
 assert(html.indexOf('<details>') < html.indexOf('id="NvencPreset"'));
 
 let config = {
-    Enabled: true, EnableVsr: true, EnableAllDevices: false, Backend: 'nvidia', EnabledDeviceIds: ['device-1'],
+    Enabled: true, EnableVsr: true, ProcessAbove800p: false, EnableAllDevices: false, Backend: 'nvidia', EnabledDeviceIds: ['device-1'],
     ProcessingWidth: 5120, ProcessingHeight: 2880, StreamWidth: 3840, StreamHeight: 2160,
     PythonPath: 'python', FfmpegPath: 'ffmpeg', FfprobePath: 'ffprobe', CacheDirectory: 'cache',
     CacheMode: 'disk', MemoryBudgetMb: 0, EffectiveMemoryBudgetMb: 7168,
@@ -69,8 +69,8 @@ let config = {
     EnableAutoHdr: false, EnableFrameInterpolation: true
 };
 const pluginId = '7ca129d0-7454-41c7-aad6-55250b1a7b5b';
-let updateReply = { currentVersion: '1.4.1', latestVersion: '1.4.1', canInstall: false, updateAvailable: false,
-    restartRequired: false, message: 'Up to date.', releaseUrl: 'https://github.com/TomSellecksMustache/VSR-Everywhere/releases/tag/v1.4.1' };
+let updateReply = { currentVersion: '1.4.2', latestVersion: '1.4.2', canInstall: false, updateAvailable: false,
+    restartRequired: false, message: 'Up to date.', releaseUrl: 'https://github.com/TomSellecksMustache/VSR-Everywhere/releases/tag/v1.4.2' };
 let updateError = null, installError = null, updateWait = null, updateChecks = 0, updateInstalls = 0;
 vm.runInNewContext(script, {
     document: { querySelector: () => controls.VsrEverywherePage, createElement: tag => new Element(tag) },
@@ -107,11 +107,19 @@ const save = () => controls.VsrEverywhereForm.listeners.submit({ preventDefault(
     for (const enabled of [false, true]) {
         controls.EnableVsr.checked = enabled;
         controls.EnableFrameInterpolation.checked = enabled;
+        controls.ProcessAbove800p.checked = enabled;
         await save(); await load();
         assert.equal(config.EnableFrameInterpolation, enabled);
         assert.equal(config.EnableVsr, enabled);
         assert.equal(controls.EnableFrameInterpolation.checked, enabled);
+        assert.equal(config.ProcessAbove800p, enabled);
+        assert.equal(controls.ProcessAbove800p.checked, enabled);
     }
+    delete config.ProcessAbove800p;
+    await load();
+    assert.equal(controls.ProcessAbove800p.checked, false, 'Missing setting must default to 800p and below');
+    await save();
+    assert.equal(config.ProcessAbove800p, false);
     delete config.EnableVsr;
     await load();
     assert.equal(controls.EnableVsr.checked, true, 'Existing installations must keep VSR enabled');

@@ -1,8 +1,12 @@
 # Settings
 
-Open VSR Everywhere in Jellyfin's plugin settings. Settings apply to new playback sessions. Device controls come first, followed by the VSR and Interpolation switches and the two resolution presets. Quality, encoding, cache, and runtime paths are under the collapsed Advanced settings section.
+Open VSR Everywhere in Jellyfin's plugin settings. Settings apply to new playback sessions. Device controls come first, followed by the VSR and Interpolation switches, input resolution limit, and two resolution presets. Quality, encoding, cache, and runtime paths are under the collapsed Advanced settings section.
 
-## Resolution
+## Input resolutions
+
+**Process inputs above 800p** is off by default, including for existing configurations. Unchecked, the plugin processes sources at 800p and below. Checked, it also accepts sources up to 1080p. The limit uses the source height before cropping, with the existing maximum width of 1920 pixels. Sources outside the limit use normal Jellyfin playback. The setting applies to new playback sessions.
+
+## Processing and delivery resolution
 
 Processing resolution is the size VSR works at. Stream resolution is the maximum size sent to the player. They can be different. Output fits the picture's aspect ratio inside that limit without adding a black canvas.
 
@@ -66,6 +70,6 @@ Updates that need different video runtime dependencies link to the full installe
 
 The installer enables all devices on a new install. Turn that off and select registered devices to limit access. Existing saved selections are kept during upgrades where available.
 
-The input path accepts 8-bit or 10-bit SDR sources up to 1080p. Other sources use normal Jellyfin playback. HDR input keeps normal Jellyfin playback. Higher-depth SDR samples are decoded through 16-bit RGB before enhancement. Players must accept HEVC Main 10, AAC, the selected HLS format, and the delivery resolution.
+The input path accepts 8-bit or 10-bit SDR sources within the selected input resolution limit. HDR input keeps normal Jellyfin playback. Higher-depth SDR samples are decoded through 16-bit RGB before enhancement. Players must accept HEVC Main 10, AAC, the selected HLS format, and the delivery resolution.
 
 [Overview](../README.md) · [Troubleshooting](troubleshooting.md)

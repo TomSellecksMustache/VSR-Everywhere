@@ -12,7 +12,7 @@ Start with **Open setup log** in the wizard. Setup tests processing before chang
 | Microsoft runtime asks for a reboot | Restart as requested, then rerun setup. |
 | Unfamiliar-app warning | The EXE is unsigned. Check that the file came from the intended release. |
 | VSR effect not initialized | Read the underlying worker error. Check the NVIDIA driver, free VRAM, runtime compatibility, and processing resolution. |
-| Plugin load not confirmed | Check Jellyfin's fresh startup log for VSR Everywhere 1.4.1 and any loading error. Retain the setup log and backup record. |
+| Plugin load not confirmed | Check Jellyfin's fresh startup log for VSR Everywhere 1.4.2 and any loading error. Retain the setup log and backup record. |
 
 ## Playback
 

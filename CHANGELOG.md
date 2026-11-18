@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.4.2
+
+- Add an Input resolutions section with a Process inputs above 800p switch, off by default. Sources above 800p use normal Jellyfin playback unless enabled, up to the existing 1080p limit.
+
 ## 1.4.1
 
 - Check for stable GitHub releases and install compatible plugin updates from the settings page. Keep settings and activate the update after restarting Jellyfin.
