@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<component name="HdrProbe" extends="Scene">
+  <script type="text/brightscript" uri="pkg:/components/HdrProbe.brs" />
+  <children>
+    <Video id="video" width="1920" height="1080" enableUI="true" />
+    <Rectangle translation="[0,980]" width="1920" height="100" color="0x000000CC" />
+    <Label id="status" translation="[40,1000]" width="1840" height="70" />
+  </children>
+</component>

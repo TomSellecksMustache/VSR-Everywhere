@@ -33,6 +33,9 @@ class Commands:
             value = command.get(name)
             if type(value) is not int or not 0 <= value <= (999999 if name == 'segment' else 2147483647):
                 raise ValueError('Invalid ' + name)
+        if operation == 'limit' and 'run' in command:
+            if type(command['run']) is not int or not 0 <= command['run'] <= 2147483647:
+                raise ValueError('Invalid run')
         process = None
         with self.condition:
             if operation == 'stop':
@@ -44,7 +47,9 @@ class Commands:
                 self.limit = command['segment']
                 process = self.process
             else:
-                self.limit = command['segment']
+                # Repeated HLS requests must not lower the production ceiling and stall the player.
+                if not self.stopped and self.run is not None and command.get('run', self.run) == self.run:
+                    self.limit = max(self.limit, command['segment'])
             self.condition.notify_all()
         if process is not None:
             try:

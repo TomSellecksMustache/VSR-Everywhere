@@ -139,7 +139,8 @@ internal static class PlaybackChecks
                     await File.WriteAllTextAsync(Path.Combine(output, $"ffprobe-{sampleIndices[0]}.json"), json);
                     using var data = JsonDocument.Parse(json);
                     var video = data.RootElement.GetProperty("streams").EnumerateArray().First(stream => stream.GetProperty("codec_type").GetString() == "video");
-                    Check(video.GetProperty("codec_name").GetString() == "hevc" && video.GetProperty("profile").GetString() == "Main 10", "GPU seek must remain HEVC Main 10");
+                    Check(video.GetProperty("codec_name").GetString() == "hevc" && video.GetProperty("profile").GetString() == (advanced ? "Main 10" : "Main"),
+                        "GPU seek must retain the selected SDR8 or HDR10 format");
                     Check(video.GetProperty("color_space").GetString() == (advanced ? "bt2020nc" : "bt709"), "Seek color VUI changed");
                     if (cropped)
                     {

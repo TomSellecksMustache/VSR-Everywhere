@@ -47,7 +47,7 @@ $metadata = [ordered]@{
     status = 'Active'
     targetAbi = '10.10.0.0'
     description = 'NVIDIA Video Super Resolution with selectable 1080p to 8K processing and HEVC streaming for selected Jellyfin devices.'
-    changelog = 'Limit input to 800p by default; enable Process inputs above 800p in settings for sources up to 1080p.'
+    changelog = 'Fix automatic HDR10 detection for Roku and retain the tested Roku HEVC playback profile.'
 }
 [IO.File]::WriteAllText((Join-Path $dist 'meta.json'), ($metadata | ConvertTo-Json -Depth 5), (New-Object Text.UTF8Encoding($false)))
 $zip = Join-Path $outputRoot "VSR-Everywhere-$version-plugin.zip"

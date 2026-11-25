@@ -141,16 +141,18 @@ public sealed class PlaybackFilter : IAsyncActionFilter
             var profileSource = deviceProfile is null ? "registered device" : "playback request";
             deviceProfile ??= context.HttpContext.RequestServices.GetRequiredService<MediaBrowser.Controller.Devices.IDeviceManager>()
                 .GetCapabilities(registeredDeviceId)?.DeviceProfile;
-            var supportsHdr = EnhancementProfiles.SupportsHdr10(deviceProfile);
+            var supportsHdr = EnhancementProfiles.SupportsHdr10(deviceProfile, registeredAppName);
             var hdr = cfg.EnableAutoHdr && supportsHdr;
             if (!cfg.EnableVsr && !cfg.EnableFrameInterpolation && !hdr) continue;
             _logger.LogInformation("VSR Everywhere HDR requested={Requested} clientHdr10={ClientHdr10} profile={ProfileSource} output={Range}",
                 cfg.EnableAutoHdr, supportsHdr, deviceProfile is null ? "missing" : profileSource, hdr ? "HDR10" : "SDR");
-            var videoMbps = EnhancementProfiles.DeliveryMbps(cfg.VideoMbps, registeredAppName);
+            var rokuCbrFive = registeredAppName?.Contains("roku", StringComparison.OrdinalIgnoreCase) == true;
+            // VSR_ROKU_CBR40_FIVE_SECONDS_V1: trusted registered app identity only.
+            var videoMbps = rokuCbrFive ? 40 : EnhancementProfiles.DeliveryMbps(cfg.VideoMbps, registeredAppName);
             if (videoMbps != cfg.VideoMbps)
                 _logger.LogInformation("VSR Everywhere delivery bitrate limited to {Mbps} Mbps for this client", videoMbps);
             var crop = await StreamingCrop.Detect(source.Path, v, cfg, _logger, context.HttpContext.RequestAborted).ConfigureAwait(false);
-            var token = _sessions.Register(source.Path, cfg, hdr, videoMbps, crop);
+            var token = _sessions.Register(source.Path, cfg, hdr, videoMbps, crop, rokuCbrFive: rokuCbrFive);
             if (token is null)
             {
                 _logger.LogWarning("VsrEverywhere TRACE source rejected: session registry unavailable");

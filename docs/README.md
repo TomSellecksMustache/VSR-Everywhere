@@ -1,4 +1,6 @@
-# Documentation
+# VSR Everywhere documentation
+
+Install and configure the NVIDIA RTX Video Super Resolution plugin for Jellyfin, choose processing and stream resolutions, and troubleshoot HEVC or HDR playback.
 
 - [Windows setup](../INSTALL-WINDOWS.md)
 - [Linux server setup](../INSTALL-LINUX.md)

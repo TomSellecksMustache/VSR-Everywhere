@@ -75,7 +75,7 @@ public sealed class BridgeSessions : IDisposable
     public string? Register(string source, PluginConfiguration cfg, bool hdr = false, int? maxVideoMbps = null)
         => Register(source, cfg, hdr, maxVideoMbps, null);
 
-    internal string? Register(string source, PluginConfiguration cfg, bool hdr, int? maxVideoMbps, StreamingCrop? crop)
+    internal string? Register(string source, PluginConfiguration cfg, bool hdr, int? maxVideoMbps, StreamingCrop? crop, bool rokuCbrFive = false)
     {
         foreach (var (key, old) in _active)
         {
@@ -104,7 +104,7 @@ public sealed class BridgeSessions : IDisposable
         var memoryBudget = cfg.CacheMode == "disk" ? 0 : VsrMemoryBudget.Calculate(cfg.MemoryBudgetMb, VsrMemoryBudget.Available());
         if (memoryBudget > 0 && _memory.Register(token, memoryBudget, onDemand: true))
         {
-            var memorySession = new BridgeSession(token, source, "", cfg, _logger, _memory, hdr, maxVideoMbps, crop);
+            var memorySession = new BridgeSession(token, source, "", cfg, _logger, _memory, hdr, maxVideoMbps, crop, rokuCbrFive: rokuCbrFive);
             if (_active.TryAdd(token, memorySession))
             {
                 _logger.LogInformation("VSR Everywhere cache mode=memory global budget={BudgetMb} MB", _memory.BudgetBytes / VsrMemoryBudget.MiB);
@@ -142,7 +142,7 @@ public sealed class BridgeSessions : IDisposable
         // Cache root was already validated above.
         var root = Path.Combine(Path.GetFullPath(cacheRoot), token);
         // All worker outputs are generated in the token-specific cache, never beside the media file.
-        var session = new BridgeSession(token, source, root, cfg, _logger, null, hdr, maxVideoMbps, crop);
+        var session = new BridgeSession(token, source, root, cfg, _logger, null, hdr, maxVideoMbps, crop, rokuCbrFive: rokuCbrFive);
         _logger.LogInformation("VSR Everywhere cache mode=disk");
         return _active.TryAdd(token, session) ? token : null;
     }
@@ -153,6 +153,7 @@ public sealed partial class BridgeSession : IDisposable
     private readonly PluginConfiguration _cfg;
     private readonly bool _hdr;
     private readonly int _videoMbps;
+    private readonly bool _rokuCbrFive; // VSR_ROKU_CBR40_FIVE_SECONDS_V1
     private readonly StreamingCrop? _crop;
     private readonly ILogger _logger;
     private readonly SemaphoreSlim _startLock = new(1, 1);
@@ -177,7 +178,7 @@ public sealed partial class BridgeSession : IDisposable
     public BridgeSession(string token, string source, string root, PluginConfiguration cfg, ILogger logger)
         : this(token, source, root, cfg, logger, null) { }
     internal BridgeSession(string token, string source, string root, PluginConfiguration cfg, ILogger logger, MemoryHlsStore? memory,
-        bool hdr = false, int? maxVideoMbps = null, StreamingCrop? crop = null)
+        bool hdr = false, int? maxVideoMbps = null, StreamingCrop? crop = null, bool rokuCbrFive = false)
     {
         Token = token;
         Source = source;
@@ -185,7 +186,8 @@ public sealed partial class BridgeSession : IDisposable
         _cfg = cfg;
         _crop = crop;
         _hdr = hdr && cfg.EnableAutoHdr;
-        _videoMbps = Math.Min(Math.Clamp(cfg.VideoMbps, 4, 60), Math.Clamp(maxVideoMbps ?? 60, 4, 60));
+        _rokuCbrFive = rokuCbrFive;
+        _videoMbps = rokuCbrFive ? 40 : Math.Min(Math.Clamp(cfg.VideoMbps, 4, 60), Math.Clamp(maxVideoMbps ?? 60, 4, 60));
         _logger = logger;
         _memory = memory;
         Expires = DateTimeOffset.UtcNow.AddMinutes(Math.Clamp(cfg.SessionMinutes, 10, 1440));
@@ -280,11 +282,13 @@ public sealed partial class BridgeSession : IDisposable
                 psi.ArgumentList.Add("--crop");
                 psi.ArgumentList.Add($"{_crop.X}:{_crop.Y}:{_crop.Width}:{_crop.Height}");
             }
+            if (_rokuCbrFive) psi.ArgumentList.Add("--roku-cbr-five");
             if (_cfg.NvencSpatialAq) psi.ArgumentList.Add("--nvenc-spatial-aq");
             if (!_cfg.EnableVsr) psi.ArgumentList.Add("--no-vsr");
             if (_cfg.NvencTemporalAq) psi.ArgumentList.Add("--nvenc-temporal-aq");
             if (_cfg.EnableFrameInterpolation) psi.ArgumentList.Add("--frame-interpolation");
             if (_hdr) psi.ArgumentList.Add("--auto-hdr");
+            if (_rokuCbrFive) _logger.LogInformation("VSR Roku CBR40/5s active: HEVC CBR 40Mbps, 5s HLS chunks, five-second seek timeline");
             _logger.LogInformation("VSR Everywhere profile quality={Quality} strength={Strength} preset={Preset} tune={Tune} " +
                 "lookahead={Lookahead} spatialAQ={SpatialAq} temporalAQ={TemporalAq} cq={CQ} bitrate={Mbps}",
                 vsrQuality, vsrStrength, preset, tune, lookahead, _cfg.NvencSpatialAq,

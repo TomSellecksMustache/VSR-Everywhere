@@ -1,4 +1,4 @@
-"""GPU P010 conversion and HEVC encoding for the pinned PyNvVideoCodec wheel."""
+"""GPU NV12/P010 conversion and HEVC encoding for the pinned PyNvVideoCodec wheel."""
 from __future__ import annotations
 
 from fractions import Fraction
@@ -70,8 +70,9 @@ class GpuEncoder:
         if getattr(nvc, '__version__', None) != '2.2.3':
             raise RuntimeError('GPU encoding requires the verified PyNvVideoCodec 2.2.3 runtime')
         capabilities = probe_codec()
-        if not capabilities.get('capabilities_verified') or 'P010' not in capabilities['hevc_input_formats']:
-            raise RuntimeError('GPU HEVC P010 is unavailable: ' + capabilities.get('reason', '10-bit encode not supported'))
+        input_format = 'P010' if self._hdr else 'NV12'
+        if not capabilities.get('capabilities_verified') or input_format not in capabilities['hevc_input_formats']:
+            raise RuntimeError(f'GPU HEVC {input_format} is unavailable: ' + capabilities.get('reason', '10-bit encode not supported'))
         caps = capabilities.get('caps', {})
         if any(caps.get(key) and size > caps[key] for key, size in [('width_max', self._width), ('height_max', self._height)]):
             raise RuntimeError('Requested stream resolution exceeds GPU HEVC limits')
@@ -95,7 +96,7 @@ class GpuEncoder:
         if args.nvenc_temporal_aq:
             options['temporalaq'] = 1
         try:
-            self._encoder = nvc.CreateEncoder(self._width, self._height, 'P010', False, **options)
+            self._encoder = nvc.CreateEncoder(self._width, self._height, input_format, False, **options)
             if args.nvenc_cq:
                 # Constructor cq clears bitrate limits; reconfiguration preserves them.
                 params = self._encoder.GetEncodeReconfigureParams()
@@ -137,7 +138,7 @@ class GpuEncoder:
         self._stream.wait_stream(self._torch.cuda.current_stream(0))
         with self._torch.cuda.stream(self._stream):
             self._surface = _CudaInput(rgb_to_yuv420(fit_rgb(rgb, self._width, self._height, self._sar),
-                bits=10, matrix='bt2020' if self._hdr else 'bt709'))
+                bits=10 if self._hdr else 8, matrix='bt2020' if self._hdr else 'bt709'))
         # Raw DLPack input has no consumer-stream handoff; keep its allocation until copying finishes.
         self._stream.synchronize()
         try:

@@ -90,13 +90,15 @@ def build_ffmpeg_command(ffmpeg: str, source: str, dest: str, width: int, height
                          rolling_rewind_minutes: int = 0, encoded_video: bool = False,
                          raw_pixel_format: str = "rgb24", memory_output: bool = False,
                          ingest_key: str = "", start_segment: int | None = None,
-                         source_start_time: float = 0, hdr_output: bool = False) -> list[str]:
+                         source_start_time: float = 0, hdr_output: bool = False, roku_cbr_five: bool = False) -> list[str]:
     if memory_output:
         if not hls:
             raise ValueError("Memory output requires HLS")
         validate_memory_output(dest, ingest_key)
     if segment_type not in {"fmp4", "mpegts"}:
         raise ValueError("invalid segment type")
+    if roku_cbr_five and mbps != 40:
+        raise ValueError("Roku CBR profile requires 40 Mbps")
     if not (4 <= mbps <= 60 and 0 <= start < 1_000_000 and 1 <= fps <= 120):
         raise ValueError("invalid encode settings")
     if nvenc_preset not in {"p4", "p5", "p6", "p7"} or nvenc_tune not in {"default", "hq"}:
@@ -107,7 +109,7 @@ def build_ffmpeg_command(ffmpeg: str, source: str, dest: str, width: int, height
     fps_str = f"{fps.numerator}/{fps.denominator}"
     vf = f"setsar={sar.numerator}/{sar.denominator},scale=w='max(2,round(min({stream_width},{stream_height}*dar)/2)*2)':" \
          f"h='max(2,round(min({stream_height},{stream_width}/dar)/2)*2)':flags=lanczos," \
-         f"pad={stream_width}:{stream_height}:(ow-iw)/2:(oh-ih)/2,setsar=1,format=p010le"
+         f"pad={stream_width}:{stream_height}:(ow-iw)/2:(oh-ih)/2,setsar=1,format={'p010le' if hdr_output else 'nv12'}"
     if raw_pixel_format not in {"rgb24", "nv12", "p010le"}:
         raise ValueError("invalid raw pixel format")
     cmd = [ffmpeg, "-hide_banner", "-nostdin", "-loglevel", "warning", "-y"]
@@ -133,10 +135,11 @@ def build_ffmpeg_command(ffmpeg: str, source: str, dest: str, width: int, height
         cmd += ["-c:v", "copy", "-tag:v", "hvc1", "-bsf:v",
                 "hevc_metadata=video_full_range_flag=0:" + colour]
     else:
-        cmd += ["-vf", vf, "-c:v", "hevc_nvenc", "-pix_fmt", "p010le",
-            "-profile:v", "main10", "-tag:v", "hvc1",
-            "-b:v", f"{mbps}M", "-maxrate", f"{mbps}M",
-            "-bufsize", f"{int(mbps * 2)}M", "-g", str(round(float(fps) * 2))]
+        cmd += ["-vf", vf, "-c:v", "hevc_nvenc", "-pix_fmt", "p010le" if hdr_output else "nv12",
+            "-profile:v", "main10" if hdr_output else "main", "-tag:v", "hvc1",
+            "-b:v", "40M" if roku_cbr_five else f"{mbps}M", "-maxrate", "40M" if roku_cbr_five else f"{mbps}M",
+            "-bufsize", "40M" if roku_cbr_five else f"{int(mbps * 2)}M",
+            "-g", str(round(float(fps) * (5 if roku_cbr_five else 2)))]
     cmd += ["-c:a", "aac", "-b:a", "192k", "-ar", "48000", "-ac", "2", "-shortest"]
     if not encoded_video:
         cmd += (["-color_primaries", "bt2020", "-color_trc", "smpte2084", "-colorspace", "bt2020nc", "-color_range", "tv"] if hdr_output
@@ -152,8 +155,10 @@ def build_ffmpeg_command(ffmpeg: str, source: str, dest: str, width: int, height
         cmd += ["-spatial-aq", "1"]
     if not encoded_video and nvenc_temporal_aq:
         cmd += ["-temporal-aq", "1"]
-    if not encoded_video and nvenc_cq:
+    if not encoded_video and nvenc_cq and not roku_cbr_five:
         cmd += ["-rc", "vbr", "-cq", str(nvenc_cq)]
+    if roku_cbr_five and not encoded_video:
+        cmd += ["-rc", "cbr", "-minrate:v", "40M"]  # VSR_ROKU_CBR40_FIVE_SECONDS_V1
     if start_segment is not None:
         if not 0 <= start_segment <= 999999:
             raise ValueError("Invalid starting segment")
@@ -166,11 +171,11 @@ def build_ffmpeg_command(ffmpeg: str, source: str, dest: str, width: int, height
                         else str(Path(dest).parent / "seg_%06d"))
         # Rolling mode uses FFmpeg's HLS sliding playlist. Do not label it EVENT/VOD:
         # those playlist types cannot remove historic entries safely.
-        seg_count = max(60, rolling_rewind_minutes * 30) if rolling_rewind_minutes else 0
+        seg_count = max(60, math.ceil(rolling_rewind_minutes * 60 / (5 if roku_cbr_five else 2))) if rolling_rewind_minutes else 0
         hls_flags = "independent_segments" + ("" if memory_output else "+temp_file")
         if rolling_rewind_minutes:
             hls_flags += "+delete_segments"
-        cmd += ["-f", "hls", "-hls_time", "1.9" if start_segment is not None else "2",
+        cmd += ["-f", "hls", "-hls_time", ("4.9" if start_segment is not None else "5") if roku_cbr_five else ("1.9" if start_segment is not None else "2"),
                 "-hls_list_size", str(seg_count), "-hls_flags", hls_flags]
         if start_segment is not None:
             cmd += ["-start_number", str(start_segment)]
@@ -205,6 +210,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--ffmpeg", default="ffmpeg")
     p.add_argument("--ffprobe", default="ffprobe")
     p.add_argument("--video-mbps", type=int, default=18)
+    p.add_argument("--roku-cbr-five", action="store_true", help="Registered Roku client: 40 Mbps CBR and 5-second HLS")
     p.add_argument("--segment-type", default="fmp4", choices=["fmp4", "mpegts"])
     p.add_argument("--quality", default="STREAMING_MEDIUM", choices=QUALITY)
     p.add_argument("--strength", type=float, default=0.75)
@@ -309,10 +315,10 @@ def run(args: argparse.Namespace, retained=None, initialize_only=False, control=
         if initialize_only:
             retained['frame_origin'] = cfr_origin(container, stream, source_fps)
             retained['ready'] = {"event": "ready", "fps_num": fps.numerator, "fps_den": fps.denominator,
-                                 "gop_frames": round(2 * fps), "duration_s": duration,
+                                 "gop_frames": round((5 if getattr(args, "roku_cbr_five", False) else 2) * fps), "duration_s": duration,
                                  "source_start_time": float(container.start_time or 0) / 1_000_000}
         pipeline = "legacy"
-        if args.pipeline == "gpu" and not initialize_only:
+        if args.pipeline == "gpu" and not initialize_only and not getattr(args, "roku_cbr_five", False):
             try:
                 from vsr_gpu import GpuEncoder
                 encode_geometry = replace(g, vsr_width=args.stream_width, vsr_height=args.stream_height) if advanced else g
@@ -405,10 +411,10 @@ def run(args: argparse.Namespace, retained=None, initialize_only=False, control=
                                    args.nvenc_spatial_aq, args.nvenc_temporal_aq, args.nvenc_cq,
                                    args.stream_width, args.stream_height, args.rolling_rewind_minutes,
                                    encoded_video=encoder is not None,
-                                   raw_pixel_format="p010le" if advanced else "nv12" if threaded else "rgb24",
+                                   raw_pixel_format=("p010le" if args.auto_hdr else "nv12") if advanced else "nv12" if threaded else "rgb24",
                                    memory_output=args.memory_output, ingest_key=ingest_key, start_segment=start_segment,
                                    source_start_time=retained['ready'].get('source_start_time', 0) if retained is not None else 0,
-                                   hdr_output=args.auto_hdr)
+                                   hdr_output=args.auto_hdr, roku_cbr_five=getattr(args, "roku_cbr_five", False))
         print(json.dumps({"event": "start", "source_size": [width, height],
                           "vsr_size": [g.vsr_width, g.vsr_height],
                           "output_size": [args.stream_width, args.stream_height],
@@ -418,7 +424,7 @@ def run(args: argparse.Namespace, retained=None, initialize_only=False, control=
                                     "spatial_aq": args.nvenc_spatial_aq,
                                     "temporal_aq": args.nvenc_temporal_aq},
                           "fps": float(fps),
-                          "source_fps": float(source_fps), "hdr": args.auto_hdr,
+                          "source_fps": float(source_fps), "hdr": args.auto_hdr, "output_bits": 10 if args.auto_hdr else 8,
                           "frame_interpolation": args.frame_interpolation,
                           "pipeline": pipeline,
                           "legacy_schedule": "threaded" if threaded else "serial",
@@ -447,7 +453,7 @@ def run(args: argparse.Namespace, retained=None, initialize_only=False, control=
             processed, pipe_bytes = run_threaded(container, stream, create_effect, torch, np, g, args,
                                                  proc, stats, progress)
         else:
-            gop = round(2 * fps)
+            gop = round((5 if getattr(args, "roku_cbr_five", False) else 2) * fps)
             if advanced:
                 first_output = start_segment * gop if control is not None else math.ceil(args.start_time * float(fps))
                 first_source = first_output
@@ -493,7 +499,7 @@ def run(args: argparse.Namespace, retained=None, initialize_only=False, control=
                     with stats.gpu("convert_download", torch):
                         if advanced:
                             from vsr_colour import rgb_to_yuv420
-                            out = rgb_to_yuv420(enhanced, bits=10,
+                            out = rgb_to_yuv420(enhanced, bits=10 if args.auto_hdr else 8,
                                 matrix='bt2020' if args.auto_hdr else 'bt709').cpu().numpy()
                         else:
                             out = (enhanced.clamp(0, 1).mul(255).round().byte()

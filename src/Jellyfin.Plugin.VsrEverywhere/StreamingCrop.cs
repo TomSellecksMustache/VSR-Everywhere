@@ -102,9 +102,9 @@ internal sealed record StreamingCrop(int X, int Y, int Width, int Height, int St
         video.Codec = "hevc";
         video.CodecTag = null;
         video.Level = null;
-        video.Profile = "Main 10";
-        video.PixelFormat = "yuv420p10le";
-        video.BitDepth = 10;
+        video.Profile = hdr ? "Main 10" : "Main";
+        video.PixelFormat = hdr ? "yuv420p10le" : "yuv420p";
+        video.BitDepth = hdr ? 10 : 8;
         video.ColorPrimaries = hdr ? "bt2020" : "bt709";
         video.ColorTransfer = hdr ? "smpte2084" : "bt709";
         video.ColorSpace = hdr ? "bt2020nc" : "bt709";

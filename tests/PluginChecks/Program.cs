@@ -10,7 +10,7 @@ static void Check(bool condition, string message)
 }
 
 var assembly = typeof(BridgeSession).Assembly;
-Check(assembly.GetName().Version == new Version(1, 4, 2, 0), "Expected version 1.4.2.0");
+Check(assembly.GetName().Version == new Version(1, 5, 0, 0), "Expected version 1.5.0.0");
 Check(assembly.GetName().Name == "Jellyfin.Plugin.VsrEverywhere", "Configuration-compatible assembly identity changed");
 Check(assembly.GetCustomAttribute<AssemblyProductAttribute>()?.Product == "VSR Everywhere", "Wrong product name");
 Check(Plugin.PluginId == new Guid("7ca129d0-7454-41c7-aad6-55250b1a7b5b"), "Plugin ID changed");
@@ -37,7 +37,7 @@ import json, os, sys
 from pathlib import Path
 if '--memory-output' in sys.argv:
     Path(__file__).with_name('memory-arguments.json').write_text(json.dumps({'args': sys.argv[1:], 'key': os.environ.get('VSR_INGEST_KEY')}))
-    print(json.dumps({'event': 'ready', 'fps_num': 24, 'fps_den': 1, 'gop_frames': 48, 'duration_s': 12}), flush=True)
+    print(json.dumps({'event': 'ready', 'fps_num': 24, 'fps_den': 1, 'gop_frames': 120 if '--roku-cbr-five' in sys.argv else 48, 'duration_s': 12}), flush=True)
     for line in sys.stdin:
         with Path(__file__).with_name('commands.jsonl').open('a') as captured:
             captured.write(line)

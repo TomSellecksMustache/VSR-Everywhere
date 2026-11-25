@@ -7,10 +7,14 @@ internal static class EnhancementProfiles
     internal static int DeliveryMbps(int requested, string? client)
         => Math.Clamp(requested, 4, client?.Contains("roku", StringComparison.OrdinalIgnoreCase) == true ? 40 : 60);
 
-    internal static bool SupportsHdr10(DeviceProfile? device)
+    internal static bool SupportsHdr10(DeviceProfile? device, string? client = null)
     {
         var profiles = (device?.CodecProfiles ?? []).Where(profile => profile.Type == CodecType.Video &&
-            (profile.Codec ?? "").Split(',').Any(codec => codec.Trim().Equals("hevc", StringComparison.OrdinalIgnoreCase))).ToArray();
+            (profile.Codec ?? "").Split(',').Any(codec => codec.Trim().ToLowerInvariant() is "hevc" or "h265")).ToArray();
+        // Roku derives these HDR10 flags from the display, even when it omits HEVC profiles.
+        if (profiles.Length == 0 && client?.Contains("roku", StringComparison.OrdinalIgnoreCase) == true)
+            profiles = (device?.CodecProfiles ?? []).Where(profile => profile.Type == CodecType.Video &&
+                (profile.Codec ?? "").Split(',').Any(codec => codec.Trim().ToLowerInvariant() is "av1" or "vp9")).ToArray();
         var ranges = profiles.SelectMany(profile => profile.Conditions ?? [])
             .Where(condition => condition.Property == ProfileConditionValue.VideoRangeType).ToArray();
         // Unknown capabilities keep SDR. A contradictory HDR prohibition wins.

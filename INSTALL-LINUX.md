@@ -6,7 +6,7 @@ This installer is for a native Jellyfin systemd service. It installs plain NVIDI
 
 - A running, initialized Jellyfin systemd service under a non-root account.
 - x86-64 Linux with glibc 2.28 or newer. The package targets compatible Debian/Ubuntu and RPM-based systems.
-- An NVIDIA GPU with VSR and HEVC Main 10 support. Streaming quality modes need Ampere or newer.
+- An NVIDIA GPU with VSR and HEVC encoding support. Streaming quality modes need Ampere or newer.
 - A supported NVIDIA driver: 570.190+, 580.82+, 590.44+, or a newer branch.
 - Jellyfin FFmpeg/FFprobe, internet access, and room for the private runtime.
 - `bash`, `curl` or `wget`, `tar`, `base64`, `sha256sum`, `realpath`, `stat`, and `flock`.
@@ -17,16 +17,16 @@ The plugin targets the Jellyfin 10.10 API and .NET 8. Setup checks actual plugin
 
 ## Install
 
-Download [Install-VSREverywhere-1.4.2-Linux.sh](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/download/v1.4.2/Install-VSREverywhere-1.4.2-Linux.sh), then run:
+Download [Install-VSREverywhere-1.5.0-Linux.sh](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/download/v1.5.0/Install-VSREverywhere-1.5.0-Linux.sh), then run:
 
 ```bash
-sudo bash ./Install-VSREverywhere-1.4.2-Linux.sh
+sudo bash ./Install-VSREverywhere-1.5.0-Linux.sh
 ```
 
 Accept the detected service settings or supply your own. To put the runtime on another mount:
 
 ```bash
-sudo bash ./Install-VSREverywhere-1.4.2-Linux.sh --install-dir /srv/vsr-everywhere
+sudo bash ./Install-VSREverywhere-1.5.0-Linux.sh --install-dir /srv/vsr-everywhere
 ```
 
 Use a root-owned path whose parents are not writable by other users. Downloads, runtime files, logs, and backups go there. The script includes the plugin and downloads a private Python runtime and pinned GPU libraries, checking their hashes. System Python is not used for GPU packages.
@@ -45,7 +45,7 @@ The installer checks active service arguments and environment before standard pa
 
 ## Tests, backups, and recovery
 
-Before deployment, setup tests VSR, HEVC Main 10, AAC, and HLS as the Jellyfin service account. It checks both the direct GPU encoder and the FFmpeg path used for lookahead.
+Before deployment, setup tests VSR, HEVC video, AAC, and HLS as the Jellyfin service account. It checks both the direct GPU encoder and the FFmpeg path used for lookahead.
 
 It then stops Jellyfin, backs up the plugin and XML settings, installs the files, restarts the service, and checks for a fresh plugin-loaded message. A deployment failure attempts to restore the backup and restart Jellyfin. A power loss or forced process kill may need manual recovery.
 

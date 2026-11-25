@@ -72,12 +72,14 @@ public sealed partial class BridgeSession
                     var fps = (double)numerator / denominator;
                     var seconds = (double)gop * denominator / numerator;
                     var count = Math.Ceiling(duration / seconds - 1e-9);
-                    if (fps is < 1 or > 120 || gop != Math.Round(2 * fps) || count is < 1 or > 999999)
+                    if (fps is < 1 or > 120 || gop != Math.Round((_rokuCbrFive ? 5d : 2d) * fps) || count is < 1 or > 999999)
                         throw new InvalidDataException("Unsupported worker timeline");
                     _segmentSeconds = seconds; _segmentCount = (int)count;
                     var playlist = new StringBuilder("#EXTM3U\n#EXT-X-VERSION:")
                         .Append(_cfg.SegmentType == "mpegts" ? "3\n" : "7\n#EXT-X-MAP:URI=\"init.mp4\"\n")
-                        .Append("#EXT-X-INDEPENDENT-SEGMENTS\n#EXT-X-PLAYLIST-TYPE:VOD\n#EXT-X-TARGETDURATION:3\n#EXT-X-MEDIA-SEQUENCE:0\n");
+                        .Append("#EXT-X-INDEPENDENT-SEGMENTS\n#EXT-X-PLAYLIST-TYPE:VOD\n#EXT-X-TARGETDURATION:")
+                        .Append(_rokuCbrFive ? "6" : "3") // VSR_ROKU_CBR40_FIVE_SECONDS_V1
+                        .Append("\n#EXT-X-MEDIA-SEQUENCE:0\n");
                     for (var index = 0; index < _segmentCount; index++)
                     {
                         playlist.Append("#EXTINF:").Append(Math.Min(seconds, duration - index * seconds).ToString("0.000000000", CultureInfo.InvariantCulture))
@@ -142,14 +144,14 @@ public sealed partial class BridgeSession
             if (!cached && (!_runActive || segment < _runStart || segment > catchupEnd))
             {
                 _run++; _runStart = segment; _runHead = segment - 1; _runActive = true;
-                _prerollEnd = Math.Min(_segmentCount - 1, segment + 2);
+                _prerollEnd = Math.Min(_segmentCount - 1, segment + (_rokuCbrFive ? 0 : 2));
                 Volatile.Write(ref _prerollStart, segment);
                 _memory.BeginRun(Token, _run, segment);
                 await SendCommand(new { cmd = "seek", segment, run = _run }, ct).ConfigureAwait(false);
             }
             if (_runActive)
             {
-                _memory.SetWindow(Token, Math.Max(0, segment - Math.Clamp(_cfg.RollingRewindMinutes, 2, 60) * 30), limit);
+                _memory.SetWindow(Token, Math.Max(0, segment - Math.Clamp(_cfg.RollingRewindMinutes, 2, 60) * (int)Math.Ceiling(60.0 / _segmentSeconds)), limit);
                 await SendCommand(new { cmd = "limit", segment = commandLimit }, ct).ConfigureAwait(false);
             }
             return 200;

@@ -69,8 +69,8 @@ let config = {
     EnableAutoHdr: false, EnableFrameInterpolation: true
 };
 const pluginId = '7ca129d0-7454-41c7-aad6-55250b1a7b5b';
-let updateReply = { currentVersion: '1.4.2', latestVersion: '1.4.2', canInstall: false, updateAvailable: false,
-    restartRequired: false, message: 'Up to date.', releaseUrl: 'https://github.com/TomSellecksMustache/VSR-Everywhere/releases/tag/v1.4.2' };
+let updateReply = { currentVersion: '1.5.0', latestVersion: '1.5.0', canInstall: false, updateAvailable: false,
+    restartRequired: false, message: 'Up to date.', releaseUrl: 'https://github.com/TomSellecksMustache/VSR-Everywhere/releases/tag/v1.5.0' };
 let updateError = null, installError = null, updateWait = null, updateChecks = 0, updateInstalls = 0;
 vm.runInNewContext(script, {
     document: { querySelector: () => controls.VsrEverywherePage, createElement: tag => new Element(tag) },

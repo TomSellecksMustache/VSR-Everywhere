@@ -64,8 +64,8 @@ internal static class CropChecks
             Check(video.Width == 3222 && video.Height == 2160 && video.AspectRatio == "3222:2160" && video.IsAnamorphic == false,
                 "Described stream must advertise actual square-pixel delivery dimensions and DAR");
             Check(video.Codec == "hevc" && video.CodecTag is null && video.Level is null
-                && video.Profile == "Main 10" && video.PixelFormat == "yuv420p10le" && video.BitDepth == 10,
-                "Described stream must advertise HEVC Main 10");
+                && video.Profile == (hdr ? "Main 10" : "Main") && video.PixelFormat == (hdr ? "yuv420p10le" : "yuv420p")
+                && video.BitDepth == (hdr ? 10 : 8), "Described stream must match SDR8 or HDR10 encoding");
             Check(video.ColorPrimaries == (hdr ? "bt2020" : "bt709")
                 && video.ColorTransfer == (hdr ? "smpte2084" : "bt709")
                 && video.ColorSpace == (hdr ? "bt2020nc" : "bt709") && video.ColorRange == "tv",

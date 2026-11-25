@@ -1,4 +1,4 @@
-"""Prove CUDA, VSR, HEVC Main 10, AAC, and HLS work using generated test media."""
+"""Prove CUDA, VSR, HEVC, AAC, and HLS work using generated test media."""
 from __future__ import annotations
 import argparse
 from fractions import Fraction

@@ -146,6 +146,7 @@ internal static class MemoryChecks
         Check(store.AllocatedBytes == 0, "Rejected upload retains no reserved buffers");
         await EndpointChecks(python);
         await PrerollChecks(python);
+        await RokuTimelineChecks(python);
         Console.WriteLine("PASS: memory budget/fallback, shared eviction, retained playlist, atomic uploads, read leases, lifecycle, size caps and ingest security.");
     }
 
@@ -182,6 +183,33 @@ internal static class MemoryChecks
             Check(request.Response.StatusCode == 200 && ((MemoryStream)request.Response.Body).ToArray().SequenceEqual(new byte[] { 7 }),
                 "Startup reserve releases the original response, including short source tails");
         }
+    }
+
+    private static async Task RokuTimelineChecks(string python)
+    {
+        using var sessions = new BridgeSessions(NullLogger<BridgeSessions>.Instance);
+        var configuration = new PluginConfiguration { CacheMode = "memory", MemoryBudgetMb = 8, PythonPath = python,
+            SegmentType = "mpegts", VideoMbps = 40, EnableAutoHdr = true };
+        var token = sessions.Register("test-roku.mp4", configuration, true, 40, null, rokuCbrFive: true)!;
+        var session = sessions.Find(token)!;
+        var middleware = new BridgeMiddleware(_ => throw new Exception("Unexpected route"), NullLogger<BridgeMiddleware>.Instance);
+        var request = new DefaultHttpContext();
+        request.Connection.LocalPort = 8096;
+        request.Request.Method = "GET";
+        request.Request.Path = $"/VsrEverywhere/hls/{token}/index.m3u8";
+        request.Response.Body = new MemoryStream();
+        await middleware.InvokeAsync(request, sessions);
+        var playlist = Encoding.UTF8.GetString(((MemoryStream)request.Response.Body).ToArray());
+        Check(request.Response.StatusCode == 200 && playlist.Contains("#EXT-X-TARGETDURATION:6\n")
+            && playlist.Contains("#EXTINF:5.000000000,\nseg_000000.ts")
+            && playlist.Contains("#EXTINF:2.000000000,\nseg_000002.ts"), "Roku playlist must use the worker's five-second timeline");
+        Check(await session.PrepareMemory("seg_000001.ts", null, CancellationToken.None) == 200, "Prepare Roku seek");
+        Check(await session.PutMemory("seg_000001.ts", new MemoryStream([9]), 1, CancellationToken.None, 1) == 204,
+            "Upload Roku startup segment");
+        Check(session.MemoryReady("seg_000001.ts"), "Roku starts with its one-segment reserve");
+        using var captured = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(AppContext.BaseDirectory, "worker", "memory-arguments.json")));
+        var arguments = captured.RootElement.GetProperty("args").EnumerateArray().Select(value => value.GetString()!).ToArray();
+        Check(arguments.Contains("--roku-cbr-five") && arguments.Contains("--auto-hdr"), "Roku/HDR flags reach the worker together");
     }
 
     private static async Task EndpointChecks(string python)

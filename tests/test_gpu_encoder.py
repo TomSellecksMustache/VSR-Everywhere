@@ -19,7 +19,7 @@ class GpuEncoderChecks(unittest.TestCase):
         self.torch = torch
         self.args = types.SimpleNamespace(stream_width=8, stream_height=4, video_mbps=20,
             nvenc_preset='p6', nvenc_tune='hq', nvenc_lookahead=0, nvenc_cq=19,
-            nvenc_spatial_aq=True, nvenc_temporal_aq=True)
+            nvenc_spatial_aq=True, nvenc_temporal_aq=True, auto_hdr=True)
         self.geometry = types.SimpleNamespace(vsr_width=4, vsr_height=4)
 
     @contextlib.contextmanager
@@ -49,7 +49,7 @@ class GpuEncoderChecks(unittest.TestCase):
                 state['calls'].append(('encode', picture.inputTimeStamp))
                 state['pending'] = weakref.ref(surface)
                 state['last_surface'] = weakref.ref(surface)
-                self_thread.assertEqual(surface.dtype, self_thread.torch.uint16)
+                self_thread.assertEqual(surface.dtype, self_thread.torch.uint16 if self_thread.args.auto_hdr else self_thread.torch.uint8)
                 self_thread.assertEqual(tuple(surface.shape), (6, 8))
                 self_thread.assertTrue(surface.is_contiguous())
                 self_thread.assertEqual(surface.storage_offset(), 0)
@@ -94,6 +94,16 @@ class GpuEncoderChecks(unittest.TestCase):
             encoder.close()
             encoder.close()
             self.assertEqual(state['calls'].count('release'), 1)
+
+    def test_sdr_uses_nv12_without_requiring_ten_bit_hardware(self):
+        self.args.auto_hdr = False
+        with self.runtime(ten_bit=False) as state:
+            encoder = GpuEncoder(self.args, self.geometry, Fraction(24), Fraction(1))
+            self.assertEqual(state['creation'][2], 'NV12')
+            gpu_rgb = types.SimpleNamespace(is_cuda=True, device=types.SimpleNamespace(index=0), shape=(3, 4, 4))
+            with patch('vsr_gpu.fit_rgb', return_value=self.torch.zeros((3, 4, 8))):
+                encoder.encode(gpu_rgb)
+            encoder.close()
 
     @unittest.skipUnless(importlib.util.find_spec('av'), 'PyAV required')
     def test_installed_mux_api_accepts_external_packets_without_an_encoder(self):

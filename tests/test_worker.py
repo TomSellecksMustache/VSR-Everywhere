@@ -39,9 +39,29 @@ class WorkerChecks(unittest.TestCase):
                     self.assertIn(f"scale=w='max(2,round(min({delivery[0]},{delivery[1]}*dar)/2)*2)'", vf)
                     self.assertIn(f"h='max(2,round(min({delivery[1]},{delivery[0]}/dar)/2)*2)'", vf)
                     self.assertIn(f"pad={delivery[0]}:{delivery[1]}:", vf)
-                    self.assertEqual(cmd[cmd.index("-profile:v") + 1], "main10")
+                    self.assertEqual(cmd[cmd.index("-profile:v") + 1], "main")
                     self.assertEqual(cmd[cmd.index("-c:a") + 1], "aac")
                     self.assertIn("title=VSR Everywhere", cmd)
+
+    def test_roku_cbr_keeps_five_second_timing_and_correct_sdr_hdr_formats(self):
+        for hdr in (False, True):
+            cmd = worker.build_ffmpeg_command("ffmpeg", "source", "cache/index.m3u8", 3840, 2160,
+                Fraction(24000, 1001), 40, "mpegts", roku_cbr_five=True, hdr_output=hdr,
+                nvenc_cq=1, start_segment=24, start=120.12)
+            value = lambda key: cmd[cmd.index(key) + 1]
+            self.assertEqual(value("-rc"), "cbr")
+            self.assertNotIn("-cq", cmd)
+            self.assertEqual([value(key) for key in ("-b:v", "-minrate:v", "-maxrate", "-bufsize")], ["40M"] * 4)
+            self.assertEqual(value("-g"), "120")
+            self.assertEqual(value("-hls_time"), "4.9")
+            self.assertEqual(value("-start_number"), "24")
+            self.assertEqual(value("-itsoffset"), "120.120000000")
+            self.assertEqual(value("-profile:v"), "main10" if hdr else "main")
+            self.assertEqual(value("-pix_fmt"), "p010le" if hdr else "nv12")
+            self.assertEqual(value("-color_trc"), "smpte2084" if hdr else "bt709")
+        with self.assertRaisesRegex(ValueError, "40 Mbps"):
+            worker.build_ffmpeg_command("ffmpeg", "source", "output", 3840, 2160,
+                Fraction(24), 20, "mpegts", roku_cbr_five=True)
 
     def test_widescreen_and_anamorphic_sources_preserve_aspect_ratio(self):
         for w, h, sar in [(1920, 800, Fraction(1)), (720, 480, Fraction(8, 9))]:

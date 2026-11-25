@@ -10,6 +10,24 @@ from vsr_everywhere import build_ffmpeg_command, validate_memory_output
 
 
 class ServerChecks(unittest.TestCase):
+    def test_repeated_requests_cannot_lower_production_or_revive_an_old_run(self):
+        control = Commands()
+        control.accept({'cmd': 'limit', 'segment': 30})
+        self.assertEqual(control.limit, -1)
+        control.accept({'cmd': 'seek', 'segment': 0, 'run': 1})
+        control.accept({'cmd': 'limit', 'segment': 30})
+        control.accept({'cmd': 'limit', 'segment': 12})
+        self.assertEqual(control.limit, 30)
+        control.wait_for_slot(31 * 48, 48, 1)
+        control.accept({'cmd': 'seek', 'segment': 100, 'run': 2})
+        control.accept({'cmd': 'limit', 'segment': 999, 'run': 1})
+        self.assertEqual(control.limit, 100)
+        control.accept({'cmd': 'limit', 'segment': 120, 'run': 2})
+        self.assertEqual(control.limit, 120)
+        control.accept({'cmd': 'stop'})
+        control.accept({'cmd': 'limit', 'segment': 130})
+        self.assertEqual(control.limit, 120)
+
     def test_latest_seek_cancels_the_muxer_and_stop_cancels_waits(self):
         control = Commands()
         control.accept({'cmd': 'seek', 'segment': 2, 'run': 1})
@@ -27,7 +45,8 @@ class ServerChecks(unittest.TestCase):
 
     def test_commands_validate_types_and_bounds(self):
         for command in [{'cmd': 'seek', 'segment': -1, 'run': 1}, {'cmd': 'seek', 'segment': True, 'run': 1},
-                        {'cmd': 'seek', 'segment': 0, 'run': '1'}, {'cmd': 'limit', 'segment': 1000000}, {'cmd': 'unknown'}]:
+                        {'cmd': 'seek', 'segment': 0, 'run': '1'}, {'cmd': 'limit', 'segment': 1000000}, {'cmd': 'unknown'},
+                        {'cmd': 'limit', 'segment': 0, 'run': True}, {'cmd': 'limit', 'segment': 0, 'run': -1}]:
             with self.subTest(command=command), self.assertRaises(ValueError):
                 Commands().accept(command)
 

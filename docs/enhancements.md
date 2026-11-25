@@ -1,4 +1,4 @@
-# Interpolation and HDR
+# NVIDIA VSR, adaptive interpolation, and Auto HDR
 
 These optional features are included in the Windows build. Linux uses the existing VSR path.
 
@@ -18,14 +18,18 @@ The first segment waits for a small reserve of contiguous segments. This reduces
 
 ## Auto HDR
 
-Auto HDR is experimental and off by default. It uses NVIDIA TrueHDR for eligible SDR input when the player advertises HEVC HDR10 support. Other players receive SDR. Existing HDR sources use normal Jellyfin playback.
+Auto HDR is off by default. Enable **NVIDIA Auto HDR (HDR10 players)** in Advanced settings on a compatible Windows server, then start a new playback session. It uses NVIDIA TrueHDR for eligible SDR input and produces HEVC Main 10, 10-bit BT.2020/PQ HDR10 video with AAC audio. Existing HDR sources use normal Jellyfin playback.
 
-The server can encode BT.2020/PQ video, but this does not reliably activate HDR on players yet. Leave Auto HDR off if you want normal SDR output. HEVC Main 10 alone does not mean HDR is active.
+The player must explicitly advertise HDR10 support. For registered Roku clients without an HEVC constraint profile, the plugin also accepts the display's HDR10 declaration under AV1 or VP9. Explicit HEVC restrictions still take priority. Unknown capabilities retain SDR.
+
+HDR activation is confirmed in the regular Jellyfin Roku 3.2.4 app. A fresh playback run passed more than five minutes without rebuffering or stream errors, with independently checked HDR10 video and AAC audio. This does not establish compatibility with every HDR player. Check the TV's HDR picture mode when validating another device; HEVC Main 10 alone is not proof of HDR activation.
+
+Turn Auto HDR off to keep enhanced SDR output. This setting does not alter the original file or override the selected input-resolution limit.
 
 ## Memory use
 
 Enhancement and interpolation tensors use GPU memory. Encoded HLS segments use the plugin's shared RAM cache, with disk fallback.
 
-Lookahead above 0 uses FFmpeg encoding and copies enhanced P010 frames through RAM. Lookahead 0 can use the direct GPU encoder path.
+Lookahead above 0 uses FFmpeg encoding and copies enhanced frames through RAM: NV12 for SDR or P010 for HDR. Lookahead 0 can use the direct GPU encoder path, except for the registered Roku compatibility profile.
 
 [Settings](configuration.md) · [Comparisons](comparisons.md) · [Third-party notices](../THIRD_PARTY_NOTICES.md)
