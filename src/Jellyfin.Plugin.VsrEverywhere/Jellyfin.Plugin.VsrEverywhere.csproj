@@ -6,11 +6,11 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>Jellyfin.Plugin.VsrEverywhere</AssemblyName>
     <RootNamespace>Jellyfin.Plugin.VsrEverywhere</RootNamespace>
-    <Version>1.5.0</Version>
+    <Version>1.5.1</Version>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <Title>VSR Everywhere</Title>
     <Product>VSR Everywhere</Product>
-    <Description>NVIDIA RTX Video Super Resolution and optional Auto HDR for Jellyfin, with HEVC streaming to Roku and compatible players.</Description>
+    <Description>NVIDIA RTX Video Super Resolution and optional Auto HDR for Jellyfin, with HEVC streaming to compatible players.</Description>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
   </PropertyGroup>
   <ItemGroup>

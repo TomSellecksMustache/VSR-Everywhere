@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.5.1
+
+- Fix repeated frames during adaptive interpolation, including playback with upscaling and Auto HDR enabled together. Disable automatic shot detection that could return a moving anchor instead of an interpolated frame.
+- Add an optional NVIDIA hardware check for SDR and HDR interpolation. Keep the source frame rate and existing processing settings.
+- Interpolation may show brief artifacts at scene changes. Full-length playback remains untested.
+
 ## 1.5.0
 
 - Improve Auto HDR capability detection when supported client profiles declare display HDR10 support under AV1 or VP9 but omit HEVC. Keep explicit HEVC restrictions and SDR fallback for unknown capabilities.

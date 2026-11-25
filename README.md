@@ -4,9 +4,9 @@
 
 VSR Everywhere uses NVIDIA RTX Video Super Resolution (VSR) on your media server and streams enhanced video to compatible Jellyfin players. Your original media files stay unchanged, and the player does not need its own AI upscaler.
 
-[**Download the Windows installer — 1.5.0**](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/download/v1.5.0/VSR-Everywhere-1.5.0-Setup.exe) · [All downloads](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/tag/v1.5.0)
+[**Download the Windows installer — 1.5.1**](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/download/v1.5.1/VSR-Everywhere-1.5.1-Setup.exe) · [All downloads](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/tag/v1.5.1)
 
-**Linux:** [Download the server installer](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/download/v1.5.0/Install-VSREverywhere-1.5.0-Linux.sh) · [Linux setup](INSTALL-LINUX.md)
+**Linux:** [Download the server installer](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/download/v1.5.1/Install-VSREverywhere-1.5.1-Linux.sh) · [Linux setup](INSTALL-LINUX.md)
 
 [Installation](#install-on-windows-or-linux) · [Features](#video-upscaling-and-playback-features) · [Requirements](#server-and-player-requirements) · [Comparisons](#original-vs-nvidia-vsr) · [FAQ](#frequently-asked-questions) · [Documentation](docs/README.md)
 

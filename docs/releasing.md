@@ -1,16 +1,16 @@
 # Making a release
 
-For 1.5.0, build Windows packages with `Build-Installer.ps1` and Linux packages with `python3 tools/build_linux.py`. Run the checks in [development](development.md), including package checks after both builds.
+For 1.5.1, build Windows packages with `Build-Installer.ps1` and Linux packages with `python3 tools/build_linux.py`. Run the checks in [development](development.md), including package checks after both builds.
 
 ## Release files
 
 | File | Purpose |
 | --- | --- |
-| `VSR-Everywhere-1.5.0-Setup.exe` | Windows wizard. Put this download first in the release notes. |
-| `VSR-Everywhere-1.5.0-plugin.zip` | Plugin update package for an existing compatible runtime. |
-| `VSR-Everywhere-1.5.0-Source.zip` | Source, documentation, and comparison images. |
-| `Install-VSREverywhere-1.5.0-Linux.sh` | Linux systemd server installer. |
-| `VSR-Everywhere-1.5.0-Linux.tar.gz` | Linux installer and guides. |
+| `VSR-Everywhere-1.5.1-Setup.exe` | Windows wizard. Put this download first in the release notes. |
+| `VSR-Everywhere-1.5.1-plugin.zip` | Plugin update package for an existing compatible runtime. |
+| `VSR-Everywhere-1.5.1-Source.zip` | Source, documentation, and comparison images. |
+| `Install-VSREverywhere-1.5.1-Linux.sh` | Linux systemd server installer. |
+| `VSR-Everywhere-1.5.1-Linux.tar.gz` | Linux installer and guides. |
 
 Publish only these five downloads. The builders also create internal payloads, a PowerShell entry point, and checksum files for build verification. The Windows EXE embeds its payload; licenses remain included in the packages.
 
@@ -22,7 +22,7 @@ The settings page verifies the `-plugin.zip` asset using GitHub's SHA-256 digest
 
 1. Review the code, docs, known issues, and license notices. The Windows installer is unsigned unless signed separately.
 2. Push the reviewed commit to `main` and wait for CI.
-3. Create a draft `v1.5.0` release at that commit and upload the exact files from this build.
+3. Create a draft `v1.5.1` release at that commit and upload the exact files from this build.
 4. Check the uploaded names, sizes, and SHA-256 hashes against the local files.
 5. Publish as a normal release and mark it Latest. Check the README download links.
 

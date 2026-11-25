@@ -30,8 +30,9 @@ class Enhancements:
                 from nvvfx import VideoFrameGeneration
                 encoding = (VideoFrameGeneration.ImageEncoding.RGB10A2 if args.auto_hdr
                             else VideoFrameGeneration.ImageEncoding.RGB8)
+                # Automatic shot detection can copy moving anchors instead of interpolating them.
                 self.interpolator = VideoFrameGeneration(image_encoding=encoding,
-                    automatic_shot_change_detection_enabled=True)
+                    automatic_shot_change_detection_enabled=False)
                 self.interpolator.input_width, self.interpolator.input_height = args.stream_width, args.stream_height
                 self.interpolator.load()
         except BaseException:

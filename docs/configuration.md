@@ -64,7 +64,7 @@ If memory cannot be reserved, a session can fall back to disk. Disk mode uses th
 
 Use **Check for updates** at the bottom of this page to check the latest stable GitHub release. Preview releases and unbuilt commits are excluded.
 
-The 1.5.0 release includes a plugin update package. If the installed runtime is compatible, **Install** downloads and verifies it through Jellyfin's updater. Restart Jellyfin when ready to activate the update. Saved settings are retained.
+The 1.5.1 release includes a plugin update package. If the installed runtime is compatible, **Install** downloads and verifies it through Jellyfin's updater. Restart Jellyfin when ready to activate the update. Saved settings are retained.
 
 If a runtime change requires the full installer, open the release link and run the Windows setup or Linux installer. Choose the existing runtime folder to retain compatible settings and reuse verified dependencies. Update controls require a Jellyfin administrator.
 

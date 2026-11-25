@@ -69,8 +69,8 @@ let config = {
     EnableAutoHdr: false, EnableFrameInterpolation: true
 };
 const pluginId = '7ca129d0-7454-41c7-aad6-55250b1a7b5b';
-let updateReply = { currentVersion: '1.5.0', latestVersion: '1.5.0', canInstall: false, updateAvailable: false,
-    restartRequired: false, message: 'Up to date.', releaseUrl: 'https://github.com/TomSellecksMustache/VSR-Everywhere/releases/tag/v1.5.0' };
+let updateReply = { currentVersion: '1.5.1', latestVersion: '1.5.1', canInstall: false, updateAvailable: false,
+    restartRequired: false, message: 'Up to date.', releaseUrl: 'https://github.com/TomSellecksMustache/VSR-Everywhere/releases/tag/v1.5.1' };
 let updateError = null, installError = null, updateWait = null, updateChecks = 0, updateInstalls = 0;
 vm.runInNewContext(script, {
     document: { querySelector: () => controls.VsrEverywherePage, createElement: tag => new Element(tag) },
@@ -202,11 +202,11 @@ const save = () => controls.VsrEverywhereForm.listeners.submit({ preventDefault(
     await checkUpdate();
     assert.equal(controls.VsrUpdateStatus.textContent, 'Up to date.');
     assert.equal(controls.InstallVsrUpdate.hidden, true);
-    updateReply = { ...updateReply, latestVersion: '1.5.0', canInstall: true, updateAvailable: true,
-        message: 'Version 1.5.0 is available.' };
+    updateReply = { ...updateReply, latestVersion: '1.5.1', canInstall: true, updateAvailable: true,
+        message: 'Version 1.5.1 is available.' };
     await checkUpdate();
     assert.equal(controls.InstallVsrUpdate.hidden, false);
-    assert.equal(controls.InstallVsrUpdate.textContent, 'Install 1.5.0');
+    assert.equal(controls.InstallVsrUpdate.textContent, 'Install 1.5.1');
     assert.equal(updateInstalls, 0, 'Checking must not install');
     updateError = { responseJSON: { message: 'GitHub is temporarily unavailable.' } };
     await checkUpdate();

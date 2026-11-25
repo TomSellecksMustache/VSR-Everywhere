@@ -23,18 +23,18 @@ license_text = (root / 'LICENSE').read_bytes()
 update_metadata = {'windows.json': root / 'installer/downloads.lock.json',
                    'linux.json': root / 'installer/linux/runtime.json',
                    'linux-requirements.txt': root / 'installer/linux/requirements.lock.txt'}
-bundle = (dist / 'VSR-Everywhere-1.5.0-Windows.zip').read_bytes()
+bundle = (dist / 'VSR-Everywhere-1.5.1-Windows.zip').read_bytes()
 wrapper = (dist / 'Install-VSREverywhere.ps1').read_bytes()
-executable = (dist / 'VSR-Everywhere-1.5.0-Setup.exe').read_bytes()
+executable = (dist / 'VSR-Everywhere-1.5.1-Setup.exe').read_bytes()
 assert sha256(bundle).hexdigest() in wrapper.decode('utf-8-sig'), 'Wrapper ZIP checksum mismatch'
 assert bundle in executable and wrapper in executable, 'EXE embeds a different ZIP or script'
-with zipfile.ZipFile(dist / 'VSR-Everywhere-1.5.0-Windows.zip') as archive:
+with zipfile.ZipFile(dist / 'VSR-Everywhere-1.5.1-Windows.zip') as archive:
     files = entries(archive)
     read = lambda name: archive.read(files[name])
     for name in ['LICENSE', 'plugin/LICENSE']:
         assert read(name) == license_text, 'Installer MIT license: ' + name
     metadata = json.loads(read('plugin/meta.json').decode('utf-8'))
-    assert metadata['name'] == 'VSR Everywhere' and metadata['version'] == '1.5.0.0'
+    assert metadata['name'] == 'VSR Everywhere' and metadata['version'] == '1.5.1.0'
     assert metadata['targetAbi'] == '10.10.0.0', 'Jellyfin target ABI changed'
     locked = json.loads(read('downloads.lock.json').decode('utf-8-sig'))
     assert locked['targetAbi'] == metadata['targetAbi'], 'Installer and plugin target different Jellyfin ABIs'
@@ -52,7 +52,7 @@ with zipfile.ZipFile(dist / 'VSR-Everywhere-1.5.0-Windows.zip') as archive:
     assert read('plugin/Jellyfin.Plugin.VsrEverywhere.dll') == (dist / 'VSR-Everywhere/Jellyfin.Plugin.VsrEverywhere.dll').read_bytes()
     for name, source in update_metadata.items():
         assert read('plugin/update/' + name) == source.read_bytes(), 'Stale Windows update metadata: ' + name
-with zipfile.ZipFile(dist / 'VSR-Everywhere-1.5.0-plugin.zip') as archive:
+with zipfile.ZipFile(dist / 'VSR-Everywhere-1.5.1-plugin.zip') as archive:
     files = entries(archive)
     for name, source in update_metadata.items():
         assert archive.read(files['update/' + name]) == source.read_bytes(), 'Stale manual update metadata: ' + name
@@ -61,7 +61,7 @@ with zipfile.ZipFile(dist / 'VSR-Everywhere-1.5.0-plugin.zip') as archive:
     }, 'Unexpected manual plugin worker component'
     assert archive.read(files['LICENSE']) == license_text, 'Manual plugin MIT license'
     assert archive.read(files['THIRD_PARTY_NOTICES.md']) == (root / 'THIRD_PARTY_NOTICES.md').read_bytes(), 'Manual plugin third-party notices'
-with zipfile.ZipFile(dist / 'VSR-Everywhere-1.5.0-Source.zip') as archive:
+with zipfile.ZipFile(dist / 'VSR-Everywhere-1.5.1-Source.zip') as archive:
     files = entries(archive)
     for name in ['worker/vsr_gpu.py', 'worker/vsr_server.py', 'src/Jellyfin.Plugin.VsrEverywhere/BridgeSeek.cs',
                  'tools/compare_vsr_colour.py', 'installer/tests/Test-Package.py', 'installer/SetupWizard.ps1',

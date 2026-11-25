@@ -1,6 +1,6 @@
 {
   "product": "VSR Everywhere",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "targetAbi": "10.10.0.0",
   "architecture": "x86_64",
   "minimumGlibc": "2.28",
