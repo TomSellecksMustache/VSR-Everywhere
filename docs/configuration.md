@@ -30,7 +30,7 @@ For 5K processing and 4K playback, choose those two presets. A larger processing
 | VSR | Turns NVIDIA VSR on or off independently of the other features. |
 | VSR quality and strength | Controls the upscaling profile and enhancement strength. Start with Streaming Medium and 0.75. |
 | Interpolation | Adjusts how often enhancement runs and fills the frames between. Output keeps the source frame rate. Enabled by default on Windows. |
-| Auto HDR | NVIDIA TrueHDR conversion for eligible SDR input and HDR10 players. Off by default. Confirmed with the regular Jellyfin Roku app. |
+| Auto HDR | NVIDIA TrueHDR conversion for eligible SDR input and compatible HDR10 players. Off by default. |
 
 [How these features work and their limits](enhancements.md)
 
@@ -38,7 +38,7 @@ For 5K processing and 4K playback, choose those two presets. A larger processing
 
 | Setting | Default | Notes |
 | --- | --- | --- |
-| Video bitrate | 20 Mbps | Range: 4–60 Mbps for ordinary delivery. Registered Roku clients use the tested 40 Mbps CBR compatibility profile. |
+| Video bitrate | 20 Mbps | Range: 4–60 Mbps for ordinary delivery. Some client compatibility profiles use 40 Mbps CBR. |
 | NVENC preset | p4 | Higher presets need more encoding work. |
 | Tune | Default | HQ is available. |
 | Lookahead | 0 | Nonzero values use the FFmpeg encoding path and transfer enhanced frames through RAM. |
@@ -46,7 +46,7 @@ For 5K processing and 4K playback, choose those two presets. A larger processing
 | Spatial / temporal AQ | Off / off | Optional adaptive quantization. |
 | HLS format | MPEG-TS in the installer | fMP4 is also available. The player must support the selected format. |
 
-The Roku profile uses five-second HLS segments and the compatible FFmpeg encoding path. Its 40 Mbps CBR mode overrides CQ, even when a CQ value is saved. Other clients retain their configured bitrate limits and normal encoder selection.
+Profiles using 40 Mbps CBR also use five-second HLS segments and the compatible FFmpeg encoding path. CBR overrides CQ, even when a CQ value is saved. Other clients retain their configured bitrate limits and normal encoder selection.
 
 If playback falls behind, reduce processing resolution or quality, use p4 and lookahead 0, and keep one session active.
 
@@ -64,9 +64,9 @@ If memory cannot be reserved, a session can fall back to disk. Disk mode uses th
 
 Use **Check for updates** at the bottom of this page to check the latest stable GitHub release. Preview releases and unbuilt commits are excluded.
 
-The 1.5.0 release provides native installers. Open the release link and run the Windows setup or Linux installer to upgrade. Choose the existing runtime folder to retain compatible settings and reuse verified dependencies.
+The 1.5.0 release includes a plugin update package. If the installed runtime is compatible, **Install** downloads and verifies it through Jellyfin's updater. Restart Jellyfin when ready to activate the update. Saved settings are retained.
 
-For releases that include a compatible plugin update package, **Install** can download and verify it through Jellyfin's updater. Otherwise the page links to the full installer. Update controls require a Jellyfin administrator.
+If a runtime change requires the full installer, open the release link and run the Windows setup or Linux installer. Choose the existing runtime folder to retain compatible settings and reuse verified dependencies. Update controls require a Jellyfin administrator.
 
 ## Devices and source support
 

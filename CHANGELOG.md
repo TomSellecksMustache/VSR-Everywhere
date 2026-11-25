@@ -2,11 +2,11 @@
 
 ## 1.5.0
 
-- Fix Auto HDR detection for Jellyfin Roku profiles that declare display HDR10 support under AV1 or VP9 but omit HEVC. Keep explicit HEVC restrictions and SDR fallback for unknown capabilities.
-- Deliver 10-bit BT.2020/PQ HDR10 when Auto HDR is enabled on compatible Windows servers and players. HDR activation is confirmed in the regular Jellyfin Roku app.
-- Retain the tested Roku 40 Mbps CBR profile, five-second HLS timeline, and single-segment startup reserve. Match advertised stream metadata to 8-bit SDR or 10-bit HDR output.
+- Improve Auto HDR capability detection when supported client profiles declare display HDR10 support under AV1 or VP9 but omit HEVC. Keep explicit HEVC restrictions and SDR fallback for unknown capabilities.
+- Deliver 10-bit BT.2020/PQ HDR10 when Auto HDR is enabled on compatible Windows servers and players.
+- Retain tested client compatibility profiles for 40 Mbps CBR delivery, five-second HLS timing, and startup buffering. Match advertised stream metadata to 8-bit SDR or 10-bit HDR output.
 - Prevent repeated HLS requests from lowering the worker's production limit and stranding playback.
-- Add capability, encoding, seek-timeline, and worker-control regression checks, plus a standalone Roku HDR probe.
+- Add capability, encoding, seek-timeline, and worker-control regression checks, plus a standalone HDR playback probe.
 
 ## 1.4.2
 

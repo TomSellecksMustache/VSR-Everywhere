@@ -2,7 +2,7 @@
 
 **Server-side AI video upscaling and optional Auto HDR for Jellyfin.**
 
-VSR Everywhere uses NVIDIA RTX Video Super Resolution (VSR) on your media server and streams enhanced video to Roku and other compatible Jellyfin players. Your original media files stay unchanged, and the player does not need its own AI upscaler.
+VSR Everywhere uses NVIDIA RTX Video Super Resolution (VSR) on your media server and streams enhanced video to compatible Jellyfin players. Your original media files stay unchanged, and the player does not need its own AI upscaler.
 
 [**Download the Windows installer — 1.5.0**](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/download/v1.5.0/VSR-Everywhere-1.5.0-Setup.exe) · [All downloads](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/tag/v1.5.0)
 
@@ -13,13 +13,13 @@ VSR Everywhere uses NVIDIA RTX Video Super Resolution (VSR) on your media server
 ## Video upscaling and playback features
 
 - Upscales eligible SDR video with NVIDIA RTX VSR on the server's GPU.
-- Converts eligible SDR input to 10-bit HDR10 with NVIDIA TrueHDR on Windows. HDR playback is confirmed in the regular Jellyfin Roku app.
+- Converts eligible SDR input to 10-bit HDR10 with NVIDIA TrueHDR on Windows for compatible HDR10 players.
 - Lets you choose processing and stream resolutions separately, from 1080p to 8K.
 - Crops stable black bars from the stream and fits output to the picture's aspect ratio.
 - Uses interpolation to help processing keep up. The delivered frame rate still matches the source.
 - Delivers HEVC video and AAC audio over HLS, with GPU processing and a shared RAM stream cache with disk fallback.
 - Lets you enable it for all devices or select individual Jellyfin devices.
-- Checks stable GitHub releases from plugin settings and links to the current installer.
+- Checks stable GitHub releases from plugin settings and installs compatible plugin updates, with installer downloads available when needed.
 
 ## Server and player requirements
 
@@ -29,7 +29,7 @@ VSR Everywhere uses NVIDIA RTX Video Super Resolution (VSR) on your media server
 | Server GPU | Compatible NVIDIA RTX hardware and drivers for the requested processing and encoding features. Setup tests the runtime. |
 | Player | HEVC, AAC, the chosen HLS format, and the delivery resolution. HDR10 support is required for Auto HDR output. |
 | Input video | 8-bit or 10-bit SDR, up to 800p by default; optional sources up to 1080p with maximum source width 1920 pixels. |
-| Storage and network | Space for dependencies and runtime downloads; sufficient bandwidth for the enhanced stream. Roku uses a 40 Mbps CBR compatibility profile. |
+| Storage and network | Space for dependencies and runtime downloads; sufficient bandwidth for the enhanced stream. Some client compatibility profiles use 40 Mbps CBR delivery. |
 
 ### Playback support and limits
 
@@ -72,9 +72,9 @@ These use ULTRA, strength 1, 5K processing, and 4K output. HDR and interpolation
 
 ## Frequently asked questions
 
-### Does VSR Everywhere work with Jellyfin on Roku?
+### Does VSR Everywhere work with my Jellyfin player?
 
-Yes. The server performs enhancement and sends an HEVC/AAC HLS stream to the normal Jellyfin Roku app. Version 1.5.0 fixes HDR10 detection when Roku advertises display capability under AV1 or VP9 instead of HEVC. The tested Roku profile uses 40 Mbps CBR and five-second segments; the network must sustain that stream.
+Enhancement runs on the server, so compatible Jellyfin apps can receive the result without a separate client-side upscaler. The player must support HEVC video, AAC audio, HLS, and the chosen output resolution. Auto HDR also requires HDR10 support.
 
 ### Does the playback device need an NVIDIA GPU?
 

@@ -1,4 +1,4 @@
-"""Force the installed Auto HDR worker on for a 32-second Roku playback probe."""
+"""Force the installed Auto HDR worker on for a 32-second HDR playback probe."""
 import argparse
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
@@ -66,10 +66,10 @@ def main():
         parser.error("Use the server's IPv4 address and a port from 1 through 65535")
     if not args.package_only and (args.source is None or not args.source.is_file()):
         parser.error("--source must name an existing SDR media file")
-    root = Path(__file__).resolve().parents[3] / "dist" / "roku-hdr-test"
+    root = Path(__file__).resolve().parents[3] / "dist" / "hdr-test"
     root.mkdir(parents=True, exist_ok=True)
     output = Path(tempfile.mkdtemp(prefix="probe-", dir=root))
-    channel = output / "roku-hdr-probe.zip"
+    channel = output / "hdr-probe.zip"
     url = f"http://{args.host}:{args.port}/index.m3u8"
     package_channel(channel, url)
     print(f"Channel ZIP: {channel}", flush=True)
@@ -99,7 +99,7 @@ def main():
         if (public / name).exists():
             shutil.move(public / name, output / name)
     print(f"PASS: HEVC Main 10, 10-bit, BT.2020/PQ, AAC. Playback URL: {url}", flush=True)
-    print("Sideload ZIP with Roku Dev Studio or roku_sideload, then launch dev.", flush=True)
+    print("Open the HLS URL in a compatible player, or sideload the optional developer-channel ZIP.", flush=True)
     print("Check HDRTEST console lines and the TV's HDR picture mode. Ctrl+C stops this server.", flush=True)
     with ThreadingHTTPServer((str(args.host), args.port), partial(HlsHandler, directory=str(public))) as server:
         try:

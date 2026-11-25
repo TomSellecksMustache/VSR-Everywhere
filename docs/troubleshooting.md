@@ -22,7 +22,7 @@ Start with **Open setup log** in the wizard. Setup tests processing before chang
 | Buffering or uneven motion | Lower processing resolution/quality, use p4 and lookahead 0, and keep one session active. Check other GPU workloads. |
 | Strange textures or outlines | Reduce VSR strength or try another quality profile. |
 | Motion artifacts | Try disabling interpolation. Processing every frame may need lower quality to keep up. |
-| HDR does not activate | Enable Auto HDR on Windows and start a new session. Check the log for `clientHdr10=True` and `output=HDR10`, then check the TV's HDR picture mode. Unknown client capabilities keep SDR. Roku capability detection is fixed in 1.5.0. |
+| HDR does not activate | Enable Auto HDR on Windows and start a new session. Check the log for `clientHdr10=True` and `output=HDR10`, then check the display's HDR picture mode. Unknown client capabilities keep SDR. Client capability detection is improved in 1.5.0. |
 | HEVC or HLS playback fails | Check the player's HEVC, AAC, HLS format, and resolution support. Auto HDR also needs Main 10/HDR10. Try 4K or lower delivery. |
 | RAM traffic with GPU processing | Nonzero lookahead transfers frames through RAM for FFmpeg encoding. |
 | Disk cache in memory mode | A session can fall back to disk when RAM cannot be reserved. Check the log and available memory. |

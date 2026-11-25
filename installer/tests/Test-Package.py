@@ -67,9 +67,9 @@ with zipfile.ZipFile(dist / 'VSR-Everywhere-1.5.0-Source.zip') as archive:
                  'tools/compare_vsr_colour.py', 'installer/tests/Test-Package.py', 'installer/SetupWizard.ps1',
                  'src/Jellyfin.Plugin.VsrEverywhere/PluginUpdates.cs', 'tests/PluginChecks/UpdateChecks.cs',
                  'installer/Installer.Core.psm1', 'installer/Install-Engine.ps1', 'installer/Install-VSREverywhere.ps1.in',
-                 'tests/manual/roku_hdr/test_roku_hdr.py', 'tests/manual/roku_hdr/app/manifest',
-                 'tests/manual/roku_hdr/app/source/main.brs', 'tests/manual/roku_hdr/app/components/HdrProbe.xml',
-                 'tests/manual/roku_hdr/app/components/HdrProbe.brs']:
+                 'tests/manual/hdr_probe/test_hdr_probe.py', 'tests/manual/hdr_probe/app/manifest',
+                 'tests/manual/hdr_probe/app/source/main.brs', 'tests/manual/hdr_probe/app/components/HdrProbe.xml',
+                 'tests/manual/hdr_probe/app/components/HdrProbe.brs']:
         assert archive.read(files[name]) == (root / name).read_bytes(), 'Source package: ' + name
     assert not any(name.startswith('HANDOFF-') for name in files), 'Internal handoff note in source package'
     for source in [root / 'LICENSE', root / 'README.md', root / 'CHANGELOG.md', root / 'THIRD_PARTY_NOTICES.md', *sorted((root / 'docs').rglob('*'))]:

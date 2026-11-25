@@ -4,7 +4,7 @@ import tempfile
 import unittest
 import xml.etree.ElementTree as ET
 import zipfile
-from test_roku_hdr import check_hdr, package_channel, worker_arguments
+from test_hdr_probe import check_hdr, package_channel, worker_arguments
 
 
 class ProbeChecks(unittest.TestCase):

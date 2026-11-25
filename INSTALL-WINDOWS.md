@@ -23,7 +23,7 @@ The EXE is unsigned, so Windows may show an unfamiliar-app prompt.
 
 New installs use 4K processing and delivery, Streaming Medium, strength 0.75, 20 Mbps, p4, lookahead 0, MPEG-TS/AAC, automatic RAM caching, and one session. VSR is enabled for all devices. Automatic content selection and interpolation are enabled on Windows; Auto HDR is off.
 
-Registered Roku clients use the tested 40 Mbps CBR compatibility profile with five-second HLS segments. See [encoder settings](docs/configuration.md#encoder) for its bitrate and CQ behavior.
+Some client compatibility profiles use 40 Mbps CBR delivery with five-second HLS segments. See [encoder settings](docs/configuration.md#encoder) for bitrate and CQ behavior.
 
 For upgrades, choose the same runtime folder. Existing compatible settings and device selections are kept. Verified dependencies can be reused when only the product version changed. Video checks still run.
 
@@ -60,6 +60,6 @@ Some system-drive space is still needed for the bootstrap and Microsoft runtime.
 
 If deployment or startup checks fail, setup attempts to restore the previous plugin and settings and restart Jellyfin. Keep the setup log and backup record if recovery is needed. Microsoft runtime updates are separate from plugin rollback.
 
-A manual plugin package can also be built from source for an existing working runtime. Use the wizard for a new install or a release upgrade.
+The [plugin update ZIP](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/download/v1.5.0/VSR-Everywhere-1.5.0-plugin.zip) is provided for an existing compatible runtime. Use **Check for updates**, then **Install** in plugin settings, or use the wizard for a full installation.
 
 [Settings](docs/configuration.md) · [Troubleshooting and removal](docs/troubleshooting.md)
