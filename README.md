@@ -19,7 +19,7 @@ VSR Everywhere uses NVIDIA RTX Video Super Resolution (VSR) on your media server
 - Uses interpolation to help processing keep up. The delivered frame rate still matches the source.
 - Delivers HEVC video and AAC audio over HLS, with GPU processing and a shared RAM stream cache with disk fallback.
 - Lets you enable it for all devices or select individual Jellyfin devices.
-- Checks stable GitHub releases and installs compatible updates from plugin settings.
+- Checks stable GitHub releases from plugin settings and links to the current installer.
 
 ## Server and player requirements
 

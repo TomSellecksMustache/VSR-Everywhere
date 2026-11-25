@@ -27,9 +27,9 @@ Registered Roku clients use the tested 40 Mbps CBR compatibility profile with fi
 
 For upgrades, choose the same runtime folder. Existing compatible settings and device selections are kept. Verified dependencies can be reused when only the product version changed. Video checks still run.
 
-## PowerShell option
+## Advanced deployments from source
 
-Download the matching [Windows ZIP](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/download/v1.5.0/VSR-Everywhere-1.5.0-Windows.zip) and [PowerShell installer](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/download/v1.5.0/Install-VSREverywhere.ps1) into one folder. Leave the ZIP intact, then run:
+The [source package](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/download/v1.5.0/VSR-Everywhere-1.5.0-Source.zip) includes the build scripts. [Build the Windows packages](docs/development.md#windows-build) to generate a matching Windows ZIP and `Install-VSREverywhere.ps1`. Keep both generated files in one folder, leave the ZIP intact, then run:
 
 ```powershell
 powershell.exe -NoProfile -Sta -ExecutionPolicy Bypass -File .\Install-VSREverywhere.ps1
@@ -60,6 +60,6 @@ Some system-drive space is still needed for the bootstrap and Microsoft runtime.
 
 If deployment or startup checks fail, setup attempts to restore the previous plugin and settings and restart Jellyfin. Keep the setup log and backup record if recovery is needed. Microsoft runtime updates are separate from plugin rollback.
 
-The [manual plugin ZIP](https://github.com/TomSellecksMustache/VSR-Everywhere/releases/download/v1.5.0/VSR-Everywhere-1.5.0-plugin.zip) is for an existing working runtime. Use the wizard for a new install.
+A manual plugin package can also be built from source for an existing working runtime. Use the wizard for a new install or a release upgrade.
 
 [Settings](docs/configuration.md) · [Troubleshooting and removal](docs/troubleshooting.md)

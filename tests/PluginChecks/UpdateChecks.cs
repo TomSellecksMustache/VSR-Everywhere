@@ -49,6 +49,14 @@ internal static class UpdateChecks
             result = await fixture.Updater().Run(true, CancellationToken.None);
             Check(!result.UpdateAvailable && fixture.RequestCount == 1 && fixture.InstallCount == 0, "Current/older release must not download or install");
         }
+        foreach (var install in new[] { false, true })
+        {
+            fixture = new UpdateFixture(next) { NoPluginAsset = true };
+            result = await fixture.Updater().Run(install, CancellationToken.None);
+            Check(result.UpdateAvailable && !result.CanInstall && !result.RestartRequired && fixture.InstallCount == 0
+                && fixture.RequestCount == 1 && result.Message.Contains("installer") && result.ReleaseUrl.EndsWith("v" + next.ToString(3)),
+                "Installer-only releases must link the release without downloading or installing a plugin package");
+        }
         foreach (var change in new Action<UpdateFixture>[]
         {
             f => f.Draft = true, f => f.Prerelease = true, f => f.CorruptHash = true,
@@ -143,7 +151,7 @@ internal sealed class UpdateFixture : HttpMessageHandler, IHttpClientFactory
 {
     private readonly Version _version;
     internal byte[] Package;
-    internal bool Draft, Prerelease, CorruptHash, FailInstall;
+    internal bool Draft, Prerelease, CorruptHash, FailInstall, NoPluginAsset;
     internal int RequestCount, InstallCount;
     internal long? DeclaredSize;
     internal string? Url, Digest = "automatic";
@@ -183,6 +191,7 @@ internal sealed class UpdateFixture : HttpMessageHandler, IHttpClientFactory
             {
                 tag_name = "v" + label, draft = Draft, prerelease = Prerelease,
                 assets = new[] { new { name = "VSR-Everywhere-" + label + "-plugin.zip", size = DeclaredSize ?? Package.Length, digest, browser_download_url = Url ?? url } }
+                    .Where(_ => !NoPluginAsset).ToArray()
             }) : Package;
         return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(bytes) });
     }

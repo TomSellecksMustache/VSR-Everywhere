@@ -64,9 +64,9 @@ If memory cannot be reserved, a session can fall back to disk. Disk mode uses th
 
 Use **Check for updates** at the bottom of this page to check the latest stable GitHub release. Preview releases and unbuilt commits are excluded.
 
-If a compatible update is available, **Install** downloads and verifies the plugin package through Jellyfin's updater. Your settings and current playback stay in place. Restart Jellyfin when you are ready to activate the update.
+The 1.5.0 release provides native installers. Open the release link and run the Windows setup or Linux installer to upgrade. Choose the existing runtime folder to retain compatible settings and reuse verified dependencies.
 
-Updates that need different video runtime dependencies link to the full installer instead. Update controls require a Jellyfin administrator.
+For releases that include a compatible plugin update package, **Install** can download and verify it through Jellyfin's updater. Otherwise the page links to the full installer. Update controls require a Jellyfin administrator.
 
 ## Devices and source support
 
